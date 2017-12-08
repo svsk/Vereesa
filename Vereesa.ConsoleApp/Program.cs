@@ -1,4 +1,5 @@
 ﻿using System;
+using Vereesa.Core;
 
 namespace Vereesa.ConsoleApp
 {
@@ -6,7 +7,7 @@ namespace Vereesa.ConsoleApp
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var client = new VereesaClient();
         }
     }
 }
