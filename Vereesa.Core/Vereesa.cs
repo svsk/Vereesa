@@ -15,6 +15,7 @@ namespace Vereesa.Core
     {
         private IConfigurationRoot _config;
         private IServiceProvider _serviceProvider;
+        private DiscordSocketClient _discord;
 
         public VereesaClient()
         {
@@ -25,29 +26,31 @@ namespace Vereesa.Core
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("config.json", optional: true, reloadOnChange: true)
-                .AddJsonFile("config.Local.json", optional: true);
+                .AddJsonFile("config.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("config.Local.json", optional: true, reloadOnChange: true);
 
             _config = builder.Build();
 
-            var discordClient = new DiscordSocketClient(new DiscordSocketConfig
+            _discord = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Verbose,
                 MessageCacheSize = 1000
             });
 
             var services = new ServiceCollection()
-                .AddSingleton(discordClient)
+                .AddSingleton(_config)
+                .AddSingleton(_discord)
                 .AddSingleton<StartupService>()
-                .AddSingleton<GameTrackerService>()
-                .AddSingleton(_config);
+                .AddSingleton<GameTrackerService>();
 
             _serviceProvider = services.BuildServiceProvider();
-            
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
             _serviceProvider.GetRequiredService<GameTrackerService>();
+        }
 
-            await Task.Delay(-1);
+        public void Shutdown() 
+        {
+            _discord.LogoutAsync().GetAwaiter().GetResult();
         }
     }
 }
