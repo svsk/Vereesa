@@ -8,6 +8,9 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Vereesa.Core.Services;
+using Vereesa.Data;
+using Vereesa.Data.Models.GameTracking;
+using Vereesa.Data.Models.Giveaways;
 
 namespace Vereesa.Core
 {
@@ -41,11 +44,15 @@ namespace Vereesa.Core
                 .AddSingleton(_config)
                 .AddSingleton(_discord)
                 .AddSingleton<StartupService>()
-                .AddSingleton<GameTrackerService>();
+                .AddSingleton<GameTrackerService>()
+                .AddSingleton<GiveawayService>()
+                .AddScoped<JsonRepository<GameTrackMember>>()
+                .AddScoped<JsonRepository<Giveaway>>();
 
             _serviceProvider = services.BuildServiceProvider();
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
             _serviceProvider.GetRequiredService<GameTrackerService>();
+            _serviceProvider.GetRequiredService<GiveawayService>();
         }
 
         public void Shutdown() 

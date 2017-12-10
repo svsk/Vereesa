@@ -1,17 +1,23 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord;
 using Discord.WebSocket;
+using Vereesa.Data;
+using Vereesa.Data.Models.GameTracking;
 
 namespace Vereesa.Core.Services
 {
     public class GameTrackerService
     {
         private DiscordSocketClient _discord;
+        private JsonRepository<GameTrackMember> _trackingRepo;
 
-        public GameTrackerService(DiscordSocketClient discord)
+        public GameTrackerService(DiscordSocketClient discord, JsonRepository<GameTrackMember> trackingRepo)
         {
             _discord = discord;
+            _trackingRepo = trackingRepo;
             _discord.GuildAvailable += OnGuildAvailable;
             _discord.GuildMemberUpdated += OnMemberUpdated;
         }
@@ -29,23 +35,37 @@ namespace Vereesa.Core.Services
 
             if (beforeGame != null && (afterGame == null || afterGame.Value.Name != beforeGame.Value.Name))
             {
-                StoppedPlaying(userBeforeChange);
+                UpdateUserGameState(userBeforeChange, "stopped");
             }
             
             if (afterGame != null)
             {
-                StartedPlaying(userAfterChange);
+                UpdateUserGameState(userAfterChange, "started");
             }
         }
 
-        private void StartedPlaying(SocketGuildUser user)
+        private void UpdateUserGameState(SocketGuildUser user, string eventType)
         {
-            System.IO.File.AppendAllText(@"C:\temp\gamelog.json", $"{DateTime.UtcNow} | {user.Username} started playing {user.Game.Value.Name}.{Environment.NewLine}");
+            var userHistory = GetGameTrackMember(user);
+            var gameName = user.Game.Value.Name;
+            var gameHistory = userHistory.GetGameHistory(gameName);
+            gameHistory.Add(GameTrackEntry.CreateInstance(eventType));
+            _trackingRepo.Save();
         }
 
-        private void StoppedPlaying(SocketGuildUser user)
+        private GameTrackMember GetGameTrackMember(SocketGuildUser user) 
         {
-            System.IO.File.AppendAllText(@"C:\temp\gamelog.json", $"{DateTime.UtcNow} | {user.Username} stopped playing {user.Game.Value.Name}.{Environment.NewLine}");
+            var member = _trackingRepo.GetAll().FirstOrDefault(m => m.Id == user.Id.ToString());
+            if (member == null) 
+            {
+                member = new GameTrackMember();
+                member.Id = user.Id.ToString();
+                member.Username = user.Username;
+                member.GameHistory = new Dictionary<string, ICollection<GameTrackEntry>>();
+                _trackingRepo.Add(member);
+            }
+
+            return member;
         }
     }
 }
