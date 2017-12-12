@@ -2,5 +2,9 @@
 	"prefix": "!",
 	"tokens": {
 		"discord": null
+	},
+	"gameStateEmissions": {
+		"emissionEndpoint": "",
+		"emissionEndpointUserKey": ""
 	}
 }
