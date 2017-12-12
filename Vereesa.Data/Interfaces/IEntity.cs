@@ -1,4 +1,4 @@
-namespace Vereesa.Data
+namespace Vereesa.Data.Interfaces
 {
     public interface IEntity
     {

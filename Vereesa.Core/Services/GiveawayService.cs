@@ -3,8 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Vereesa.Core.Extensions;
-using Vereesa.Data;
 using Vereesa.Data.Models.Giveaways;
+using Vereesa.Data.Repositories;
 
 namespace Vereesa.Core.Services
 {

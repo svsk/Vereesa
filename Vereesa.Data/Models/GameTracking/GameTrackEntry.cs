@@ -1,4 +1,5 @@
 using System;
+using Vereesa.Data.Interfaces;
 
 namespace Vereesa.Data.Models.GameTracking
 {

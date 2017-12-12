@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using Vereesa.Data.Interfaces;
 
-namespace Vereesa.Data
+namespace Vereesa.Data.Repositories
 {
     public class JsonRepository<T> where T : IEntity
     {

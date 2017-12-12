@@ -11,6 +11,7 @@ using Vereesa.Core.Services;
 using Vereesa.Data;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Models.Giveaways;
+using Vereesa.Data.Repositories;
 
 namespace Vereesa.Core
 {

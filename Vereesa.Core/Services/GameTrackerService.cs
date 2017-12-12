@@ -7,8 +7,8 @@ using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
-using Vereesa.Data;
 using Vereesa.Data.Models.GameTracking;
+using Vereesa.Data.Repositories;
 
 namespace Vereesa.Core.Services
 {
