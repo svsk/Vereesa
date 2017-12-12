@@ -13,5 +13,6 @@ namespace Vereesa.Data.Models.Giveaways
         public int Duration { get; set; }
         public int NumberOfWinners { get; set; }
         public List<string> WinnerNames { get; set; }
+        public ulong AnnouncementMessageId { get; set; }
     }
 }

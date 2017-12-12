@@ -1,6 +1,9 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Timers;
+using Discord;
+using Discord.Rest;
 using Discord.WebSocket;
 using Vereesa.Core.Extensions;
 using Vereesa.Data.Models.Giveaways;
@@ -14,17 +17,49 @@ namespace Vereesa.Core.Services
         private JsonRepository<Giveaway> _giveawayRepo;
         private Giveaway _giveawayBeingCreated;
         private ISocketMessageChannel _configChannel;
+        private Timer _updater;
         private int _configStep = 0;
         private string _channelPromptMessage = ":tada: Alright! Let's set up your giveaway. First, what channel do you want the giveaway in?\r\nYou can type `cancel` at any time to cancel creation.\r\n\r\n`Please type the name of a channel in this server.`";
         private string _durationPromptMessage = ":tada: Sweet! The giveaway will be in {0}! Next, how long should the giveaway last?\r\n\r\n`Please enter the duration of the giveaway in seconds.\r\nAlternatively, enter a duration in minutes and include an M at the end.`";
         private string _winnerCountPromptMessage = ":tada: Neat! This giveaway will last **{0}** {1}! Now, how many winners should there be?\r\n\r\n`Please enter a number of winners between 1 and 15.`";
         private string _prizePromptMessage = ":tada: Ok! {0} winners it is! Finally, what do you want to give away?\r\n\r\n`Please enter the giveaway prize. This will also begin the giveaway.`";
 
+
         public GiveawayService(DiscordSocketClient discord, JsonRepository<Giveaway> giveawayRepo)
         {
             _discord = discord;
             _giveawayRepo = giveawayRepo;
             _discord.MessageReceived += EvaluateMessage;
+            InitiateUpdateTimer();
+        }
+
+        private void InitiateUpdateTimer()
+        {
+            _updater = new Timer();
+            _updater.Elapsed += UpdateActiveGiveaways;
+            _updater.Interval = 10000;
+            _updater.AutoReset = true;
+            _updater.Start();
+        }
+
+        private async void UpdateActiveGiveaways(object sender, ElapsedEventArgs args)
+        {
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var giveaways = _giveawayRepo.GetAll().Where(ga => now < ga.CreatedTimestamp + ga.Duration);
+            var discord = _discord;
+
+            foreach (var giveaway in giveaways)
+            {
+                var channelId = giveaway.TargetChannel.ToChannelId();
+
+                var channel = discord.Guilds.First().Channels.First(c => c.Id == channelId) as ISocketMessageChannel;
+                var message = await channel.GetMessageAsync(giveaway.AnnouncementMessageId) as SocketUserMessage;
+
+                await message.ModifyAsync((msg) =>
+                {
+                    msg.Embed = GetAnnouncementEmbed(giveaway).Build();
+                });
+            }
         }
 
         private async Task EvaluateMessage(SocketMessage message)
@@ -98,6 +133,11 @@ namespace Vereesa.Core.Services
                 _giveawayBeingCreated.Prize = message.Content;
                 _giveawayBeingCreated.CreatedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
+                var embed = GetAnnouncementEmbed(_giveawayBeingCreated);
+                var channel = _discord.GetChannel(_giveawayBeingCreated.TargetChannel.ToChannelId().Value) as ISocketMessageChannel;
+                var announcementMessage = await channel.SendMessageAsync(":tada:  **GIVEAWAY**  :tada:", false, embed);
+                _giveawayBeingCreated.AnnouncementMessageId = announcementMessage.Id;
+
                 _giveawayRepo.Add(_giveawayBeingCreated);
                 _giveawayRepo.Save();
 
@@ -106,6 +146,22 @@ namespace Vereesa.Core.Services
                 CleanupConfig();
                 return;
             }
+        }
+
+        private EmbedBuilder GetAnnouncementEmbed(Giveaway giveaway)
+        {
+            var duration = giveaway.Duration;
+            var created = giveaway.CreatedTimestamp;
+            var endsAt = created + duration;
+
+            var embed = new EmbedBuilder();
+            embed.Title = giveaway.Prize;
+            embed.Description = $"React with :tada: or any other emote to enter!\r\nTime remaining: **{endsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds()}** seconds";
+            embed.Footer = new EmbedFooterBuilder();
+            embed.Footer.Text = $"Ends at | {DateTimeOffset.FromUnixTimeSeconds(endsAt)}";
+            embed.Color = new Color(155, 89, 182);
+
+            return embed;
         }
 
         private void CleanupConfig()
