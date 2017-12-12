@@ -15,10 +15,10 @@ namespace Vereesa.Core.Services
         private Giveaway _giveawayBeingCreated;
         private ISocketMessageChannel _configChannel;
         private int _configStep = 0;
-        private string _channelPromptMessage = "Alright! Let's set up your giveaway. First, what channel do you want the giveaway in? You can type [cancel] at any time to cancel creation.";
-        private string _durationPromptMessage = "Sweet! The giveaway will be in {0}. Next how long should the giveaway last?";
-        private string _winnerCountPromptMessage = "Neat this giveaway will last {0} seconds! Now, how many winners will there be?";
-        private string _prizePromptMessage = "Ok! {0} winners it is! Finally what do you want to give away?";
+        private string _channelPromptMessage = ":tada: Alright! Let's set up your giveaway. First, what channel do you want the giveaway in?\r\nYou can type `cancel` at any time to cancel creation.\r\n\r\n`Please type the name of a channel in this server.`";
+        private string _durationPromptMessage = ":tada: Sweet! The giveaway will be in {0}! Next, how long should the giveaway last?\r\n\r\n`Please enter the duration of the giveaway in seconds.\r\nAlternatively, enter a duration in minutes and include an M at the end.`";
+        private string _winnerCountPromptMessage = ":tada: Neat! This giveaway will last **{0}** {1}! Now, how many winners should there be?\r\n\r\n`Please enter a number of winners between 1 and 15.`";
+        private string _prizePromptMessage = ":tada: Ok! {0} winners it is! Finally, what do you want to give away?\r\n\r\n`Please enter the giveaway prize. This will also begin the giveaway.`";
 
         public GiveawayService(DiscordSocketClient discord, JsonRepository<Giveaway> giveawayRepo)
         {
@@ -41,9 +41,9 @@ namespace Vereesa.Core.Services
                 return;
             }
 
-            if (message.Content == "cancel")
+            if (message.Content.ToLowerInvariant() == "cancel")
             {
-                await message.Channel.SendMessageAsync("OK! I'll forget what you told me about this giveaway. If you want to create a new one, simply use the command !gcreate to set one up.");
+                await message.Channel.SendMessageAsync(":boom: Alright, I guess we're not having a giveaway after all...\r\n\r\n`Giveaway creation has been cancelled.`");
                 CleanupConfig();
                 return;
             }
@@ -65,9 +65,9 @@ namespace Vereesa.Core.Services
 
             if (_configStep == 2)
             {
-                if (SetGiveAwayDuration(message))
+                if (SetGiveAwayDuration(message, out var isMinutes))
                 {
-                    await PromptUserForWinnerCount();
+                    await PromptUserForWinnerCount(isMinutes);
                     _configStep = 3;
                 }
                 else
@@ -101,7 +101,7 @@ namespace Vereesa.Core.Services
                 _giveawayRepo.Add(_giveawayBeingCreated);
                 _giveawayRepo.Save();
 
-                await message.Channel.SendMessageAsync($"Cool! I've created the giveaway in {_giveawayBeingCreated.TargetChannel}!");
+                await message.Channel.SendMessageAsync($":tada: Done! The giveaway for the `{_giveawayBeingCreated.Prize}` is starting in {_giveawayBeingCreated.TargetChannel}!");
 
                 CleanupConfig();
                 return;
@@ -120,9 +120,9 @@ namespace Vereesa.Core.Services
             await _configChannel.SendMessageAsync(String.Format(_prizePromptMessage, _giveawayBeingCreated.NumberOfWinners));
         }
 
-        private async Task PromptUserForWinnerCount()
+        private async Task PromptUserForWinnerCount(bool isMinutes)
         {
-            await _configChannel.SendMessageAsync(String.Format(_winnerCountPromptMessage, _giveawayBeingCreated.Duration));
+            await _configChannel.SendMessageAsync(String.Format(_winnerCountPromptMessage, isMinutes ? _giveawayBeingCreated.Duration / 60 : _giveawayBeingCreated.Duration, isMinutes ? "minutes" : "seconds"));
         }
 
         private async Task PromptUserForDuration()
@@ -146,14 +146,22 @@ namespace Vereesa.Core.Services
             return true;
         }
 
-        private bool SetGiveAwayDuration(SocketMessage message)
+        private bool SetGiveAwayDuration(SocketMessage message, out bool isMinutes)
         {
-            var parseSuccess = int.TryParse(message.Content, out var durationInSeconds);
+            var minuteSplit = message.Content.Split('m');
+            isMinutes = false;
+
+            if (minuteSplit.Length == 2 && message.Content.EndsWith("m"))
+            {
+                isMinutes = true;
+            }
+
+            var parseSuccess = int.TryParse(minuteSplit.First(), out var duration);
 
             if (!parseSuccess)
                 return false;
 
-            _giveawayBeingCreated.Duration = durationInSeconds;
+            _giveawayBeingCreated.Duration = isMinutes ? duration * 60 : duration;
 
             return true;
         }
@@ -177,7 +185,8 @@ namespace Vereesa.Core.Services
 
         private async Task StartGiveawayConfiguration(SocketMessage cmdMessage)
         {
-            if (cmdMessage.Channel.Id == (await cmdMessage.Author.GetOrCreateDMChannelAsync())?.Id) {
+            if (cmdMessage.Channel.Id == (await cmdMessage.Author.GetOrCreateDMChannelAsync())?.Id)
+            {
                 await cmdMessage.Channel.SendMessageAsync($"I can't create giveaways from direct messages. Please use the !gcreate command in a channel on the server where you want the giveaway to be created.");
                 return;
             }
