@@ -29,6 +29,7 @@ namespace Vereesa.Core
 
         public async Task StartupAsync()
         {
+            //Set up configuration
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppContext.BaseDirectory)
                 .AddJsonFile("config.json", optional: false, reloadOnChange: true)
@@ -41,12 +42,14 @@ namespace Vereesa.Core
             var gameStateEmissionSettings = new GameStateEmissionSettings();
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
 
+            //Set up discord client
             _discord = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Verbose,
                 MessageCacheSize = 1000
             });
 
+            //Set up a service provider with all relevant resources for DI
             IServiceCollection services = new ServiceCollection()
                 .AddSingleton(_discord)
                 .AddSingleton(discordSettings)
@@ -58,7 +61,10 @@ namespace Vereesa.Core
                 .AddScoped<JsonRepository<Giveaway>>()
                 .AddSingleton<Random>();          
 
+            //Build the service provider
             _serviceProvider = services.BuildServiceProvider();
+
+            //Start the desired services
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
             _serviceProvider.GetRequiredService<GameTrackerService>();
             _serviceProvider.GetRequiredService<GiveawayService>();
