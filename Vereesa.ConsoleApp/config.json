@@ -1,10 +1,10 @@
 {
 	"prefix": "!",
-	"tokens": {
-		"discord": null
+	"DiscordSettings": {
+		"Token": null
 	},
-	"gameStateEmissions": {
-		"emissionEndpoint": "",
-		"emissionEndpointUserKey": ""
+	"GameStateEmissionSettings": {
+		"EmissionEndpoint": "",
+		"EmissionEndpointUserKey": ""
 	}
 }

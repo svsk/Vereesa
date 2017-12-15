@@ -7,12 +7,13 @@ using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Vereesa.Core.Configuration;
 using Vereesa.Core.Services;
 using Vereesa.Data;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Models.Giveaways;
 using Vereesa.Data.Repositories;
-
+ 
 namespace Vereesa.Core
 {
     public class VereesaClient
@@ -34,6 +35,11 @@ namespace Vereesa.Core
                 .AddJsonFile("config.Local.json", optional: true, reloadOnChange: true);
 
             _config = builder.Build();
+            
+            var discordSettings = new DiscordSettings();
+            _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
+            var gameStateEmissionSettings = new GameStateEmissionSettings();
+            _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
 
             _discord = new DiscordSocketClient(new DiscordSocketConfig
             {
@@ -41,15 +47,16 @@ namespace Vereesa.Core
                 MessageCacheSize = 1000
             });
 
-            var services = new ServiceCollection()
-                .AddSingleton(_config)
+            IServiceCollection services = new ServiceCollection()
                 .AddSingleton(_discord)
+                .AddSingleton(discordSettings)
+                .AddSingleton(gameStateEmissionSettings)
                 .AddSingleton<StartupService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
-                .AddSingleton<Random>();
+                .AddSingleton<Random>();          
 
             _serviceProvider = services.BuildServiceProvider();
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();

@@ -7,6 +7,7 @@ using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Vereesa.Core.Configuration;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Repositories;
 
@@ -16,15 +17,15 @@ namespace Vereesa.Core.Services
     {
         private DiscordSocketClient _discord;
         private JsonRepository<GameTrackMember> _trackingRepo;
-        private IConfigurationRoot _options;
+        private GameStateEmissionSettings _options;
 
-        public GameTrackerService(DiscordSocketClient discord, JsonRepository<GameTrackMember> trackingRepo, IConfigurationRoot options)
+        public GameTrackerService(DiscordSocketClient discord, JsonRepository<GameTrackMember> trackingRepo, GameStateEmissionSettings emissionSettings)
         {
             _discord = discord;
             _trackingRepo = trackingRepo;
             _discord.GuildAvailable += OnGuildAvailable;
             _discord.GuildMemberUpdated += OnMemberUpdated;
-            _options = options;
+            _options = emissionSettings;
         }
 
         private async Task OnGuildAvailable(SocketGuild guild)
@@ -102,8 +103,8 @@ namespace Vereesa.Core.Services
 
             using (var client = new HttpClient()) 
             {
-                client.DefaultRequestHeaders.Add("user-key", _options["gameStateEmissions:emissionEndpointUserKey"]);
-                var response = await client.PostAsync(_options["gameStateEmissions:emissionEndpoint"], new FormUrlEncodedContent(postContent));
+                client.DefaultRequestHeaders.Add("user-key", _options.EmissionEndpointUserKey);
+                var response = await client.PostAsync(_options.EmissionEndpoint, new FormUrlEncodedContent(postContent));
                 var responseContent = await response.Content.ReadAsStringAsync();
                 Console.WriteLine(responseContent);
             }
