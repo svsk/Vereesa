@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
@@ -14,6 +15,7 @@ namespace Vereesa.Core.Services
     public class GiveawayService
     {
         private DiscordSocketClient _discord;
+        private Random _rng;
         private JsonRepository<Giveaway> _giveawayRepo;
         private Giveaway _giveawayBeingCreated;
         private ISocketMessageChannel _configChannel;
@@ -23,13 +25,14 @@ namespace Vereesa.Core.Services
         private string _durationPromptMessage = ":tada: Sweet! The giveaway will be in {0}! Next, how long should the giveaway last?\r\n\r\n`Please enter the duration of the giveaway in seconds.\r\nAlternatively, enter a duration in minutes and include an M at the end.`";
         private string _winnerCountPromptMessage = ":tada: Neat! This giveaway will last **{0}** {1}! Now, how many winners should there be?\r\n\r\n`Please enter a number of winners between 1 and 15.`";
         private string _prizePromptMessage = ":tada: Ok! {0} winners it is! Finally, what do you want to give away?\r\n\r\n`Please enter the giveaway prize. This will also begin the giveaway.`";
+        
 
-
-        public GiveawayService(DiscordSocketClient discord, JsonRepository<Giveaway> giveawayRepo)
+        public GiveawayService(DiscordSocketClient discord, JsonRepository<Giveaway> giveawayRepo, Random rng)
         {
             _discord = discord;
             _giveawayRepo = giveawayRepo;
             _discord.MessageReceived += EvaluateMessage;
+            _rng = rng;
             InitiateUpdateTimer();
         }
 
@@ -45,21 +48,86 @@ namespace Vereesa.Core.Services
         private async void UpdateActiveGiveaways(object sender, ElapsedEventArgs args)
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var giveaways = _giveawayRepo.GetAll().Where(ga => now < ga.CreatedTimestamp + ga.Duration);
-            var discord = _discord;
+            var progressingGiveaways = _giveawayRepo.GetAll().Where(ga => now < ga.CreatedTimestamp + ga.Duration);
+            var unreslovedGiveaways = _giveawayRepo.GetAll().Where(ga => now > ga.CreatedTimestamp + ga.Duration && ga.WinnerNames == null);
 
-            foreach (var giveaway in giveaways)
+            foreach (var giveaway in progressingGiveaways)
             {
-                var channelId = giveaway.TargetChannel.ToChannelId();
-
-                var channel = discord.Guilds.First().Channels.First(c => c.Id == channelId) as ISocketMessageChannel;
-                var message = await channel.GetMessageAsync(giveaway.AnnouncementMessageId) as SocketUserMessage;
-
+                var message = await GetGiveawayMessage(giveaway);
                 await message.ModifyAsync((msg) =>
                 {
                     msg.Embed = GetAnnouncementEmbed(giveaway).Build();
                 });
             }
+
+            foreach (var giveaway in unreslovedGiveaways) 
+            {
+                await ResolveGiveaway(giveaway);
+                await AnnounceWinners(giveaway);
+            }
+        }
+
+        private async Task AnnounceWinners(Giveaway giveaway)
+        {
+            var channel = GetChannelById(giveaway.TargetChannel.ToChannelId());
+
+            if (giveaway.WinnerNames.Count == 0) 
+            {
+                await channel.SendMessageAsync($"A winner for the **{giveaway.Prize}** could not be determined.");
+            } 
+            else 
+            {
+                await channel.SendMessageAsync($"Congratulations {string.Join(", ", giveaway.WinnerNames)}! You won the **{giveaway.Prize}**!");
+            }
+        }
+
+        private async Task ResolveGiveaway(Giveaway giveaway)
+        {
+            var message = await GetGiveawayMessage(giveaway);
+            var participants = await GetReactingUsers(message);
+            var winners = new List<IUser>();
+
+            if (giveaway.NumberOfWinners > participants.Count) 
+            {
+                giveaway.NumberOfWinners = participants.Count;
+            }
+            
+            for (var i = 0; i < giveaway.NumberOfWinners; i++) 
+            {
+                var winnerIndex = _rng.Next(0, participants.Count - 1);
+                var winner = participants[winnerIndex];
+                winners.Add(winner);
+                participants.Remove(winner);
+            }
+            
+            giveaway.WinnerNames = winners.Select(w => w.Username).ToList();
+            _giveawayRepo.AddOrEdit(giveaway);
+            _giveawayRepo.Save();
+        }
+
+        private async Task<List<IUser>> GetReactingUsers(IUserMessage message)
+        {
+            var reactingUsers = new List<IUser>();
+
+            foreach (IEmote reaction in message.Reactions.Keys) 
+            {
+                 reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction.Name));
+            }
+
+            return reactingUsers.GroupBy(u => u.Id).Select(c => c.First()).ToList();
+        }
+
+        private async Task<IUserMessage> GetGiveawayMessage(Giveaway giveaway)
+        {
+            var channelId = giveaway.TargetChannel.ToChannelId();
+            var channel = GetChannelById(channelId);
+            var iMessage =  await channel.GetMessageAsync(giveaway.AnnouncementMessageId);
+            return iMessage as IUserMessage;
+        }
+
+        private ISocketMessageChannel GetChannelById(ulong? channelId)
+        {
+            return _discord.Guilds.Where(g => g.Channels.Any(c => c.Id == channelId)).FirstOrDefault().Channels.First(c => c.Id == channelId) as ISocketMessageChannel;
         }
 
         private async Task EvaluateMessage(SocketMessage message)
@@ -100,7 +168,7 @@ namespace Vereesa.Core.Services
 
             if (_configStep == 2)
             {
-                if (SetGiveAwayDuration(message, out var isMinutes))
+                if (SetGiveawayDuration(message, out var isMinutes))
                 {
                     await PromptUserForWinnerCount(isMinutes);
                     _configStep = 3;
@@ -135,7 +203,7 @@ namespace Vereesa.Core.Services
 
                 var embed = GetAnnouncementEmbed(_giveawayBeingCreated);
                 var channel = _discord.GetChannel(_giveawayBeingCreated.TargetChannel.ToChannelId().Value) as ISocketMessageChannel;
-                var announcementMessage = await channel.SendMessageAsync(":tada:  **GIVEAWAY**  :tada:", false, embed);
+                var announcementMessage = await channel.SendMessageAsync(":tada:  **G I V E A W A Y**  :tada:", false, embed);
                 _giveawayBeingCreated.AnnouncementMessageId = announcementMessage.Id;
 
                 _giveawayRepo.Add(_giveawayBeingCreated);
@@ -202,7 +270,7 @@ namespace Vereesa.Core.Services
             return true;
         }
 
-        private bool SetGiveAwayDuration(SocketMessage message, out bool isMinutes)
+        private bool SetGiveawayDuration(SocketMessage message, out bool isMinutes)
         {
             var minuteSplit = message.Content.Split('m');
             isMinutes = false;

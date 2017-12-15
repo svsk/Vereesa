@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Vereesa.Data.Interfaces;
+using Vereesa.Data.Models.Giveaways;
 
 namespace Vereesa.Data.Repositories
 {
@@ -51,6 +52,18 @@ namespace Vereesa.Data.Repositories
             foreach (var entity in _context)
             {
                 File.WriteAllText($"{_filePath}/{typeof(T).Name}.{entity.Id}.json", JsonConvert.SerializeObject(entity));
+            }
+        }
+
+        public void AddOrEdit(T entity)
+        {
+            if (_context.Any(e => e.Id == entity.Id))
+            {
+                //do nothing? or replace? its probably the same object, but who knows?
+            }
+            else
+            {
+                Add(entity);
             }
         }
     }

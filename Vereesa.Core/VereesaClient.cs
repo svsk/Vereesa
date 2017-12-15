@@ -48,7 +48,8 @@ namespace Vereesa.Core
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
-                .AddScoped<JsonRepository<Giveaway>>();
+                .AddScoped<JsonRepository<Giveaway>>()
+                .AddSingleton<Random>();
 
             _serviceProvider = services.BuildServiceProvider();
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
