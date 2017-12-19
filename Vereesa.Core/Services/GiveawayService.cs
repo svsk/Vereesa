@@ -38,24 +38,28 @@ namespace Vereesa.Core.Services
 
         private async Task EvaluateMessage(SocketMessage message)
         {
+            var command = message.Content.Split(' ').FirstOrDefault()?.ToLowerInvariant();
+            if (command == "cancel") 
+            {
+                await CancelGiveawayConfiguration(message);
+                return;
+            }
+
+            if (command == "!gcreate") 
+            {
+                await StartGiveawayConfiguration(message);
+                return;
+            }
+
+            if (command == "!gstart") 
+            {
+                await StartGiveaway(message);
+                return;
+            }
+
             if (MessageCanConfigure(message)) 
             {
                 await ConfigureCurrentGiveaway(message);
-            }
-
-            var command = message.Content.Split(' ').FirstOrDefault()?.ToLowerInvariant();
-
-            switch (command) 
-            {
-                case "!gcreate":
-                    await StartGiveawayConfiguration(message);
-                    break;
-                case "!gstart":
-                    await StartGiveaway(message);
-                    break;
-                case "cancel":
-                    await CancelGiveawayConfiguration(message);
-                    break;
             }
         }
 
