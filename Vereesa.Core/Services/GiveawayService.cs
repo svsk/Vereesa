@@ -38,6 +38,11 @@ namespace Vereesa.Core.Services
 
         private async Task EvaluateMessage(SocketMessage message)
         {
+            if (MessageCanConfigure(message)) 
+            {
+                await ConfigureCurrentGiveaway(message);
+            }
+
             var command = message.Content.Split(' ').FirstOrDefault()?.ToLowerInvariant();
 
             switch (command) 
@@ -51,11 +56,6 @@ namespace Vereesa.Core.Services
                 case "cancel":
                     await CancelGiveawayConfiguration(message);
                     break;
-            }
-
-            if (MessageCanConfigure(message)) 
-            {
-                await ConfigureCurrentGiveaway(message);
             }
         }
 
