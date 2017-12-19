@@ -77,12 +77,12 @@ namespace Vereesa.Core.Services
         }
 
         private async Task ConfigureCurrentGiveaway(SocketMessage message) 
-        {   
+        {  
+            
             switch (_configStep) 
             {
                 case 0:
                     InitializeConfigObject(message.Channel, message.Author.Username);
-
                     await message.Channel.SendMessageAsync(_channelPromptMessage);
                     _configStep = 1;
                     break;
@@ -126,7 +126,7 @@ namespace Vereesa.Core.Services
                 case 4:
                     _giveawayBeingCreated.Prize = message.Content;
                     await FinalizeAndAnnounceNewGiveaway();
-                    await message.Channel.SendMessageAsync($":tada: Done! The giveaway for the `{_giveawayBeingCreated.Prize}` is starting in {_giveawayBeingCreated.TargetChannel}!");
+                    await message.Channel.SendMessageAsync($":tada: Done! The giveaway for `{_giveawayBeingCreated.Prize}` is starting in {_giveawayBeingCreated.TargetChannel}!");
                     CleanupConfig();
                     break;
             }
@@ -327,11 +327,11 @@ namespace Vereesa.Core.Services
 
             if (giveaway.WinnerNames.Count == 0) 
             {
-                await channel.SendMessageAsync($"A winner for the **{giveaway.Prize}** could not be determined.");
+                await channel.SendMessageAsync($"A winner for **{giveaway.Prize}** could not be determined.");
             } 
             else 
             {
-                await channel.SendMessageAsync($"Congratulations {string.Join(", ", giveaway.WinnerNames)}! You won the **{giveaway.Prize}**!");
+                await channel.SendMessageAsync($"Congratulations {string.Join(", ", giveaway.WinnerNames)}! You won **{giveaway.Prize}**!");
             }
         }
 
