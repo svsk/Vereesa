@@ -36,7 +36,261 @@ namespace Vereesa.Core.Services
             InitiateUpdateTimer();
         }
 
-        private void InitiateUpdateTimer()
+        private async Task EvaluateMessage(SocketMessage message)
+        {
+            var command = message.Content.Split(' ').FirstOrDefault()?.ToLowerInvariant();
+
+            switch (command) 
+            {
+                case "!gcreate":
+                    await StartGiveawayConfiguration(message);
+                    break;
+                case "!gstart":
+                    await StartGiveaway(message);
+                    break;
+                case "cancel":
+                    await CancelGiveawayConfiguration(message);
+                    break;
+            }
+
+            if (MessageCanConfigure(message)) 
+            {
+                await ConfigureCurrentGiveaway(message);
+            }
+        }
+
+        private async Task StartGiveawayConfiguration(SocketMessage cmdMessage)
+        {
+            if (cmdMessage.Channel.Id == (await cmdMessage.Author.GetOrCreateDMChannelAsync())?.Id)
+            {
+                await cmdMessage.Channel.SendMessageAsync($"I can't create giveaways from direct messages. Please use the !gcreate command in a channel on the server where you want the giveaway to be created.");
+                return;
+            }
+
+            if (_giveawayBeingCreated != null)
+            {
+                await cmdMessage.Channel.SendMessageAsync($"{_giveawayBeingCreated.CreatedBy} is currently creating a giveaway. Please wait until they have finished their configuration to create another.");
+                return;
+            }
+
+            await ConfigureCurrentGiveaway(cmdMessage);
+        }
+
+        private async Task ConfigureCurrentGiveaway(SocketMessage message) 
+        {   
+            switch (_configStep) 
+            {
+                case 0:
+                    InitializeConfigObject(message.Channel, message.Author.Username);
+
+                    await message.Channel.SendMessageAsync(_channelPromptMessage);
+                    _configStep = 1;
+                    break;
+
+                case 1:
+                    if (SetGiveawayChannel(message.Content))
+                    {
+                        await PromptUserForDuration();
+                        _configStep = 2;
+                    }
+                    else
+                    {
+                        await _configChannel.SendMessageAsync("Sorry, I didn't really understand which channel you meant. Please try again or type 'cancel' to cancel creation.");
+                    }
+                    break;
+
+                case 2:
+                     if (SetGiveawayDuration(message.Content, out var isMinutes))
+                    {
+                        await PromptUserForWinnerCount(isMinutes);
+                        _configStep = 3;
+                    }
+                    else
+                    {
+                        await _configChannel.SendMessageAsync("Sorry, I didn't really understand how long you wanted it to go on for. Please try again or type 'cancel' to cancel creation.");
+                    }
+                    break;
+
+                case 3:
+                    if (SetGiveawayWinnerCount(message.Content))
+                    {
+                        await PromptUserForPrize();
+                        _configStep = 4;
+                    }
+                    else
+                    {
+                        await _configChannel.SendMessageAsync("Sorry, I didn't really understand how many winners you wanted. Please try again or type 'cancel' to cancel creation.");
+                    }
+                    break;
+
+                case 4:
+                    _giveawayBeingCreated.Prize = message.Content;
+                    await FinalizeAndAnnounceNewGiveaway();
+                    await message.Channel.SendMessageAsync($":tada: Done! The giveaway for the `{_giveawayBeingCreated.Prize}` is starting in {_giveawayBeingCreated.TargetChannel}!");
+                    CleanupConfig();
+                    break;
+            }
+        }
+
+        private async Task FinalizeAndAnnounceNewGiveaway()
+        {
+            _giveawayBeingCreated.CreatedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var embed = GetAnnouncementEmbed(_giveawayBeingCreated);
+            var channel = _discord.GetChannel(_giveawayBeingCreated.TargetChannel.ToChannelId().Value) as ISocketMessageChannel;
+            var announcementMessage = await channel.SendMessageAsync(":tada:  **G I V E A W A Y**  :tada:", false, embed);
+            _giveawayBeingCreated.AnnouncementMessageId = announcementMessage.Id;
+            _giveawayRepo.Add(_giveawayBeingCreated);
+            _giveawayRepo.Save();
+        }
+
+        private async Task CancelGiveawayConfiguration(SocketMessage message)
+        {
+            if (MessageCanConfigure(message) && message.Content.ToLowerInvariant() == "cancel")
+            {
+                await message.Channel.SendMessageAsync(":boom: Alright, I guess we're not having a giveaway after all...\r\n\r\n`Giveaway creation has been cancelled.`");
+                CleanupConfig();
+            }
+        }        
+
+        private async Task StartGiveaway(SocketMessage message)
+        {
+            var commandParams = message.Content.Split(' ').Skip(1).ToList();
+            var time = commandParams.FirstOrDefault();
+            var prize = string.Join(" ", commandParams.Skip(1));
+            var channel = message.Channel;
+
+            InitializeConfigObject(channel, message.Author.Username);
+            SetGiveawayChannel(message.Channel.Id.ToString());
+            SetGiveawayDuration(time, out var isMinutes);
+            SetGiveawayWinnerCount("1");
+            _giveawayBeingCreated.Prize = prize;
+            await FinalizeAndAnnounceNewGiveaway();
+            CleanupConfig();
+        }
+
+        private bool SetGiveawayChannel(string messageContent)
+        {
+            var guild = _discord.Guilds.Where(g => g.Channels.Any(c => c.Id == _configChannel.Id)).FirstOrDefault();
+            var channelId = messageContent.ToChannelId();
+
+            var targetChannel = guild.Channels.FirstOrDefault(c => c.Id == channelId);
+            if (targetChannel == null)
+            {
+                return false;
+            }
+
+            _giveawayBeingCreated.TargetChannel = messageContent;
+
+            return true;
+        }
+
+        private bool SetGiveawayDuration(string messageContent, out bool isMinutes)
+        {
+            var minuteSplit = messageContent.Split('m');
+            isMinutes = false;
+
+            if (minuteSplit.Length == 2 && messageContent.EndsWith("m"))
+            {
+                isMinutes = true;
+            }
+
+            var parseSuccess = int.TryParse(minuteSplit.First(), out var duration);
+
+            if (!parseSuccess)
+                return false;
+
+            _giveawayBeingCreated.Duration = isMinutes ? duration * 60 : duration;
+
+            return true;
+        }
+
+        private bool SetGiveawayWinnerCount(string messageContent)
+        {
+            var parseSuccess = int.TryParse(messageContent, out var numberOfWinners);
+
+            if (!parseSuccess)
+                return false;
+
+            _giveawayBeingCreated.NumberOfWinners = numberOfWinners;
+
+            return true;
+        }
+
+        #region Config prompts 
+
+        private async Task PromptUserForPrize()
+        {
+            await _configChannel.SendMessageAsync(String.Format(_prizePromptMessage, _giveawayBeingCreated.NumberOfWinners));
+        }
+
+        private async Task PromptUserForWinnerCount(bool isMinutes)
+        {
+            await _configChannel.SendMessageAsync(String.Format(_winnerCountPromptMessage, isMinutes ? _giveawayBeingCreated.Duration / 60 : _giveawayBeingCreated.Duration, isMinutes ? "minutes" : "seconds"));
+        }
+
+        private async Task PromptUserForDuration()
+        {
+            await _configChannel.SendMessageAsync(String.Format(_durationPromptMessage, _giveawayBeingCreated.TargetChannel));
+        }
+
+        #endregion
+
+        #region Helpers
+
+         private async Task<IUserMessage> GetGiveawayMessage(Giveaway giveaway)
+        {
+            var channelId = giveaway.TargetChannel.ToChannelId();
+            var channel = GetChannelById(channelId);
+            var iMessage =  await channel.GetMessageAsync(giveaway.AnnouncementMessageId);
+            return iMessage as IUserMessage;
+        }
+
+        private ISocketMessageChannel GetChannelById(ulong? channelId)
+        {
+            return _discord.Guilds.Where(g => g.Channels.Any(c => c.Id == channelId)).FirstOrDefault().Channels.First(c => c.Id == channelId) as ISocketMessageChannel;
+        }
+
+        private EmbedBuilder GetAnnouncementEmbed(Giveaway giveaway)
+        {
+            var duration = giveaway.Duration;
+            var created = giveaway.CreatedTimestamp;
+            var endsAt = created + duration;
+
+            var embed = new EmbedBuilder();
+            embed.Title = giveaway.Prize;
+            embed.Description = $"React with :tada: or any other emote to enter!\r\nTime remaining: **{endsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds()}** seconds";
+            embed.Footer = new EmbedFooterBuilder();
+            embed.Footer.Text = $"Ends at | {DateTimeOffset.FromUnixTimeSeconds(endsAt)}";
+            embed.Color = new Color(155, 89, 182);
+
+            return embed;
+        }
+
+        private void InitializeConfigObject(ISocketMessageChannel channel, string authorUsername)
+        {
+            _configChannel = channel;
+            _giveawayBeingCreated = new Giveaway();
+            _giveawayBeingCreated.Id = Guid.NewGuid().ToString();
+            _giveawayBeingCreated.CreatedBy = authorUsername;
+        }
+
+        private void CleanupConfig()
+        {
+            _configStep = 0;
+            _giveawayBeingCreated = null;
+            _configChannel = null;
+        }
+
+        private bool MessageCanConfigure(SocketMessage message)
+        {
+            return _giveawayBeingCreated != null && message.Author.Username == _giveawayBeingCreated.CreatedBy && message.Channel.Id == _configChannel.Id;
+        }
+
+        #endregion
+        
+        #region Periodic updates
+
+         private void InitiateUpdateTimer()
         {
             _updater = new Timer();
             _updater.Elapsed += UpdateActiveGiveaways;
@@ -111,223 +365,18 @@ namespace Vereesa.Core.Services
 
             foreach (IEmote reaction in message.Reactions.Keys) 
             {
-                 reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction.Name));
+                var emojiString = reaction.ToString();
+                var emojiIsCustom = emojiString.StartsWith("<:");
+
+                if (emojiIsCustom)
+                    reactingUsers.AddRange(await message.GetReactionUsersAsync(emojiString.Replace("<:", string.Empty).Replace(">", string.Empty)));
+                else
+                    reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction.Name));
             }
 
             return reactingUsers.GroupBy(u => u.Id).Select(c => c.First()).ToList();
         }
 
-        private async Task<IUserMessage> GetGiveawayMessage(Giveaway giveaway)
-        {
-            var channelId = giveaway.TargetChannel.ToChannelId();
-            var channel = GetChannelById(channelId);
-            var iMessage =  await channel.GetMessageAsync(giveaway.AnnouncementMessageId);
-            return iMessage as IUserMessage;
-        }
-
-        private ISocketMessageChannel GetChannelById(ulong? channelId)
-        {
-            return _discord.Guilds.Where(g => g.Channels.Any(c => c.Id == channelId)).FirstOrDefault().Channels.First(c => c.Id == channelId) as ISocketMessageChannel;
-        }
-
-        private async Task EvaluateMessage(SocketMessage message)
-        {
-            if (message.Content == "!gcreate")
-            {
-                await StartGiveawayConfiguration(message);
-                _configStep = 1;
-                return;
-            }
-
-            if (!MessageCanConfigure(message))
-            {
-                return;
-            }
-
-            if (message.Content.ToLowerInvariant() == "cancel")
-            {
-                await message.Channel.SendMessageAsync(":boom: Alright, I guess we're not having a giveaway after all...\r\n\r\n`Giveaway creation has been cancelled.`");
-                CleanupConfig();
-                return;
-            }
-
-            if (_configStep == 1)
-            {
-                if (SetGiveawayChannel(message))
-                {
-                    await PromptUserForDuration();
-                    _configStep = 2;
-                }
-                else
-                {
-                    await _configChannel.SendMessageAsync("Sorry, I didn't really understand which channel you meant. Please try again or type 'cancel' to cancel creation.");
-                }
-
-                return;
-            }
-
-            if (_configStep == 2)
-            {
-                if (SetGiveawayDuration(message, out var isMinutes))
-                {
-                    await PromptUserForWinnerCount(isMinutes);
-                    _configStep = 3;
-                }
-                else
-                {
-                    await _configChannel.SendMessageAsync("Sorry, I didn't really understand how long you wanted it to go on for. Please try again or type 'cancel' to cancel creation.");
-                }
-
-                return;
-            }
-
-            if (_configStep == 3)
-            {
-                if (SetGiveawayWinnerCount(message))
-                {
-                    await PromptUserForPrize();
-                    _configStep = 4;
-                }
-                else
-                {
-                    await _configChannel.SendMessageAsync("Sorry, I didn't really understand how many winners you wanted. Please try again or type 'cancel' to cancel creation.");
-                }
-
-                return;
-            }
-
-            if (_configStep == 4)
-            {
-                _giveawayBeingCreated.Prize = message.Content;
-                _giveawayBeingCreated.CreatedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-                var embed = GetAnnouncementEmbed(_giveawayBeingCreated);
-                var channel = _discord.GetChannel(_giveawayBeingCreated.TargetChannel.ToChannelId().Value) as ISocketMessageChannel;
-                var announcementMessage = await channel.SendMessageAsync(":tada:  **G I V E A W A Y**  :tada:", false, embed);
-                _giveawayBeingCreated.AnnouncementMessageId = announcementMessage.Id;
-
-                _giveawayRepo.Add(_giveawayBeingCreated);
-                _giveawayRepo.Save();
-
-                await message.Channel.SendMessageAsync($":tada: Done! The giveaway for the `{_giveawayBeingCreated.Prize}` is starting in {_giveawayBeingCreated.TargetChannel}!");
-
-                CleanupConfig();
-                return;
-            }
-        }
-
-        private EmbedBuilder GetAnnouncementEmbed(Giveaway giveaway)
-        {
-            var duration = giveaway.Duration;
-            var created = giveaway.CreatedTimestamp;
-            var endsAt = created + duration;
-
-            var embed = new EmbedBuilder();
-            embed.Title = giveaway.Prize;
-            embed.Description = $"React with :tada: or any other emote to enter!\r\nTime remaining: **{endsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds()}** seconds";
-            embed.Footer = new EmbedFooterBuilder();
-            embed.Footer.Text = $"Ends at | {DateTimeOffset.FromUnixTimeSeconds(endsAt)}";
-            embed.Color = new Color(155, 89, 182);
-
-            return embed;
-        }
-
-        private void CleanupConfig()
-        {
-            _configStep = 0;
-            _giveawayBeingCreated = null;
-            _configChannel = null;
-        }
-
-        private async Task PromptUserForPrize()
-        {
-            await _configChannel.SendMessageAsync(String.Format(_prizePromptMessage, _giveawayBeingCreated.NumberOfWinners));
-        }
-
-        private async Task PromptUserForWinnerCount(bool isMinutes)
-        {
-            await _configChannel.SendMessageAsync(String.Format(_winnerCountPromptMessage, isMinutes ? _giveawayBeingCreated.Duration / 60 : _giveawayBeingCreated.Duration, isMinutes ? "minutes" : "seconds"));
-        }
-
-        private async Task PromptUserForDuration()
-        {
-            await _configChannel.SendMessageAsync(String.Format(_durationPromptMessage, _giveawayBeingCreated.TargetChannel));
-        }
-
-        private bool SetGiveawayChannel(SocketMessage message)
-        {
-            var guild = _discord.Guilds.Where(g => g.Channels.Any(c => c.Id == _configChannel.Id)).FirstOrDefault();
-            var channelId = message.Content.ToChannelId();
-
-            var targetChannel = guild.Channels.FirstOrDefault(c => c.Id == channelId);
-            if (targetChannel == null)
-            {
-                return false;
-            }
-
-            _giveawayBeingCreated.TargetChannel = message.Content;
-
-            return true;
-        }
-
-        private bool SetGiveawayDuration(SocketMessage message, out bool isMinutes)
-        {
-            var minuteSplit = message.Content.Split('m');
-            isMinutes = false;
-
-            if (minuteSplit.Length == 2 && message.Content.EndsWith("m"))
-            {
-                isMinutes = true;
-            }
-
-            var parseSuccess = int.TryParse(minuteSplit.First(), out var duration);
-
-            if (!parseSuccess)
-                return false;
-
-            _giveawayBeingCreated.Duration = isMinutes ? duration * 60 : duration;
-
-            return true;
-        }
-
-        private bool SetGiveawayWinnerCount(SocketMessage message)
-        {
-            var parseSuccess = int.TryParse(message.Content, out var numberOfWinners);
-
-            if (!parseSuccess)
-                return false;
-
-            _giveawayBeingCreated.NumberOfWinners = numberOfWinners;
-
-            return true;
-        }
-
-        private bool MessageCanConfigure(SocketMessage message)
-        {
-            return _giveawayBeingCreated != null && message.Author.Username == _giveawayBeingCreated.CreatedBy && message.Channel.Id == _configChannel.Id;
-        }
-
-        private async Task StartGiveawayConfiguration(SocketMessage cmdMessage)
-        {
-            if (cmdMessage.Channel.Id == (await cmdMessage.Author.GetOrCreateDMChannelAsync())?.Id)
-            {
-                await cmdMessage.Channel.SendMessageAsync($"I can't create giveaways from direct messages. Please use the !gcreate command in a channel on the server where you want the giveaway to be created.");
-                return;
-            }
-
-            if (_giveawayBeingCreated != null)
-            {
-                await cmdMessage.Channel.SendMessageAsync($"{_giveawayBeingCreated.CreatedBy} is currently creating a giveaway. Please wait until they have finished their configuration to create another.");
-                return;
-            }
-
-            _configChannel = cmdMessage.Channel;
-            _giveawayBeingCreated = new Giveaway();
-            _giveawayBeingCreated.Id = Guid.NewGuid().ToString();
-            _giveawayBeingCreated.CreatedBy = cmdMessage.Author.Username;
-
-            await cmdMessage.Channel.SendMessageAsync(_channelPromptMessage);
-            _configStep = 1;
-        }
+        #endregion
     }
 }

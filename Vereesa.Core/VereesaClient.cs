@@ -54,12 +54,12 @@ namespace Vereesa.Core
                 .AddSingleton(_discord)
                 .AddSingleton(discordSettings)
                 .AddSingleton(gameStateEmissionSettings)
+                .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
-                .AddScoped<JsonRepository<Giveaway>>()
-                .AddSingleton<Random>();          
+                .AddScoped<JsonRepository<Giveaway>>();
 
             //Build the service provider
             _serviceProvider = services.BuildServiceProvider();
