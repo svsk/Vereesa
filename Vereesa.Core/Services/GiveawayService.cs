@@ -57,6 +57,12 @@ namespace Vereesa.Core.Services
                 return;
             }
 
+            if (command == "!greroll") 
+            {
+                await RerollGiveaway(message);
+                return;
+            }
+
             if (MessageCanConfigure(message)) 
             {
                 await ConfigureCurrentGiveaway(message);
@@ -170,6 +176,23 @@ namespace Vereesa.Core.Services
             _giveawayBeingCreated.Prize = prize;
             await FinalizeAndAnnounceNewGiveaway();
             CleanupConfig();
+        }
+
+        private async Task RerollGiveaway(SocketMessage message)
+        {
+            var giveaway = _giveawayRepo.GetAll()
+                .Where(g =>     
+                    g.TargetChannel.ToChannelId() == message.Channel.Id && 
+                    g.WinnerNames != null && 
+                    g.CreatedBy == message.Author.Username)
+                .OrderByDescending(g => g.CreatedTimestamp + g.Duration)
+                .FirstOrDefault();
+
+            if (giveaway != null) 
+            {
+                await ResolveGiveaway(giveaway);
+                await AnnounceWinners(giveaway);
+            }
         }
 
         private bool SetGiveawayChannel(string messageContent)
