@@ -25,7 +25,7 @@ namespace Vereesa.Core.Services
         private string _durationPromptMessage = ":tada: Sweet! The giveaway will be in {0}! Next, how long should the giveaway last?\r\n\r\n`Please enter the duration of the giveaway in seconds.\r\nAlternatively, enter a duration in minutes and include an M at the end.`";
         private string _winnerCountPromptMessage = ":tada: Neat! This giveaway will last **{0}** {1}! Now, how many winners should there be?\r\n\r\n`Please enter a number of winners between 1 and 15.`";
         private string _prizePromptMessage = ":tada: Ok! {0} winners it is! Finally, what do you want to give away?\r\n\r\n`Please enter the giveaway prize. This will also begin the giveaway.`";
-        
+
 
         public GiveawayService(DiscordSocketClient discord, JsonRepository<Giveaway> giveawayRepo, Random rng)
         {
@@ -39,31 +39,31 @@ namespace Vereesa.Core.Services
         private async Task EvaluateMessage(SocketMessage message)
         {
             var command = message.Content.Split(' ').FirstOrDefault()?.ToLowerInvariant();
-            if (command == "cancel") 
+            if (command == "cancel")
             {
                 await CancelGiveawayConfiguration(message);
                 return;
             }
 
-            if (command == "!gcreate") 
+            if (command == "!gcreate")
             {
                 await StartGiveawayConfiguration(message);
                 return;
             }
 
-            if (command == "!gstart") 
+            if (command == "!gstart")
             {
                 await StartGiveaway(message);
                 return;
             }
 
-            if (command == "!greroll") 
+            if (command == "!greroll")
             {
                 await RerollGiveaway(message);
                 return;
             }
 
-            if (MessageCanConfigure(message)) 
+            if (MessageCanConfigure(message))
             {
                 await ConfigureCurrentGiveaway(message);
             }
@@ -86,10 +86,10 @@ namespace Vereesa.Core.Services
             await ConfigureCurrentGiveaway(cmdMessage);
         }
 
-        private async Task ConfigureCurrentGiveaway(SocketMessage message) 
-        {  
-            
-            switch (_configStep) 
+        private async Task ConfigureCurrentGiveaway(SocketMessage message)
+        {
+
+            switch (_configStep)
             {
                 case 0:
                     InitializeConfigObject(message.Channel, message.Author.Username);
@@ -110,7 +110,7 @@ namespace Vereesa.Core.Services
                     break;
 
                 case 2:
-                     if (SetGiveawayDuration(message.Content, out var isMinutes))
+                    if (SetGiveawayDuration(message.Content, out var isMinutes))
                     {
                         await PromptUserForWinnerCount(isMinutes);
                         _configStep = 3;
@@ -160,7 +160,7 @@ namespace Vereesa.Core.Services
                 await message.Channel.SendMessageAsync(":boom: Alright, I guess we're not having a giveaway after all...\r\n\r\n`Giveaway creation has been cancelled.`");
                 CleanupConfig();
             }
-        }        
+        }
 
         private async Task StartGiveaway(SocketMessage message)
         {
@@ -181,14 +181,14 @@ namespace Vereesa.Core.Services
         private async Task RerollGiveaway(SocketMessage message)
         {
             var giveaway = _giveawayRepo.GetAll()
-                .Where(g =>     
-                    g.TargetChannel.ToChannelId() == message.Channel.Id && 
-                    g.WinnerNames != null && 
+                .Where(g =>
+                    g.TargetChannel.ToChannelId() == message.Channel.Id &&
+                    g.WinnerNames != null &&
                     g.CreatedBy == message.Author.Username)
                 .OrderByDescending(g => g.CreatedTimestamp + g.Duration)
                 .FirstOrDefault();
 
-            if (giveaway != null) 
+            if (giveaway != null)
             {
                 await ResolveGiveaway(giveaway);
                 await AnnounceWinners(giveaway);
@@ -264,11 +264,11 @@ namespace Vereesa.Core.Services
 
         #region Helpers
 
-         private async Task<IUserMessage> GetGiveawayMessage(Giveaway giveaway)
+        private async Task<IUserMessage> GetGiveawayMessage(Giveaway giveaway)
         {
             var channelId = giveaway.TargetChannel.ToChannelId();
             var channel = GetChannelById(channelId);
-            var iMessage =  await channel.GetMessageAsync(giveaway.AnnouncementMessageId);
+            var iMessage = await channel.GetMessageAsync(giveaway.AnnouncementMessageId);
             return iMessage as IUserMessage;
         }
 
@@ -285,9 +285,22 @@ namespace Vereesa.Core.Services
 
             var embed = new EmbedBuilder();
             embed.Title = giveaway.Prize;
-            embed.Description = $"React with :tada: or any other emote to enter!\r\nTime remaining: **{endsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds()}** seconds";
+            embed.Description = $"React with :tada: or any other emote to enter!\r\n";
             embed.Footer = new EmbedFooterBuilder();
-            embed.Footer.Text = $"Ends at | {DateTimeOffset.FromUnixTimeSeconds(endsAt)}";
+
+            if (giveaway.WinnerNames != null)
+            {
+                var winnerNamesString = giveaway.WinnerNames.Any() ? string.Join(", ", giveaway.WinnerNames) : "Could not be determined.";
+
+                embed.Description = $"Giveaway ended.";
+                embed.Footer.Text = $"Winners: {winnerNamesString}";
+            }
+            else
+            {
+                embed.Description += $"Time remaining: **{(endsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToHoursMinutesSeconds()}**";
+                embed.Footer.Text = $"Ends at {DateTimeOffset.FromUnixTimeSeconds(endsAt).ToLocalTime()} (Server time)";
+            }
+
             embed.Color = new Color(155, 89, 182);
 
             return embed;
@@ -314,10 +327,10 @@ namespace Vereesa.Core.Services
         }
 
         #endregion
-        
+
         #region Periodic updates
 
-         private void InitiateUpdateTimer()
+        private void InitiateUpdateTimer()
         {
             _updater = new Timer();
             _updater.Elapsed += UpdateActiveGiveaways;
@@ -341,7 +354,7 @@ namespace Vereesa.Core.Services
                 });
             }
 
-            foreach (var giveaway in unreslovedGiveaways) 
+            foreach (var giveaway in unreslovedGiveaways)
             {
                 await ResolveGiveaway(giveaway);
                 await AnnounceWinners(giveaway);
@@ -352,11 +365,11 @@ namespace Vereesa.Core.Services
         {
             var channel = GetChannelById(giveaway.TargetChannel.ToChannelId());
 
-            if (giveaway.WinnerNames.Count == 0) 
+            if (giveaway.WinnerNames.Count == 0)
             {
                 await channel.SendMessageAsync($"A winner for **{giveaway.Prize}** could not be determined.");
-            } 
-            else 
+            }
+            else
             {
                 await channel.SendMessageAsync($"Congratulations {string.Join(", ", giveaway.WinnerNames)}! You won **{giveaway.Prize}**!");
             }
@@ -368,29 +381,34 @@ namespace Vereesa.Core.Services
             var participants = await GetReactingUsers(message);
             var winners = new List<IUser>();
 
-            if (giveaway.NumberOfWinners > participants.Count) 
+            if (giveaway.NumberOfWinners > participants.Count)
             {
                 giveaway.NumberOfWinners = participants.Count;
             }
-            
-            for (var i = 0; i < giveaway.NumberOfWinners; i++) 
+
+            for (var i = 0; i < giveaway.NumberOfWinners; i++)
             {
                 var winnerIndex = _rng.Next(0, participants.Count - 1);
                 var winner = participants[winnerIndex];
                 winners.Add(winner);
                 participants.Remove(winner);
             }
-            
+
             giveaway.WinnerNames = winners.Select(w => w.Username).ToList();
             _giveawayRepo.AddOrEdit(giveaway);
             _giveawayRepo.Save();
+
+            await message.ModifyAsync((msg) =>
+            {
+                msg.Embed = GetAnnouncementEmbed(giveaway).Build();
+            });
         }
 
         private async Task<List<IUser>> GetReactingUsers(IUserMessage message)
         {
             var reactingUsers = new List<IUser>();
 
-            foreach (IEmote reaction in message.Reactions.Keys) 
+            foreach (IEmote reaction in message.Reactions.Keys)
             {
                 var emojiString = reaction.ToString();
                 var emojiIsCustom = emojiString.StartsWith("<:");
