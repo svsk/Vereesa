@@ -38,9 +38,11 @@ namespace Vereesa.Core
             _config = builder.Build();
             
             var discordSettings = new DiscordSettings();
-            _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             var gameStateEmissionSettings = new GameStateEmissionSettings();
+            var googleSheetSettings = new GoogleSheetSettings();
+            _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
+            _config.GetSection(nameof(GoogleSheetSettings)).Bind(googleSheetSettings);
 
             //Set up discord client
             _discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -54,10 +56,12 @@ namespace Vereesa.Core
                 .AddSingleton(_discord)
                 .AddSingleton(discordSettings)
                 .AddSingleton(gameStateEmissionSettings)
+                .AddSingleton(googleSheetSettings)
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
+                .AddSingleton<GoogleSheetService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>();
 
@@ -68,6 +72,7 @@ namespace Vereesa.Core
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
             _serviceProvider.GetRequiredService<GameTrackerService>();
             _serviceProvider.GetRequiredService<GiveawayService>();
+            _serviceProvider.GetRequiredService<GoogleSheetService>();
         }
 
         public void Shutdown() 

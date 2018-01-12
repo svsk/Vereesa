@@ -6,5 +6,11 @@
 	"GameStateEmissionSettings": {
 		"EmissionEndpoint": "",
 		"EmissionEndpointUserKey": ""
+	},
+	"GoogleSheetSettings": {
+		"GoogleSheetCsvUrl": "",
+		"CheckIntervalSeconds": 3000,
+		"MessageToSendOnNewLine": "",
+		"NotificationMessageChannelName": ""
 	}
 }
