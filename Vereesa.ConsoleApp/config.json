@@ -12,5 +12,8 @@
 		"CheckIntervalSeconds": 3000,
 		"MessageToSendOnNewLine": "",
 		"NotificationMessageChannelName": ""
+	},
+	"GamblingSettings": {
+		"GamblingChannelName": ""
 	}
 }

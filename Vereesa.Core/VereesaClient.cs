@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Services;
 using Vereesa.Data;
+using Vereesa.Data.Models.Gambling;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Models.Giveaways;
 using Vereesa.Data.Repositories;
@@ -40,9 +41,11 @@ namespace Vereesa.Core
             var discordSettings = new DiscordSettings();
             var gameStateEmissionSettings = new GameStateEmissionSettings();
             var googleSheetSettings = new GoogleSheetSettings();
+            var gamblingSettings = new GamblingSettings();
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
             _config.GetSection(nameof(GoogleSheetSettings)).Bind(googleSheetSettings);
+            _config.GetSection(nameof(GamblingSettings)).Bind(gamblingSettings);
 
             //Set up discord client
             _discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -57,13 +60,16 @@ namespace Vereesa.Core
                 .AddSingleton(discordSettings)
                 .AddSingleton(gameStateEmissionSettings)
                 .AddSingleton(googleSheetSettings)
+                .AddSingleton(gamblingSettings)
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
+                .AddSingleton<GamblingService>()
                 .AddSingleton<GoogleSheetService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
-                .AddScoped<JsonRepository<Giveaway>>();
+                .AddScoped<JsonRepository<Giveaway>>()
+                .AddScoped<JsonRepository<GamblingStandings>>();
 
             //Build the service provider
             _serviceProvider = services.BuildServiceProvider();
@@ -73,6 +79,7 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<GameTrackerService>();
             _serviceProvider.GetRequiredService<GiveawayService>();
             _serviceProvider.GetRequiredService<GoogleSheetService>();
+            _serviceProvider.GetRequiredService<GamblingService>();
         }
 
         public void Shutdown() 
