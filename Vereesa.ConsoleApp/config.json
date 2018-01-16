@@ -15,5 +15,8 @@
 	},
 	"GamblingSettings": {
 		"GamblingChannelName": ""
+	},
+	"VoiceChannelTrackerSettings": {
+		"AnnouncementChannelName": ""
 	}
 }

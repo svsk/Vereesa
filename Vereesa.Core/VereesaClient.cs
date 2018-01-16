@@ -42,10 +42,12 @@ namespace Vereesa.Core
             var gameStateEmissionSettings = new GameStateEmissionSettings();
             var googleSheetSettings = new GoogleSheetSettings();
             var gamblingSettings = new GamblingSettings();
+            var voiceChannelTrackerSettings = new VoiceChannelTrackerSettings();
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
             _config.GetSection(nameof(GoogleSheetSettings)).Bind(googleSheetSettings);
             _config.GetSection(nameof(GamblingSettings)).Bind(gamblingSettings);
+            _config.GetSection(nameof(VoiceChannelTrackerSettings)).Bind(voiceChannelTrackerSettings);
 
             //Set up discord client
             _discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -61,12 +63,14 @@ namespace Vereesa.Core
                 .AddSingleton(gameStateEmissionSettings)
                 .AddSingleton(googleSheetSettings)
                 .AddSingleton(gamblingSettings)
+                .AddSingleton(voiceChannelTrackerSettings)
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
                 .AddSingleton<GamblingService>()
                 .AddSingleton<GoogleSheetService>()
+                .AddSingleton<VoiceChannelTrackerService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
                 .AddScoped<JsonRepository<GamblingStandings>>();
@@ -80,6 +84,7 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<GiveawayService>();
             _serviceProvider.GetRequiredService<GoogleSheetService>();
             _serviceProvider.GetRequiredService<GamblingService>();
+            _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
         }
 
         public void Shutdown() 
