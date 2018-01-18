@@ -27,7 +27,7 @@ namespace Vereesa.Data.Repositories
         public IEnumerable<T> GetAll()
         {
             var directory = new DirectoryInfo(_filePath);
-            var files = directory.EnumerateFiles($"{typeof(T).Name}.*.json");
+            var files = directory.EnumerateFiles($"{typeof(T).Name}.*.json").ToList();
 
             foreach (var file in files)
             {
