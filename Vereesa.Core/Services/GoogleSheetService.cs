@@ -29,6 +29,9 @@ namespace Vereesa.Core.Services
 
         private async Task OnGuildAvailable(SocketGuild guild)
         {
+            if (_checkInterval != null)
+                _checkInterval.Stop();
+
             _checkInterval = new Timer();
             _checkInterval.Interval = _settings.CheckIntervalSeconds * 1000;
             _checkInterval.AutoReset = true;

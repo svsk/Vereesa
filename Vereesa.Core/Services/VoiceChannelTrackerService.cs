@@ -21,6 +21,7 @@ namespace Vereesa.Core.Services
 
         private async Task InitailizeVoiceChannelTracker(SocketGuild guild)
         {
+            _discord.UserVoiceStateUpdated -= HandleVoiceStateChanged;
             _discord.UserVoiceStateUpdated += HandleVoiceStateChanged;
             _announcementChannel = guild.GetChannelByName(_settings.AnnouncementChannelName);
         }
@@ -32,15 +33,15 @@ namespace Vereesa.Core.Services
 
             var action = string.Empty;
             if (beforeChannel != null && afterChannel == null) {
-                action = $"left {beforeChannel.Name}";
+                action = $"left `{beforeChannel.Name}`";
             }
                 
             if (beforeChannel != null && afterChannel != null) {
-                action = $"switched from {beforeChannel.Name} to {afterChannel.Name}";
+                action = $"switched from `{beforeChannel.Name}` to `{afterChannel.Name}`";
             }
                 
             if (beforeChannel == null && afterChannel != null) {
-                action = $"joined {afterChannel.Name}";
+                action = $"joined `{afterChannel.Name}`";
             }
 
             await _announcementChannel.SendMessageAsync($"{user.Username} {action}.", isTTS: true);

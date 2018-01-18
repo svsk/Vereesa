@@ -34,12 +34,12 @@ namespace Vereesa.Core.Services
             _standings = standings;
 
             _discord.GuildAvailable += StartGamblingService;
+            _discord.MessageReceived += EvaluateMessage;
         }
 
         private async Task StartGamblingService(SocketGuild guild)
         {
             _gamblingChannel = guild.GetChannelByName(_settings.GamblingChannelName);
-            _discord.MessageReceived += EvaluateMessage;
         }
 
         private async Task EvaluateMessage(SocketMessage message)
