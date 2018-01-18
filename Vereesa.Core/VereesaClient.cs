@@ -71,6 +71,7 @@ namespace Vereesa.Core
                 .AddSingleton<GamblingService>()
                 .AddSingleton<GoogleSheetService>()
                 .AddSingleton<VoiceChannelTrackerService>()
+                .AddSingleton<RoleGiverService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
                 .AddScoped<JsonRepository<GamblingStandings>>();
@@ -85,6 +86,7 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<GoogleSheetService>();
             _serviceProvider.GetRequiredService<GamblingService>();
             _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
+            _serviceProvider.GetRequiredService<RoleGiverService>();
         }
 
         public void Shutdown() 
