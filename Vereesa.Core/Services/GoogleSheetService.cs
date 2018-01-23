@@ -46,40 +46,49 @@ namespace Vereesa.Core.Services
         private async void ReadSheet()
         {
             var rows = new List<string>();
+            HttpResponseMessage response = null;
 
             using (var client = new HttpClient())
             {
-                var response = await client.GetAsync(_settings.GoogleSheetCsvUrl);
-                if (response.StatusCode == HttpStatusCode.OK)
+                try 
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    rows = responseContent.Split(new[] { Environment.NewLine }, StringSplitOptions.None).ToList();
+                    response = await client.GetAsync(_settings.GoogleSheetCsvUrl);
+                }
+                catch (TaskCanceledException) 
+                {
+                    //aw well
+                }
+            }
+                
+            if (response != null && response.StatusCode == HttpStatusCode.OK)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                rows = responseContent.Split(new[] { Environment.NewLine }, StringSplitOptions.None).ToList();
 
-                    if (_previousRowCount != -1 && rows.Count > _previousRowCount)
+                if (_previousRowCount != -1 && rows.Count > _previousRowCount)
+                {
+                    var notificationChannel = _discord.Guilds.FirstOrDefault()?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName) as ISocketMessageChannel;
+                    if (notificationChannel != null) 
                     {
-                        var notificationChannel = _discord.Guilds.FirstOrDefault()?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName) as ISocketMessageChannel;
-                        if (notificationChannel != null) 
+                        foreach (var row in rows.Skip(_previousRowCount))
                         {
-                            foreach (var row in rows.Skip(_previousRowCount))
+                            //parse CSV line (gross, I know)
+                            var fields = row.Replace(", ", "¤COMMA¤").Split(',').Select(slug => slug.Replace("¤COMMA¤", ", ")).ToArray();
+                            try 
                             {
-                                //parse CSV line (gross, I know)
-                                var fields = row.Replace(", ", "¤COMMA¤").Split(',').Select(slug => slug.Replace("¤COMMA¤", ", ")).ToArray();
-                                try 
-                                {
-                                    await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
-                                }
-                                catch (Exception ex)
-                                { 
-                                    //probably a malformed response array
-                                }
-                                
+                                await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
                             }
+                            catch (Exception ex)
+                            { 
+                                //probably a malformed response array
+                            }
+                            
                         }
                     }
                 }
-            }
 
-            _previousRowCount = rows.Count;
+                _previousRowCount = rows.Count;
+            }
         }
     }
 }
