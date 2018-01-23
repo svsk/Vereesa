@@ -20,7 +20,7 @@ namespace Vereesa.Core.Services
         private JsonRepository<GamblingStandings> _standings;
         private GamblingRound _currentRound;
         private ISocketMessageChannel _gamblingChannel;
-        private List<string> _gameCommands = new List<string> { "!roll", "!joinbet" };
+        private List<string> _gameCommands = new List<string> { "!roll", "!jb" };
         private List<string> _outOfGameCommands = new List<string> { "!startbet", "!hallofshame", "!halloffame" };
         private Timer _awaitingRollsTimer;
         private Timer _rollRemindTimer;
@@ -64,7 +64,7 @@ namespace Vereesa.Core.Services
         {
             switch (command)
             {
-                case "!joinbet":
+                case "!jb":
                     await JoinBet(message.Author.Id);
                     break;
                 case "!roll":
@@ -152,7 +152,7 @@ namespace Vereesa.Core.Services
                 return;
 
             _currentRound = GamblingRound.CreateInstance(maxRollValue);
-            await _gamblingChannel.SendMessageAsync($"New bet (Max roll value: {maxRollValue}) started. Type !joinbet to join this round. Starting in 15 seconds.");
+            await _gamblingChannel.SendMessageAsync($"New bet (Max roll value: {maxRollValue}) started. Type `!jb` to join this round. Starting in 15 seconds.");
 
             _awaitingRollsTimer = TimerHelpers.SetTimeout(async () => { await StartAwaitingRolls(); }, 15000);
             _rollRemindTimer = TimerHelpers.SetTimeout(async () => { await RemindRollers(); }, 30000);
