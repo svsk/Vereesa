@@ -30,13 +30,21 @@ namespace Vereesa.Core.Services
             if (_announcementChannel == null)
                 return;
 
-            var messages = await _announcementChannel.GetMessagesAsync(1000).Flatten();
-            foreach (var message in messages.Where(c => c.Author.IsBot))
+            try 
             {
-                if (message.Timestamp < DateTimeOffset.UtcNow.AddHours(-3)) {
-                    await message.DeleteAsync();
+                var messages = await _announcementChannel.GetMessagesAsync(1000).Flatten();
+                foreach (var message in messages.Where(c => c.Author.IsBot))
+                {
+                    if (message.Timestamp < DateTimeOffset.UtcNow.AddHours(-3)) {
+                        await message.DeleteAsync();
+                    }
                 }
             }
+            catch
+            {
+                //Well shit
+            }
+            
         }
 
         private async Task InitailizeVoiceChannelTracker(SocketGuild guild)
