@@ -7,27 +7,27 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Timers;
-using Discord.WebSocket;
 using Vereesa.Core.Configuration;
+using Vereesa.Data.Models.EventHub;
 
 namespace Vereesa.Core.Services
 {
     public class GoogleSheetService
     {
-        private DiscordSocketClient _discord;
+        private EventHubService _eventHubService;
         private GoogleSheetSettings _settings;
         private Timer _checkInterval;
         private int _previousRowCount;
 
-        public GoogleSheetService(DiscordSocketClient discord, GoogleSheetSettings settings)
+        public GoogleSheetService(GoogleSheetSettings settings, EventHubService eventHubService)
         {
-            _discord = discord;
+            _eventHubService = eventHubService;
             _settings = settings;
-            _discord.GuildAvailable += OnGuildAvailable;
             _previousRowCount = -1;
+            Start();
         }
 
-        private async Task OnGuildAvailable(SocketGuild guild)
+        private void Start()
         {
             if (_checkInterval != null)
                 _checkInterval.Stop();
@@ -38,9 +38,6 @@ namespace Vereesa.Core.Services
             _checkInterval.Elapsed += (object sender, ElapsedEventArgs e) => { ReadSheet(); };
             _checkInterval.Start();
             ReadSheet();
-
-            //Supress warning... Blerh
-            await Task.Run(() => {});
         }
 
         private async void ReadSheet()
@@ -58,6 +55,9 @@ namespace Vereesa.Core.Services
                 {
                     //aw well
                 }
+                catch (Exception) 
+                {
+                }
             }
                 
             if (response != null && response.StatusCode == HttpStatusCode.OK)
@@ -67,23 +67,9 @@ namespace Vereesa.Core.Services
 
                 if (_previousRowCount != -1 && rows.Count > _previousRowCount)
                 {
-                    var notificationChannel = _discord.Guilds.FirstOrDefault()?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName) as ISocketMessageChannel;
-                    if (notificationChannel != null) 
+                    foreach (var row in rows.Skip(_previousRowCount))
                     {
-                        foreach (var row in rows.Skip(_previousRowCount))
-                        {
-                            //parse CSV line (gross, I know)
-                            var fields = row.Replace(", ", "¤COMMA¤").Split(',').Select(slug => slug.Replace("¤COMMA¤", ", ")).ToArray();
-                            try 
-                            {
-                                await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
-                            }
-                            catch (Exception ex)
-                            { 
-                                //probably a malformed response array
-                            }
-                            
-                        }
+                        _eventHubService.Emit(EventHubEvents.NewCsvRow, row);
                     }
                 }
 

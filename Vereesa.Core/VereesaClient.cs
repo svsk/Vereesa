@@ -1,5 +1,3 @@
-
-
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,11 +41,14 @@ namespace Vereesa.Core
             var googleSheetSettings = new GoogleSheetSettings();
             var gamblingSettings = new GamblingSettings();
             var voiceChannelTrackerSettings = new VoiceChannelTrackerSettings();
+            var guildApplicationSettings = new GuildApplicationSettings();
+
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
             _config.GetSection(nameof(GoogleSheetSettings)).Bind(googleSheetSettings);
             _config.GetSection(nameof(GamblingSettings)).Bind(gamblingSettings);
             _config.GetSection(nameof(VoiceChannelTrackerSettings)).Bind(voiceChannelTrackerSettings);
+            _config.GetSection(nameof(GuildApplicationSettings)).Bind(guildApplicationSettings);
 
             //Set up discord client
             _discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -64,14 +65,17 @@ namespace Vereesa.Core
                 .AddSingleton(googleSheetSettings)
                 .AddSingleton(gamblingSettings)
                 .AddSingleton(voiceChannelTrackerSettings)
+                .AddSingleton(guildApplicationSettings)
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
+                .AddSingleton<EventHubService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
-                .AddSingleton<GamblingService>()
+                .AddSingleton<GuildApplicationService>()
                 .AddSingleton<GoogleSheetService>()
+                .AddSingleton<GamblingService>()
                 .AddSingleton<VoiceChannelTrackerService>()
-                .AddSingleton<RoleGiverService>()
+                .AddSingleton<RoleGiverService>()    
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
                 .AddScoped<JsonRepository<GamblingStandings>>();
@@ -81,8 +85,10 @@ namespace Vereesa.Core
 
             //Start the desired services
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
+            _serviceProvider.GetRequiredService<EventHubService>();
             _serviceProvider.GetRequiredService<GameTrackerService>();
             _serviceProvider.GetRequiredService<GiveawayService>();
+            _serviceProvider.GetRequiredService<GuildApplicationService>();
             _serviceProvider.GetRequiredService<GoogleSheetService>();
             _serviceProvider.GetRequiredService<GamblingService>();
             _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();

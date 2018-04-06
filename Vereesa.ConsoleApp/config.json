@@ -9,8 +9,9 @@
 	},
 	"GoogleSheetSettings": {
 		"GoogleSheetCsvUrl": "",
-		"CheckIntervalSeconds": 3000,
-		"MessageToSendOnNewLine": "",
+		"CheckIntervalSeconds": 3000
+	},
+	"GuildApplicationSettings": {
 		"NotificationMessageChannelName": ""
 	},
 	"GamblingSettings": {
