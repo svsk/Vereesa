@@ -40,12 +40,12 @@ namespace Vereesa.Core.Services
             {
                 //parse CSV line (gross, I know)
                 var row = parameters.FirstOrDefault() as string;
-                var fields = row.Replace(", ", "¤COMMA¤").Split(',').Select(slug => slug.Replace("¤COMMA¤", ", ")).ToArray();
+                var application = row.Replace(", ", "¤COMMA¤").Split(',').Select(slug => slug.Replace("¤COMMA¤", ", ")).ToArray();
 
                 try 
                 {
                     //await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
-                    await notificationChannel.SendMessageAsync("", false, GetApplicationEmbed("test"));
+                    await notificationChannel.SendMessageAsync("", false, GetApplicationEmbed(application));
                 }
                 catch (Exception ex)
                 { 
@@ -54,18 +54,18 @@ namespace Vereesa.Core.Services
             }
         }
 
-        private EmbedBuilder GetApplicationEmbed(string application)
+        private EmbedBuilder GetApplicationEmbed(string[] application)
         {
             var embed = new EmbedBuilder();
             embed.Title = "Test";
             embed.Color = new Color(155, 89, 182);
             
             embed.WithThumbnailUrl("https://render-eu.worldofwarcraft.com/character/karazhan/102/54145126-avatar.jpg");
-            embed.WithAuthor("Veinlash - Karazhan EU", "https://render-eu.worldofwarcraft.com/character/karazhan/102/54145126-avatar.jpg", "https://worldofwarcraft.com/en-gb/character/karazhan/veinlash");
+            embed.WithAuthor($"New appliaction: {application[9]} - {application[6]} {application[17]}", null, application[5]);
 
-            embed.AddField("__Name__", "Sverre Skuland", true);
-            embed.AddField("__Class__", "Death Knight", true);
-            embed.AddField("__Specialization__", "Blood", true);
+            embed.AddField("__Real Name__", application[2], true);
+            embed.AddField("__Age__", application[4], true);
+            embed.AddField("__Country__", application[3], true);
             embed.AddField("__Character Stats__", "**Artifact traits:** 78 \r\n**Health:** 5 493 060\r\n**Crit:** 31.56% | **Haste:** 22.09% | **Mastery:** 51.04%", false);
             embed.AddField("__External sites__", @"[Armory](https://www.google.com) | [RaiderIO](https://www.google.com) | [WoWProgress](https://www.google.com) | [WarcraftLogs](https://www.google.co)", false);
             

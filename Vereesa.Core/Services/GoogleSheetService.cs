@@ -65,6 +65,8 @@ namespace Vereesa.Core.Services
                 var responseContent = await response.Content.ReadAsStringAsync();
                 rows = responseContent.Split(new[] { Environment.NewLine }, StringSplitOptions.None).ToList();
 
+                //_previousRowCount--;
+
                 if (_previousRowCount != -1 && rows.Count > _previousRowCount)
                 {
                     foreach (var row in rows.Skip(_previousRowCount))
