@@ -1,5 +1,6 @@
 {
 	"prefix": "!",
+
 	"DiscordSettings": {
 		"Token": null
 	},
@@ -19,5 +20,8 @@
 	},
 	"VoiceChannelTrackerSettings": {
 		"AnnouncementChannelName": ""
+	},
+	"BattleNetApiSettings": {
+		"ApiKey": ""
 	}
 }

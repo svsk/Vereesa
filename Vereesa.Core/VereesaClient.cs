@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Timers;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
@@ -37,6 +38,7 @@ namespace Vereesa.Core
             _config = builder.Build();
             
             var discordSettings = new DiscordSettings();
+            var battleNetApiSettings = new BattleNetApiSettings();
             var gameStateEmissionSettings = new GameStateEmissionSettings();
             var googleSheetSettings = new GoogleSheetSettings();
             var gamblingSettings = new GamblingSettings();
@@ -44,6 +46,7 @@ namespace Vereesa.Core
             var guildApplicationSettings = new GuildApplicationSettings();
 
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
+            _config.GetSection(nameof(BattleNetApiSettings)).Bind(battleNetApiSettings);
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
             _config.GetSection(nameof(GoogleSheetSettings)).Bind(googleSheetSettings);
             _config.GetSection(nameof(GamblingSettings)).Bind(gamblingSettings);
@@ -61,6 +64,7 @@ namespace Vereesa.Core
             IServiceCollection services = new ServiceCollection()
                 .AddSingleton(_discord)
                 .AddSingleton(discordSettings)
+                .AddSingleton(battleNetApiSettings)
                 .AddSingleton(gameStateEmissionSettings)
                 .AddSingleton(googleSheetSettings)
                 .AddSingleton(gamblingSettings)
@@ -69,6 +73,7 @@ namespace Vereesa.Core
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<EventHubService>()
+                .AddSingleton<BattleNetApiService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
                 .AddSingleton<GuildApplicationService>()
