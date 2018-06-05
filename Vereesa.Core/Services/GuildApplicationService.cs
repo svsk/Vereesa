@@ -12,12 +12,14 @@ namespace Vereesa.Core.Services
     {
         private EventHubService _eventHubService;
         private DiscordSocketClient _discord;
+        private BattleNetApiService _battleNetApi;
         private GuildApplicationSettings _settings;
 
-        public GuildApplicationService(EventHubService eventHubService, DiscordSocketClient discord, GuildApplicationSettings settings)
+        public GuildApplicationService(EventHubService eventHubService, DiscordSocketClient discord, GuildApplicationSettings settings, BattleNetApiService battleNetApi)
         {
             _eventHubService = eventHubService;
             _discord = discord;
+            _battleNetApi = battleNetApi;
             _settings = settings;
 
             Start();
@@ -57,21 +59,30 @@ namespace Vereesa.Core.Services
         private EmbedBuilder GetApplicationEmbed(string[] application)
         {
             var embed = new EmbedBuilder();
-            embed.Title = "Test";
+            embed.Title = $"{application[9]} - {application[6]} {application[17]}";
             embed.Color = new Color(155, 89, 182);
+
+            var armoryProfileUrl = application[5];
+            var realmAndName = armoryProfileUrl.Split(new string[] { "/character/" }, StringSplitOptions.None).Last();
+            var realmAndNameSplit = realmAndName.Split('/');
+            var realm = realmAndNameSplit.Skip(0).Take(1).First();
+            var name = realmAndNameSplit.Skip(1).Take(1).First();
+            var character = _battleNetApi.GetCharacterData(realm, name, "eu").GetAwaiter().GetResult();
+            var avatar = _battleNetApi.GetCharacterThumbnail(character, "eu");
+            var artifactTraitCount = _battleNetApi.GetCharacterArtifactTraitCount(character);
             
-            embed.WithThumbnailUrl("https://render-eu.worldofwarcraft.com/character/karazhan/102/54145126-avatar.jpg");
-            embed.WithAuthor($"New appliaction: {application[9]} - {application[6]} {application[17]}", null, application[5]);
+            embed.WithThumbnailUrl(avatar);
+            embed.WithAuthor($"New application @ neon.gg/applications", null, "https://www.neon.gg/applications/");
 
             embed.AddField("__Real Name__", application[2], true);
             embed.AddField("__Age__", application[4], true);
             embed.AddField("__Country__", application[3], true);
-            embed.AddField("__Character Stats__", "**Artifact traits:** 78 \r\n**Health:** 5 493 060\r\n**Crit:** 31.56% | **Haste:** 22.09% | **Mastery:** 51.04%", false);
-            embed.AddField("__External sites__", @"[Armory](https://www.google.com) | [RaiderIO](https://www.google.com) | [WoWProgress](https://www.google.com) | [WarcraftLogs](https://www.google.co)", false);
+            embed.AddField("__Character Stats__", $"**Artifact traits:** {artifactTraitCount} \r\n**Health:** {character.Stats.Health.ToString("N")}\r\n**Crit:** {character.Stats.Crit.ToString ("0.##")}% | **Haste:** {character.Stats.Haste.ToString ("0.##")}% | **Mastery:** {character.Stats.Mastery.ToString ("0.##")}%", false);
+            embed.AddField("__External sites__", $@"[Armory]({armoryProfileUrl}) | [RaiderIO](https://raider.io/characters/eu/{realm}/{name}) | [WoWProgress](https://www.wowprogress.com/character/eu/{realm}/{name}) | [WarcraftLogs](https://www.warcraftlogs.com/character/eu/{realm}/{name})", false);
             
             embed.Footer = new EmbedFooterBuilder();
             embed.Footer.WithIconUrl("https://render-eu.worldofwarcraft.com/character/karazhan/102/54145126-avatar.jpg");
-            embed.Footer.Text = "Requested by Veinlash - Today at 9:50 AM";
+            embed.Footer.Text = $"Requested by Veinlash - Today at {DateTime.Now.ToString("HH:mm")}";
 
             return embed;
         }
