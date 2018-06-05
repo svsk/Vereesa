@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.Timers;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -17,7 +18,14 @@ namespace Vereesa.Core.Services
         {
             _settings = settings;
             _discord = discord;
+
+            _discord.Disconnected -= HandleDisconnected;
+            _discord.Disconnected += HandleDisconnected;
+            _discord.Connected -= HandleConnected;
+            _discord.Connected += HandleConnected;
         }
+
+        private Timer _reconnectAttemptTimer = null;
 
         public async Task StartAsync()
         {
@@ -28,6 +36,35 @@ namespace Vereesa.Core.Services
 
             await _discord.LoginAsync(TokenType.Bot, discordToken);
             await _discord.StartAsync();
+        }
+
+        private async Task HandleDisconnected(Exception arg)
+        {
+            Console.WriteLine("Disconnected!");
+
+            if (_reconnectAttemptTimer == null)
+            {
+                _reconnectAttemptTimer = new Timer(5000);
+                _reconnectAttemptTimer.Elapsed += AttemptReconnect;
+                _reconnectAttemptTimer.AutoReset = true;
+                _reconnectAttemptTimer.Start();
+            }
+        }
+
+        private async void AttemptReconnect(object sender, ElapsedEventArgs e)
+        {
+            Console.WriteLine("Attempting reconnect...");
+            await this.StartAsync();
+        }
+
+        private async Task HandleConnected() 
+        {
+            Console.WriteLine("Connected!");
+
+            if (_reconnectAttemptTimer != null) 
+            {
+                _reconnectAttemptTimer.Stop();
+            }
         }
     }
 }
