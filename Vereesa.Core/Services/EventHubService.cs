@@ -27,7 +27,9 @@ namespace Vereesa.Core.Services
 
         public void Emit(string eventName, params object[] param)
         {
-            var eventListeners = this._eventListeners.Where(el => el.EventName == eventName);
+            Console.WriteLine($"New event emitted: {eventName}.");
+            var eventListeners = this._eventListeners.Where(el => el.EventName == eventName).ToList();
+            Console.WriteLine($"Invoking event callbacks for {eventListeners.Count} listeners.");
             foreach (var eventListener in eventListeners)
             {
                 eventListener.EventCallback.Invoke(param);
