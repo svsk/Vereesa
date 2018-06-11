@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 
 namespace Vereesa.Core.Extensions
@@ -13,6 +14,11 @@ namespace Vereesa.Core.Extensions
         public static string GetCommand(this string rawMessage)
         {
             return rawMessage.Split(' ').First();
+        }
+
+        public static string[] Split(this string rawString, string separator) 
+        {
+            return rawString.Split(new string[] { separator }, StringSplitOptions.None);
         }
     }
 }

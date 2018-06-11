@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Services;
 using Vereesa.Data;
+using Vereesa.Data.Models.Commands;
 using Vereesa.Data.Models.Gambling;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Models.Giveaways;
@@ -81,9 +82,11 @@ namespace Vereesa.Core
                 .AddSingleton<GamblingService>()
                 .AddSingleton<VoiceChannelTrackerService>()
                 .AddSingleton<RoleGiverService>()    
+                .AddSingleton<CommandService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
-                .AddScoped<JsonRepository<GamblingStandings>>();
+                .AddScoped<JsonRepository<GamblingStandings>>()
+                .AddScoped<JsonRepository<Command>>();
 
             //Build the service provider
             _serviceProvider = services.BuildServiceProvider();
@@ -98,6 +101,7 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<GamblingService>();
             _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
             _serviceProvider.GetRequiredService<RoleGiverService>();
+            _serviceProvider.GetRequiredService<CommandService>();
         }
 
         public void Shutdown() 
