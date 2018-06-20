@@ -277,7 +277,7 @@ namespace Vereesa.Core.Services
             return _discord.Guilds.Where(g => g.Channels.Any(c => c.Id == channelId)).FirstOrDefault().Channels.First(c => c.Id == channelId) as ISocketMessageChannel;
         }
 
-        private EmbedBuilder GetAnnouncementEmbed(Giveaway giveaway)
+        private Embed GetAnnouncementEmbed(Giveaway giveaway)
         {
             var duration = giveaway.Duration;
             var created = giveaway.CreatedTimestamp;
@@ -303,7 +303,7 @@ namespace Vereesa.Core.Services
 
             embed.Color = new Color(155, 89, 182);
 
-            return embed;
+            return embed.Build();
         }
 
         private void InitializeConfigObject(ISocketMessageChannel channel, string authorUsername)
@@ -350,7 +350,7 @@ namespace Vereesa.Core.Services
                 var message = await GetGiveawayMessage(giveaway);
                 await message.ModifyAsync((msg) =>
                 {
-                    msg.Embed = GetAnnouncementEmbed(giveaway).Build();
+                    msg.Embed = GetAnnouncementEmbed(giveaway);
                 });
             }
 
@@ -400,7 +400,7 @@ namespace Vereesa.Core.Services
 
             await message.ModifyAsync((msg) =>
             {
-                msg.Embed = GetAnnouncementEmbed(giveaway).Build();
+                msg.Embed = GetAnnouncementEmbed(giveaway);
             });
         }
 
@@ -413,10 +413,12 @@ namespace Vereesa.Core.Services
                 var emojiString = reaction.ToString();
                 var emojiIsCustom = emojiString.StartsWith("<:");
 
+                //emojiString.Replace("<:", string.Empty).Replace(">", string.Empty))
+
                 if (emojiIsCustom)
-                    reactingUsers.AddRange(await message.GetReactionUsersAsync(emojiString.Replace("<:", string.Empty).Replace(">", string.Empty)));
+                    reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction));
                 else
-                    reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction.Name));
+                    reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction));
             }
 
             return reactingUsers.GroupBy(u => u.Id).Select(c => c.First()).ToList();

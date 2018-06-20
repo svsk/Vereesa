@@ -47,7 +47,7 @@ namespace Vereesa.Core.Services
                 try 
                 {
                     //await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
-                    await notificationChannel.SendMessageAsync("", false, GetApplicationEmbed(application));
+                    await notificationChannel.SendMessageAsync("", false, GetApplicationEmbed(application).Build());
                 }
                 catch (Exception ex)
                 { 

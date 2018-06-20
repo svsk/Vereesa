@@ -36,10 +36,10 @@ namespace Vereesa.Core.Services
         private async Task OnMemberUpdated(SocketGuildUser userBeforeChange, SocketGuildUser userAfterChange)
         {
             var gameChangeHappened = false;
-            var beforeGame = userBeforeChange.Game;
-            var afterGame = userAfterChange.Game;
+            var beforeGame = userBeforeChange.Activity;
+            var afterGame = userAfterChange.Activity;
 
-            if (beforeGame != null && (afterGame == null || afterGame.Value.Name != beforeGame.Value.Name))
+            if (beforeGame != null && (afterGame == null || afterGame.Name != beforeGame.Name))
             {
                 UpdateUserGameState(userBeforeChange, "stopped");
                 gameChangeHappened = true;
@@ -60,7 +60,7 @@ namespace Vereesa.Core.Services
         private void UpdateUserGameState(SocketGuildUser user, string eventType)
         {
             var userHistory = GetGameTrackMember(user);
-            var gameName = user.Game.Value.Name;
+            var gameName = user.Activity.Name;
             var gameHistory = userHistory.GetGameHistory(gameName);
             gameHistory.Add(GameTrackEntry.CreateInstance(eventType));
             _trackingRepo.Save();
@@ -83,8 +83,8 @@ namespace Vereesa.Core.Services
 
         private  async Task EmitGameState(SocketGuild guild) 
         {            
-            var gameNames = guild.Users.Where(u => u.Game != null && u.IsBot == false)
-                .Select(u => u.Game.Value.Name)
+            var gameNames = guild.Users.Where(u => u.Activity != null && u.IsBot == false)
+                .Select(u => u.Activity.Name)
                 .GroupBy(n => n)
                 .OrderByDescending(g => g.Count());
 

@@ -32,13 +32,12 @@ namespace Vereesa.Core.Services
 
             try 
             {
-                var messages = await _announcementChannel.GetMessagesAsync(1000).Flatten();
-                foreach (var message in messages.Where(c => c.Author.IsBot))
-                {
-                    if (message.Timestamp < DateTimeOffset.UtcNow.AddHours(-3)) {
-                        await message.DeleteAsync();
+                var messages = _announcementChannel.GetMessagesAsync(1000).Flatten();
+                messages.ForEach(msg => {
+                    if (msg.Timestamp < DateTimeOffset.UtcNow.AddHours(-3)) {
+                        msg.DeleteAsync().GetAwaiter().GetResult();
                     }
-                }
+                });
             }
             catch
             {
