@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using Vereesa.Core.Configuration;
+using Vereesa.Core.Extensions;
 using Vereesa.Data.Models.EventHub;
 
 namespace Vereesa.Core.Services
@@ -82,7 +83,7 @@ namespace Vereesa.Core.Services
             
             embed.Footer = new EmbedFooterBuilder();
             embed.Footer.WithIconUrl("https://render-eu.worldofwarcraft.com/character/karazhan/102/54145126-avatar.jpg");
-            embed.Footer.Text = $"Requested by Veinlash - Today at {DateTime.Now.ToString("HH:mm")}";
+            embed.Footer.Text = $"Requested by Veinlash - Today at {DateTime.UtcNow.ToCentralEuropeanTime().ToString("HH:mm")}";
 
             return embed;
         }

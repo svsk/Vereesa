@@ -121,7 +121,7 @@ namespace Vereesa.Core.Services
 
             if (DateTime.TryParse(this.TagValue, out var parsedResult)) 
             {
-                result = parsedResult - DateTime.Now;
+                result = parsedResult - DateTime.Now.ToCentralEuropeanTime();
             }
 
             return result;
