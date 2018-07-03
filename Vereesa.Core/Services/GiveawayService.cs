@@ -63,6 +63,12 @@ namespace Vereesa.Core.Services
                 return;
             }
 
+            if (command == "!gcancel") 
+            {
+                await CancelGiveaway(message);
+                return;
+            }
+
             if (MessageCanConfigure(message))
             {
                 await ConfigureCurrentGiveaway(message);
@@ -178,6 +184,24 @@ namespace Vereesa.Core.Services
             CleanupConfig();
         }
 
+        private async Task CancelGiveaway(SocketMessage message) 
+        {
+            var giveaway = _giveawayRepo.GetAll()
+                .Where(g =>
+                    g.TargetChannel.ToChannelId() == message.Channel.Id &&
+                    g.WinnerNames == null &&
+                    g.CreatedBy == message.Author.Username)
+                .OrderByDescending(g => g.CreatedTimestamp + g.Duration)
+                .FirstOrDefault();
+
+            if (giveaway != null) 
+            {
+                giveaway.Duration = 0;
+                await ResolveGiveaway(giveaway);
+                await message.Channel.SendMessageAsync($"The giveaway for {giveaway.Prize} was cancelled.");
+            }
+        }
+
         private async Task RerollGiveaway(SocketMessage message)
         {
             var giveaway = _giveawayRepo.GetAll()
@@ -213,6 +237,7 @@ namespace Vereesa.Core.Services
 
         private bool SetGiveawayDuration(string messageContent, out bool isMinutes)
         {
+            messageContent = messageContent.ToLowerInvariant();
             var minuteSplit = messageContent.Split('m');
             isMinutes = false;
 
@@ -297,8 +322,8 @@ namespace Vereesa.Core.Services
             }
             else
             {
-                embed.Description += $"Time remaining: **{(endsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToHoursMinutesSeconds()}**";
-                embed.Footer.Text = $"Ends at {DateTimeOffset.FromUnixTimeSeconds(endsAt).ToLocalTime()} (Server time)";
+                embed.Description += $"Time remaining: **{(endsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToDaysHoursMinutesSeconds()}**";
+                embed.Footer.Text = $"Ends at {DateTimeOffset.FromUnixTimeSeconds(endsAt).DateTime.ToCentralEuropeanTime()} (Server time)";
             }
 
             embed.Color = new Color(155, 89, 182);
