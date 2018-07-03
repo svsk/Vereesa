@@ -59,10 +59,6 @@ namespace Vereesa.Core.Services
 
         private EmbedBuilder GetApplicationEmbed(string[] application)
         {
-            var embed = new EmbedBuilder();
-            embed.Title = $"{application[9]} - {application[6]} {application[17]}";
-            embed.Color = new Color(155, 89, 182);
-
             var armoryProfileUrl = application[5];
             var realmAndName = armoryProfileUrl.Split(new string[] { "/character/" }, StringSplitOptions.None).Last();
             var realmAndNameSplit = realmAndName.Split('/');
@@ -71,10 +67,13 @@ namespace Vereesa.Core.Services
             var character = _battleNetApi.GetCharacterData(realm, name, "eu").GetAwaiter().GetResult();
             var avatar = _battleNetApi.GetCharacterThumbnail(character, "eu");
             var artifactTraitCount = _battleNetApi.GetCharacterArtifactTraitCount(character);
-            
-            embed.WithThumbnailUrl(avatar);
-            embed.WithAuthor($"New application @ neon.gg/applications", null, "https://www.neon.gg/applications/");
 
+            var embed = new EmbedBuilder();
+            embed.Color = new Color(155, 89, 182);
+            embed.WithAuthor($"New application @ neon.gg/applications", null, "https://www.neon.gg/applications/");
+            embed.WithThumbnailUrl(avatar);
+
+            embed.Title = $"{application[9]} - {application[6]} {application[17]}";
             embed.AddField("__Real Name__", application[2], true);
             embed.AddField("__Age__", application[4], true);
             embed.AddField("__Country__", application[3], true);
