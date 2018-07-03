@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
@@ -44,14 +45,14 @@ namespace Vereesa.Core.Services
                 UpdateUserGameState(userBeforeChange, "stopped");
                 gameChangeHappened = true;
             }
-            
+
             if (afterGame != null)
             {
                 UpdateUserGameState(userAfterChange, "started");
                 gameChangeHappened = true;
             }
 
-            if (gameChangeHappened) 
+            if (gameChangeHappened)
             {
                 await EmitGameState(userAfterChange.Guild);
             }
@@ -66,10 +67,10 @@ namespace Vereesa.Core.Services
             _trackingRepo.Save();
         }
 
-        private GameTrackMember GetGameTrackMember(SocketGuildUser user) 
+        private GameTrackMember GetGameTrackMember(SocketGuildUser user)
         {
             var member = _trackingRepo.GetAll().FirstOrDefault(m => m.Id == user.Id.ToString());
-            if (member == null) 
+            if (member == null)
             {
                 member = new GameTrackMember();
                 member.Id = user.Id.ToString();
@@ -81,8 +82,8 @@ namespace Vereesa.Core.Services
             return member;
         }
 
-        private  async Task EmitGameState(SocketGuild guild) 
-        {            
+        private async Task EmitGameState(SocketGuild guild)
+        {
             var gameNames = guild.Users.Where(u => u.Activity != null && u.IsBot == false)
                 .Select(u => u.Activity.Name)
                 .GroupBy(n => n)
@@ -90,9 +91,10 @@ namespace Vereesa.Core.Services
 
             var gameState = new List<object>();
 
-            foreach (var game in gameNames) 
+            foreach (var game in gameNames)
             {
-                gameState.Add(new {
+                gameState.Add(new
+                {
                     name = game.Key,
                     count = game.Count()
                 });
@@ -101,12 +103,16 @@ namespace Vereesa.Core.Services
             var postContent = new Dictionary<string, string>();
             postContent.Add("gamestate", JsonConvert.SerializeObject(gameState));
 
-            using (var client = new HttpClient()) 
+            using (var client = new HttpClient())
             {
                 client.DefaultRequestHeaders.Add("user-key", _options.EmissionEndpointUserKey);
                 var response = await client.PostAsync(_options.EmissionEndpoint, new FormUrlEncodedContent(postContent));
                 var responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(responseContent);
+
+                if (response.StatusCode != HttpStatusCode.OK)
+                {
+                    Console.WriteLine(responseContent);
+                }
             }
         }
     }
