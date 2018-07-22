@@ -23,5 +23,10 @@
 	},
 	"BattleNetApiSettings": {
 		"ApiKey": ""
+	},
+	"SignupsSettings": {
+		"EventsUrl": "",
+		"EventsUpdateUrl": "",
+		"ApiKey": ""
 	}
 }

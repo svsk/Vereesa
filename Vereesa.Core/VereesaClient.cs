@@ -45,6 +45,7 @@ namespace Vereesa.Core
             var gamblingSettings = new GamblingSettings();
             var voiceChannelTrackerSettings = new VoiceChannelTrackerSettings();
             var guildApplicationSettings = new GuildApplicationSettings();
+            var signupsSettings = new SignupsSettings();
 
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             _config.GetSection(nameof(BattleNetApiSettings)).Bind(battleNetApiSettings);
@@ -53,6 +54,7 @@ namespace Vereesa.Core
             _config.GetSection(nameof(GamblingSettings)).Bind(gamblingSettings);
             _config.GetSection(nameof(VoiceChannelTrackerSettings)).Bind(voiceChannelTrackerSettings);
             _config.GetSection(nameof(GuildApplicationSettings)).Bind(guildApplicationSettings);
+            _config.GetSection(nameof(SignupsSettings)).Bind(signupsSettings);
 
             //Set up discord client
             _discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -71,6 +73,7 @@ namespace Vereesa.Core
                 .AddSingleton(gamblingSettings)
                 .AddSingleton(voiceChannelTrackerSettings)
                 .AddSingleton(guildApplicationSettings)
+                .AddSingleton(signupsSettings)
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<EventHubService>()
@@ -83,6 +86,7 @@ namespace Vereesa.Core
                 .AddSingleton<VoiceChannelTrackerService>()
                 .AddSingleton<RoleGiverService>()    
                 .AddSingleton<CommandService>()
+                .AddSingleton<SignupsService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
                 .AddScoped<JsonRepository<GamblingStandings>>()
@@ -102,6 +106,7 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
             _serviceProvider.GetRequiredService<RoleGiverService>();
             _serviceProvider.GetRequiredService<CommandService>();
+            _serviceProvider.GetRequiredService<SignupsService>();
         }
 
         public void Shutdown() 
