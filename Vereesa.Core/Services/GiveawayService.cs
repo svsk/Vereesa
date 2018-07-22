@@ -63,7 +63,7 @@ namespace Vereesa.Core.Services
                 return;
             }
 
-            if (command == "!gcancel") 
+            if (command == "!gcancel")
             {
                 await CancelGiveaway(message);
                 return;
@@ -184,7 +184,7 @@ namespace Vereesa.Core.Services
             CleanupConfig();
         }
 
-        private async Task CancelGiveaway(SocketMessage message) 
+        private async Task CancelGiveaway(SocketMessage message)
         {
             var giveaway = _giveawayRepo.GetAll()
                 .Where(g =>
@@ -194,7 +194,7 @@ namespace Vereesa.Core.Services
                 .OrderByDescending(g => g.CreatedTimestamp + g.Duration)
                 .FirstOrDefault();
 
-            if (giveaway != null) 
+            if (giveaway != null)
             {
                 giveaway.Duration = 0;
                 await ResolveGiveaway(giveaway);
@@ -293,8 +293,16 @@ namespace Vereesa.Core.Services
         {
             var channelId = giveaway.TargetChannel.ToChannelId();
             var channel = GetChannelById(channelId);
-            var iMessage = await channel.GetMessageAsync(giveaway.AnnouncementMessageId);
-            return iMessage as IUserMessage;
+
+            try
+            {
+                var iMessage = await channel.GetMessageAsync(giveaway.AnnouncementMessageId);
+                return iMessage as IUserMessage;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private ISocketMessageChannel GetChannelById(ulong? channelId)
@@ -373,10 +381,21 @@ namespace Vereesa.Core.Services
             foreach (var giveaway in progressingGiveaways)
             {
                 var message = await GetGiveawayMessage(giveaway);
-                await message.ModifyAsync((msg) =>
+
+                try
                 {
-                    msg.Embed = GetAnnouncementEmbed(giveaway);
-                });
+                    if (message != null)
+                    {
+                        await message.ModifyAsync((msg) =>
+                        {
+                            msg.Embed = GetAnnouncementEmbed(giveaway);
+                        });
+                    }
+                }
+                catch
+                {
+
+                }
             }
 
             foreach (var giveaway in unreslovedGiveaways)
@@ -403,30 +422,38 @@ namespace Vereesa.Core.Services
         private async Task ResolveGiveaway(Giveaway giveaway)
         {
             var message = await GetGiveawayMessage(giveaway);
-            var participants = await GetReactingUsers(message);
-            var winners = new List<IUser>();
 
-            if (giveaway.NumberOfWinners > participants.Count)
+            if (message != null)
             {
-                giveaway.NumberOfWinners = participants.Count;
+                var participants = await GetReactingUsers(message);
+                var winners = new List<IUser>();
+
+                if (giveaway.NumberOfWinners > participants.Count)
+                {
+                    giveaway.NumberOfWinners = participants.Count;
+                }
+
+                for (var i = 0; i < giveaway.NumberOfWinners; i++)
+                {
+                    var winnerIndex = _rng.Next(0, participants.Count - 1);
+                    var winner = participants[winnerIndex];
+                    winners.Add(winner);
+                    participants.Remove(winner);
+                }
+
+                giveaway.WinnerNames = winners.Select(w => w.Username).ToList();
+                _giveawayRepo.AddOrEdit(giveaway);
+                _giveawayRepo.Save();
+
+                await message.ModifyAsync((msg) =>
+                {
+                    msg.Embed = GetAnnouncementEmbed(giveaway);
+                });
             }
-
-            for (var i = 0; i < giveaway.NumberOfWinners; i++)
+            else
             {
-                var winnerIndex = _rng.Next(0, participants.Count - 1);
-                var winner = participants[winnerIndex];
-                winners.Add(winner);
-                participants.Remove(winner);
+                Console.WriteLine("Detected possibly deleted gieaway. Find a way to handle this.");
             }
-
-            giveaway.WinnerNames = winners.Select(w => w.Username).ToList();
-            _giveawayRepo.AddOrEdit(giveaway);
-            _giveawayRepo.Save();
-
-            await message.ModifyAsync((msg) =>
-            {
-                msg.Embed = GetAnnouncementEmbed(giveaway);
-            });
         }
 
         private async Task<List<IUser>> GetReactingUsers(IUserMessage message)
