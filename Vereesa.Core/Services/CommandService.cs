@@ -79,9 +79,12 @@ namespace Vereesa.Core.Services
                         {
                             var ts = tag.GetTimeUntilDate();
                             if (ts == null)
-                                continue;                            
+                                continue;
 
-                            returnMessage = returnMessage.Replace(tag.ReplacePattern, $"{ts.Value.Days} days, {ts.Value.Hours} hours, {ts.Value.Minutes} minutes, and {ts.Value.Seconds} seconds");
+                            if (ts.Value.TotalSeconds < 0)
+                                ts = new TimeSpan();
+                                
+                            returnMessage = returnMessage.Replace(tag.ReplacePattern, $"{ts.Value.Days} days, {ts.Value.Hours} hours, {ts.Value.Minutes} minutes, and {ts.Value.Seconds} seconds until");
                         }
 
                         break;
