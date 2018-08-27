@@ -66,7 +66,7 @@ namespace Vereesa.Core.Services
             var name = realmAndNameSplit.Skip(1).Take(1).First();
             var character = _battleNetApi.GetCharacterData(realm, name, "eu").GetAwaiter().GetResult();
             var avatar = _battleNetApi.GetCharacterThumbnail(character, "eu");
-            var artifactTraitCount = _battleNetApi.GetCharacterArtifactTraitCount(character);
+            var artifactLevel = _battleNetApi.GetCharacterHeartOfAzerothLevel(character);
 
             var embed = new EmbedBuilder();
             embed.Color = new Color(155, 89, 182);
@@ -77,7 +77,7 @@ namespace Vereesa.Core.Services
             embed.AddField("__Real Name__", application[2], true);
             embed.AddField("__Age__", application[4], true);
             embed.AddField("__Country__", application[3], true);
-            embed.AddField("__Character Stats__", $"**Artifact traits:** {artifactTraitCount} \r\n**Health:** {character.Stats.Health.ToString("N")}\r\n**Crit:** {character.Stats.Crit.ToString ("0.##")}% | **Haste:** {character.Stats.Haste.ToString ("0.##")}% | **Mastery:** {character.Stats.Mastery.ToString ("0.##")}%", false);
+            embed.AddField("__Character Stats__", $"**Heart of Azeroth level:** {artifactLevel} \r\n**Avg ilvl:** {character.Items.AverageItemLevelEquipped}\r\n**Achi points:** {character.AchievementPoints} | **Total HKs:** {character.TotalHonorableKills}", false);
             embed.AddField("__External sites__", $@"[Armory]({armoryProfileUrl}) | [RaiderIO](https://raider.io/characters/eu/{realm}/{name}) | [WoWProgress](https://www.wowprogress.com/character/eu/{realm}/{name}) | [WarcraftLogs](https://www.warcraftlogs.com/character/eu/{realm}/{name})", false);
             
             embed.Footer = new EmbedFooterBuilder();

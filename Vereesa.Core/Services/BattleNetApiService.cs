@@ -77,5 +77,10 @@ namespace Vereesa.Core.Services
 
             return totalTraits;
         }
+
+        public int GetCharacterHeartOfAzerothLevel(WowCharacter character) 
+        {
+            return character.Items?.Neck?.AzeriteItem?.AzeriteLevel ?? 0;
+        }
     }
 }

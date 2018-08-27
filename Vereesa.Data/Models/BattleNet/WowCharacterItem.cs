@@ -18,6 +18,7 @@ namespace Vereesa.Data.Models.BattleNet
         public int ArtifactAppearanceId { get; set; }
         public IList<ArtifactTrait> ArtifactTraits { get; set; }
         public IList<Relic> Relics { get; set; }
+        public AzeriteItem AzeriteItem { get; set; }
         // public  Appearance { get; set; }
     }
 }
