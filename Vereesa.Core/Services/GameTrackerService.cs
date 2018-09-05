@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -100,13 +101,15 @@ namespace Vereesa.Core.Services
                 });
             }
 
-            var postContent = new Dictionary<string, string>();
-            postContent.Add("gamestate", JsonConvert.SerializeObject(gameState));
+            var serializedGameState = JsonConvert.SerializeObject(gameState);
+            var buffer = System.Text.Encoding.UTF8.GetBytes(serializedGameState);
+            var byteGamestate = new ByteArrayContent(buffer);
+            byteGamestate.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
             using (var client = new HttpClient())
             {
-                client.DefaultRequestHeaders.Add("user-key", _options.EmissionEndpointUserKey);
-                var response = await client.PostAsync(_options.EmissionEndpoint, new FormUrlEncodedContent(postContent));
+                client.DefaultRequestHeaders.Add("Authorization", _options.EmissionEndpointUserKey);
+                var response = await client.PostAsync(_options.EmissionEndpoint, byteGamestate);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.StatusCode != HttpStatusCode.OK)
