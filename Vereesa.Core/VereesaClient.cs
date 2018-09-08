@@ -41,7 +41,6 @@ namespace Vereesa.Core
             var discordSettings = new DiscordSettings();
             var battleNetApiSettings = new BattleNetApiSettings();
             var gameStateEmissionSettings = new GameStateEmissionSettings();
-            var googleSheetSettings = new GoogleSheetSettings();
             var gamblingSettings = new GamblingSettings();
             var voiceChannelTrackerSettings = new VoiceChannelTrackerSettings();
             var guildApplicationSettings = new GuildApplicationSettings();
@@ -50,7 +49,6 @@ namespace Vereesa.Core
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             _config.GetSection(nameof(BattleNetApiSettings)).Bind(battleNetApiSettings);
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
-            _config.GetSection(nameof(GoogleSheetSettings)).Bind(googleSheetSettings);
             _config.GetSection(nameof(GamblingSettings)).Bind(gamblingSettings);
             _config.GetSection(nameof(VoiceChannelTrackerSettings)).Bind(voiceChannelTrackerSettings);
             _config.GetSection(nameof(GuildApplicationSettings)).Bind(guildApplicationSettings);
@@ -69,7 +67,6 @@ namespace Vereesa.Core
                 .AddSingleton(discordSettings)
                 .AddSingleton(battleNetApiSettings)
                 .AddSingleton(gameStateEmissionSettings)
-                .AddSingleton(googleSheetSettings)
                 .AddSingleton(gamblingSettings)
                 .AddSingleton(voiceChannelTrackerSettings)
                 .AddSingleton(guildApplicationSettings)
@@ -77,11 +74,11 @@ namespace Vereesa.Core
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<EventHubService>()
+                .AddSingleton<NeonApiService>()
                 .AddSingleton<BattleNetApiService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
                 .AddSingleton<GuildApplicationService>()
-                .AddSingleton<GoogleSheetService>()
                 .AddSingleton<GamblingService>()
                 .AddSingleton<VoiceChannelTrackerService>()
                 .AddSingleton<RoleGiverService>()    
@@ -101,7 +98,6 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<GameTrackerService>();
             _serviceProvider.GetRequiredService<GiveawayService>();
             _serviceProvider.GetRequiredService<GuildApplicationService>();
-            _serviceProvider.GetRequiredService<GoogleSheetService>();
             _serviceProvider.GetRequiredService<GamblingService>();
             _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
             _serviceProvider.GetRequiredService<RoleGiverService>();
