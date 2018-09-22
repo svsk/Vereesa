@@ -16,7 +16,7 @@ namespace Vereesa.Data.Repositories
         public JsonRepository()
         {
             _filePath = $@"{AppContext.BaseDirectory}/data";
-            if (Directory.Exists(_filePath) == false) 
+            if (Directory.Exists(_filePath) == false)
             {
                 Directory.CreateDirectory(_filePath);
             }
@@ -26,7 +26,7 @@ namespace Vereesa.Data.Repositories
             Console.WriteLine($"Initialized JsonRepository for type {typeof(T).Name} at {_filePath}.");
         }
 
-        private List<FileInfo> GetRepositoryFiles() 
+        private List<FileInfo> GetRepositoryFiles()
         {
             var directory = new DirectoryInfo(_filePath);
             var files = directory.EnumerateFiles($"{typeof(T).Name}.*.json").ToList();
@@ -35,16 +35,23 @@ namespace Vereesa.Data.Repositories
 
         public IEnumerable<T> GetAll()
         {
-            var files = GetRepositoryFiles();
-
-            foreach (var file in files)
+            try
             {
-                var fileId = file.Name.Split('.')[1];
+                var files = GetRepositoryFiles();
 
-                if (!_context.Any(e => e.Id == fileId))
+                foreach (var file in files)
                 {
-                    _context.Add(JsonConvert.DeserializeObject<T>(File.ReadAllText($"{_filePath}/{file.Name}")));
+                    var fileId = file.Name.Split('.')[1];
+
+                    if (!_context.Any(e => e.Id == fileId))
+                    {
+                        _context.Add(JsonConvert.DeserializeObject<T>(File.ReadAllText($"{_filePath}/{file.Name}")));
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
             }
 
             return _context;
@@ -58,24 +65,31 @@ namespace Vereesa.Data.Repositories
 
         public void Save()
         {
-            Console.WriteLine($"Saving entities of type {typeof(T).Name}.");
-
-            var savedEntities = 0;
-
-            foreach (var entity in _context)
+            try
             {
-                try 
-                {
-                    File.WriteAllText($"{_filePath}/{typeof(T).Name}.{entity.Id}.json", JsonConvert.SerializeObject(entity));
-                    savedEntities++;
-                }
-                catch (Exception ex) 
-                {
-                    Console.WriteLine($"Failed save entity: {entity.Id} ({typeof(T).Name}).", ex);
-                }
-            }
+                Console.WriteLine($"Saving entities of type {typeof(T).Name}.");
 
-            Console.WriteLine($"Saved {savedEntities} entities of type {typeof(T).Name}.");
+                var savedEntities = 0;
+
+                foreach (var entity in _context)
+                {
+                    try
+                    {
+                        File.WriteAllText($"{_filePath}/{typeof(T).Name}.{entity.Id}.json", JsonConvert.SerializeObject(entity));
+                        savedEntities++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed save entity: {entity.Id} ({typeof(T).Name}).", ex);
+                    }
+                }
+
+                Console.WriteLine($"Saved {savedEntities} entities of type {typeof(T).Name}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
         }
 
         public void AddOrEdit(T entity)
