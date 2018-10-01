@@ -32,10 +32,11 @@ namespace Vereesa.Core.Services
 
         private void Start()
         {
-            TimerHelpers.SetTimeout(() => {
+            TimerHelpers.SetTimeout(() =>
+            {
                 var applications = _neonApiService.GetApplications();
 
-                if (applications != null) 
+                if (applications != null)
                 {
                     CheckForNewApplications(applications).GetAwaiter().GetResult();
                 }
@@ -51,7 +52,7 @@ namespace Vereesa.Core.Services
                 _cachedApplications = new Dictionary<int, Application>();
             }
 
-            foreach (var application in applications) 
+            foreach (var application in applications)
             {
                 if (!_cachedApplications.ContainsKey(application.Id) && !isFirstRun)
                 {
@@ -61,22 +62,22 @@ namespace Vereesa.Core.Services
                 _cachedApplications[application.Id] = application;
             }
 
-            
+
         }
 
-        private async Task AnnounceNewApplication (Application application)
+        private async Task AnnounceNewApplication(Application application)
         {
             var notificationChannel = _discord.Guilds.FirstOrDefault()?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName) as ISocketMessageChannel;
-            if (notificationChannel != null) 
+            if (notificationChannel != null)
             {
-                try 
+                try
                 {
                     //await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
                     var applicationEmbed = GetApplicationEmbed(application).Build();
                     await notificationChannel.SendMessageAsync("", false, applicationEmbed);
                 }
                 catch (Exception ex)
-                { 
+                {
                     //probably a malformed response array
                 }
             }
@@ -85,11 +86,8 @@ namespace Vereesa.Core.Services
         private EmbedBuilder GetApplicationEmbed(Application application)
         {
             var armoryProfileUrl = application.GetFirstAnswerByQuestionPart("wow-armory profile");
-            var realmAndName = armoryProfileUrl.Split(new string[] { "/character/" }, StringSplitOptions.None).Last();
-            var realmAndNameSplit = realmAndName.Split('/');
-            var realm = realmAndNameSplit.Skip(0).Take(1).First();
-            var name = realmAndNameSplit.Skip(1).Take(1).First();
-            var character = _battleNetApi.GetCharacterData(realm, name, "eu").GetAwaiter().GetResult();
+            var charAndRealm = ParseArmoryLink(armoryProfileUrl);
+            var character = _battleNetApi.GetCharacterData(charAndRealm.realm, charAndRealm.name, "eu").GetAwaiter().GetResult();
             var avatar = _battleNetApi.GetCharacterThumbnail(character, "eu");
             var artifactLevel = _battleNetApi.GetCharacterHeartOfAzerothLevel(character);
 
@@ -110,13 +108,29 @@ namespace Vereesa.Core.Services
             embed.AddField("__Age__", playerAge, true);
             embed.AddField("__Country__", playerCountry, true);
             embed.AddField("__Character Stats__", $"**Heart of Azeroth level:** {artifactLevel} \r\n**Avg ilvl:** {character.Items.AverageItemLevelEquipped}\r\n**Achi points:** {character.AchievementPoints} | **Total HKs:** {character.TotalHonorableKills}", false);
-            embed.AddField("__External sites__", $@"[Armory]({armoryProfileUrl}) | [RaiderIO](https://raider.io/characters/eu/{realm}/{name}) | [WoWProgress](https://www.wowprogress.com/character/eu/{realm}/{name}) | [WarcraftLogs](https://www.warcraftlogs.com/character/eu/{realm}/{name})", false);
-            
+            embed.AddField("__External sites__", $@"[Armory]({armoryProfileUrl}) | [RaiderIO](https://raider.io/characters/eu/{charAndRealm.realm}/{charAndRealm.name}) | [WoWProgress](https://www.wowprogress.com/character/eu/{charAndRealm.realm}/{charAndRealm.name}) | [WarcraftLogs](https://www.warcraftlogs.com/character/eu/{charAndRealm.realm}/{charAndRealm.name})", false);
+
             embed.Footer = new EmbedFooterBuilder();
             embed.Footer.WithIconUrl("https://render-eu.worldofwarcraft.com/character/karazhan/102/54145126-avatar.jpg");
             embed.Footer.Text = $"Requested by Veinlash - Today at {DateTime.UtcNow.ToCentralEuropeanTime().ToString("HH:mm")}";
 
             return embed;
+        }
+
+        //handles:
+        //https://raider.io/characters/eu/the-maelstrom/Connon
+        //https://worldofwarcraft.com/en-gb/character/the-maelstrom/Boop
+        //https://www.warcraftlogs.com/character/eu/karazhan/veinlash
+        private dynamic ParseArmoryLink(string armoryLink)
+        {
+            var realmAndNameSplit = armoryLink.Split('?').First().Trim('/').Split('/').Reverse();
+            var name = realmAndNameSplit.Skip(0).Take(1).First();
+            var realm = realmAndNameSplit.Skip(1).Take(1).First();
+
+            return new {
+                realm = realm,
+                name = name
+            };
         }
     }
 }
