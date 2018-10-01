@@ -45,6 +45,8 @@ namespace Vereesa.Core.Services
 
         private async Task CheckForNewApplications(IEnumerable<Application> applications)
         {
+            Console.WriteLine($"Checking for new apps ({_cachedApplications?.Keys.Count ?? 0} cached)...");
+
             var isFirstRun = _cachedApplications == null;
 
             if (isFirstRun)
@@ -56,13 +58,14 @@ namespace Vereesa.Core.Services
             {
                 if (!_cachedApplications.ContainsKey(application.Id) && !isFirstRun)
                 {
+                    Console.WriteLine($"Found new app! Announcing!");
                     await AnnounceNewApplication(application);
                 }
 
                 _cachedApplications[application.Id] = application;
             }
 
-
+            Console.WriteLine($"Finished checking for new apps. Now {_cachedApplications.Keys.Count} cached.");
         }
 
         private async Task AnnounceNewApplication(Application application)
@@ -78,7 +81,7 @@ namespace Vereesa.Core.Services
                 }
                 catch (Exception ex)
                 {
-                    //probably a malformed response array
+                    Console.WriteLine(ex);
                 }
             }
         }
@@ -103,7 +106,8 @@ namespace Vereesa.Core.Services
             embed.WithAuthor($"New application @ neon.gg/applications", null, "https://www.neon.gg/applications/");
             embed.WithThumbnailUrl(avatar);
 
-            embed.Title = $"{characterName} - {characterSpec} {characterClass}";
+            var title = $"{characterName} - {characterSpec} {characterClass}";
+            embed.Title = title.Length > 256 ? title.Substring(0, 256) : title;
             embed.AddField("__Real Name__", playerName, true);
             embed.AddField("__Age__", playerAge, true);
             embed.AddField("__Country__", playerCountry, true);
