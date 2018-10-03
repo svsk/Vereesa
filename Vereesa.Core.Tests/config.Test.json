@@ -1,5 +1,6 @@
 {
     "BattleNetApiSettings": {
-        "ApiKey": ""
+        "ClientId": "",
+        "ClientSecret": ""
     }
 }

@@ -22,7 +22,8 @@
 		"AnnouncementChannelName": ""
 	},
 	"BattleNetApiSettings": {
-		"ApiKey": ""
+		"ClientId": "",
+		"ClientSecret": ""
 	},
 	"SignupsSettings": {
 		"EventsUrl": "",

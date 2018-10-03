@@ -5,6 +5,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using RestSharp;
+using RestSharp.Authenticators;
 using Vereesa.Core.Configuration;
 using Vereesa.Data.Models.BattleNet;
 using Vereesa.Data.Models.EventHub;
@@ -14,21 +16,57 @@ namespace Vereesa.Core.Services
     public class BattleNetApiService
     {
         private BattleNetApiSettings _settings;
+        private Dictionary<string, (string token, DateTime expiryDateTime)> _regionTokens = new Dictionary<string, (string token, DateTime expiryDateTime)>();
 
         public BattleNetApiService(BattleNetApiSettings settings)
         {
             _settings = settings;
         }
 
-        private async Task<T> GetRequestAsync<T>(string url)
+        private string GetAuthToken(string region) 
         {
-            using (var client = new HttpClient())
+            if (_regionTokens.ContainsKey(region) && _regionTokens[region].expiryDateTime > DateTime.Now)
+                return _regionTokens[region].token;
+
+            var client = new RestClient($"https://{region}.battle.net");
+            client.Authenticator = new HttpBasicAuthenticator(_settings.ClientId, _settings.ClientSecret);
+            var request = new RestRequest("oauth/token", Method.POST);
+            request.AddParameter("grant_type", "client_credentials");
+
+            var response = client.Execute(request);
+
+            if (!response.IsSuccessful) 
             {
-                var httpResponse = await client.GetAsync(url);
-                var responseText = await httpResponse.Content.ReadAsStringAsync();
-                var typedResponse = JsonConvert.DeserializeObject<T>(responseText);
-                return typedResponse;
+                throw new InvalidOperationException("Failed to perform Battle.net authentication.");
             }
+
+            var deserializedResponse = JsonConvert.DeserializeObject<Dictionary<string, string>>(response.Content);
+            var tokenDuration = int.Parse(deserializedResponse["expires_in"]);
+            var accessToken = deserializedResponse["access_token"];
+            
+            _regionTokens[region] = (token: accessToken, expiryDateTime: DateTime.Now.AddSeconds(tokenDuration));
+            
+            return _regionTokens[region].token;
+        }
+
+        private T ExecuteApiRequest<T>(string region, string endpoint, Method method)
+        {
+            var client = new RestClient($"https://{region}.api.blizzard.com");
+            var request = new RestRequest(endpoint, method);
+            var token = GetAuthToken(region);
+
+            request.AddHeader("Authorization", $"Bearer {token}");
+
+            var response = client.Execute(request);
+
+            if (!response.IsSuccessful) 
+            {
+                throw new InvalidOperationException($"Failed to execute Battle.net API request: {endpoint}.");
+            }
+
+            var deserializedResponse =JsonConvert.DeserializeObject<T>(response.Content);
+
+            return deserializedResponse;
         }
 
         public string GetCharacterThumbnail(WowCharacter character, string region)
@@ -39,13 +77,14 @@ namespace Vereesa.Core.Services
             return $"https://render-{region}.worldofwarcraft.com/character/{character.Thumbnail}";
         }
 
-        public async Task<WowCharacter> GetCharacterData(string realm, string characterName, string region)
+        public WowCharacter GetCharacterData(string realm, string characterName, string region)
         {
-            var url = $"https://{region}.api.battle.net/wow/character/{realm}/{characterName}?fields=stats,items&locale=en_GB&apikey={_settings.ApiKey}";
+            var host = $"";
+            var endpoint = $"wow/character/{realm}/{characterName}?fields=stats,items&locale=en_GB";
 
             try
             {
-                return await GetRequestAsync<WowCharacter>(url);
+                return ExecuteApiRequest<WowCharacter>(region, endpoint, Method.GET);
             }
             catch
             {

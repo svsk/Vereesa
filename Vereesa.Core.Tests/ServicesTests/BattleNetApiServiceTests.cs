@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Vereesa.Core.Configuration;
@@ -13,7 +14,7 @@ namespace Vereesa.Core.Tests.ServicesTests
         private BattleNetApiService _battleNetApiService;
 
         [TestInitialize]
-        public void Before() 
+        public void Before()
         {
             //Set up configuration
             var builder = new ConfigurationBuilder()
@@ -29,7 +30,7 @@ namespace Vereesa.Core.Tests.ServicesTests
         }
 
         [TestMethod]
-        public void TestGetCharacterStats()
+        public void GetCharacterData_GettingCharacterData_CharacterDataReturned()
         {
             //Arrange
             var charName = "Veinlash";
@@ -37,10 +38,48 @@ namespace Vereesa.Core.Tests.ServicesTests
             var region = "eu";
 
             //Act
-            var result = _battleNetApiService.GetCharacterData(realmName, charName, region).GetAwaiter().GetResult();
+            var result = _battleNetApiService.GetCharacterData(realmName, charName, region);
 
             //Assert
             Assert.IsTrue(result != null);
+        }
+
+        [TestMethod]
+        public void GetCharacterHeartOfAzerothLevel_GettingCharacterHeartOfAzerothLevel_HeartOfAzerothLevelIsAbove0()
+        {
+            //Arrange
+            var charName = "Veinlash";
+            var realmName = "Karazhan";
+            var region = "eu";
+
+            //Act
+            var character = _battleNetApiService.GetCharacterData(realmName, charName, region);
+            var hoaLevel = _battleNetApiService.GetCharacterHeartOfAzerothLevel(character);
+
+            //Assert
+            Assert.IsTrue(hoaLevel > 0); //This may no longer be the case after BfA
+        }
+
+        [TestMethod]
+        public void GetCharacterThumbnail_GettingCharacterThumbnail_ThumbnailExistsAndIsImageJpeg()
+        {
+            //Arrange
+            var charName = "Veinlash";
+            var realmName = "Karazhan";
+            var region = "eu";
+
+            //Act
+            var character = _battleNetApiService.GetCharacterData(realmName, charName, region);
+            var thumbnail = _battleNetApiService.GetCharacterThumbnail(character, region);
+
+            using (var httpClient = new HttpClient()) 
+            {
+                var thumbnailRequestResult = httpClient.GetAsync(thumbnail).GetAwaiter().GetResult();
+
+                //Assert
+                Assert.AreEqual(200, (int)thumbnailRequestResult.StatusCode);
+                Assert.AreEqual("image/jpeg", thumbnailRequestResult.Content.Headers.ContentType.MediaType);
+            }
         }
     }
 }
