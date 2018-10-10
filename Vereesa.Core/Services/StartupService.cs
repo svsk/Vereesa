@@ -5,6 +5,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 
 namespace Vereesa.Core.Services
@@ -12,17 +13,20 @@ namespace Vereesa.Core.Services
     public class StartupService
     {
         private readonly DiscordSocketClient _discord;
+        private readonly ILogger<StartupService> _logger;
         private readonly DiscordSettings _settings;
 
-        public StartupService(DiscordSocketClient discord, DiscordSettings settings)
+        public StartupService(DiscordSocketClient discord, DiscordSettings settings, ILogger<StartupService> logger)
         {
             _settings = settings;
             _discord = discord;
+            _logger = logger;
 
             _discord.Disconnected -= HandleDisconnected;
             _discord.Disconnected += HandleDisconnected;
             _discord.Connected -= HandleConnected;
             _discord.Connected += HandleConnected;
+            _discord.Log += HandleLogMessage;
         }
 
         private Timer _reconnectAttemptTimer = null;
@@ -40,7 +44,7 @@ namespace Vereesa.Core.Services
 
         private async Task HandleDisconnected(Exception arg)
         {
-            Console.WriteLine("Disconnected!");
+            _logger.LogInformation("Disconnected!");
 
             if (_reconnectAttemptTimer == null)
             {
@@ -53,17 +57,46 @@ namespace Vereesa.Core.Services
 
         private async void AttemptReconnect(object sender, ElapsedEventArgs e)
         {
-            Console.WriteLine("Attempting reconnect...");
+            _logger.LogInformation("Attempting reconnect...");
             await this.StartAsync();
         }
 
-        private async Task HandleConnected() 
+        private async Task HandleConnected()
         {
-            Console.WriteLine("Connected!");
+            _logger.LogInformation("Connected!");
 
-            if (_reconnectAttemptTimer != null) 
+            if (_reconnectAttemptTimer != null)
             {
                 _reconnectAttemptTimer.Stop();
+            }
+        }
+
+        private async Task HandleLogMessage(LogMessage logMessage)
+        {
+            switch (logMessage.Severity)
+            {
+                case LogSeverity.Verbose:
+                    _logger.Log(LogLevel.Debug, logMessage.Message, logMessage.Exception);
+                    break;
+                case LogSeverity.Debug:
+                    _logger.Log(LogLevel.Debug, logMessage.Message, logMessage.Exception);
+                    break;
+                case LogSeverity.Info:
+                    _logger.Log(LogLevel.Information, logMessage.Message, logMessage.Exception);
+                    break;
+                case LogSeverity.Warning:
+                    _logger.Log(LogLevel.Warning, logMessage.Message, logMessage.Exception);
+                    break;
+                case LogSeverity.Error:
+                    _logger.Log(LogLevel.Error, logMessage.Message, logMessage.Exception);
+                    break;
+                case LogSeverity.Critical:
+                    _logger.Log(LogLevel.Critical, logMessage.Message, logMessage.Exception);
+                    break;
+                default:
+                    _logger.LogWarning($"Unknown severity level detected ({logMessage.Severity}).");
+                    _logger.Log(LogLevel.Information, logMessage.Message, logMessage.Exception);
+                    break;
             }
         }
     }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
@@ -15,13 +16,15 @@ namespace Vereesa.Core.Services
     public class GuildApplicationService
     {
         private NeonApiService _neonApiService;
+        private ILogger<GuildApplicationService> _logger;
         private DiscordSocketClient _discord;
         private BattleNetApiService _battleNetApi;
         private GuildApplicationSettings _settings;
         private Dictionary<int, Application> _cachedApplications;
 
-        public GuildApplicationService(NeonApiService neonApiService, DiscordSocketClient discord, GuildApplicationSettings settings, BattleNetApiService battleNetApi)
+        public GuildApplicationService(NeonApiService neonApiService, DiscordSocketClient discord, GuildApplicationSettings settings, BattleNetApiService battleNetApi, ILogger<GuildApplicationService> logger)
         {
+            _logger = logger;
             _discord = discord;
             _battleNetApi = battleNetApi;
             _settings = settings;
@@ -45,8 +48,6 @@ namespace Vereesa.Core.Services
 
         private async Task CheckForNewApplications(IEnumerable<Application> applications)
         {
-            Console.WriteLine($"Checking for new apps ({_cachedApplications?.Keys.Count ?? 0} cached)...");
-
             var isFirstRun = _cachedApplications == null;
 
             if (isFirstRun)
@@ -58,14 +59,32 @@ namespace Vereesa.Core.Services
             {
                 if (!_cachedApplications.ContainsKey(application.Id) && !isFirstRun)
                 {
-                    Console.WriteLine($"Found new app! Announcing!");
+                    _logger.LogInformation($"Found new app! Announcing!");
                     await AnnounceNewApplication(application);
                 }
 
                 _cachedApplications[application.Id] = application;
-            }
 
-            Console.WriteLine($"Finished checking for new apps. Now {_cachedApplications.Keys.Count} cached.");
+                if (application.CurrentStatusString == "Pending") 
+                {
+                    var fortyEightHours = new TimeSpan(hours: 48, minutes: 0, seconds: 0);
+                    var thirtySixHours = new TimeSpan(hours: 36, minutes: 0, seconds: 0);
+                    var timeSinceAppSubmission = DateTime.UtcNow - application.GetCreatedDateUtc(_settings.SourceTimeZone);
+
+                    //Handle first run somehow...
+
+                    if (timeSinceAppSubmission > fortyEightHours) 
+                    {
+                        //Notify officers of pending application. 
+                        //Remember that 48 hour notification has been sent.
+                    } 
+                    else if (timeSinceAppSubmission > thirtySixHours) 
+                    {
+                        //Notify officers of pending application. 
+                        //Remember that 36 hour notification has been sent.
+                    }
+                }
+            }
         }
 
         private async Task AnnounceNewApplication(Application application)
@@ -81,7 +100,7 @@ namespace Vereesa.Core.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex);
+                    _logger.LogError(ex.Message, ex);
                 }
             }
         }
@@ -90,7 +109,7 @@ namespace Vereesa.Core.Services
         {
             var armoryProfileUrl = application.GetFirstAnswerByQuestionPart("wow-armory profile");
             var charAndRealm = ParseArmoryLink(armoryProfileUrl);
-            var character = _battleNetApi.GetCharacterData(charAndRealm.realm, charAndRealm.name, "eu").GetAwaiter().GetResult();
+            var character = _battleNetApi.GetCharacterData(charAndRealm.realm, charAndRealm.name, "eu");
             var avatar = _battleNetApi.GetCharacterThumbnail(character, "eu");
             var artifactLevel = _battleNetApi.GetCharacterHeartOfAzerothLevel(character);
 

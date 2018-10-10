@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Timers;
+using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Data.Models.EventHub;
 
@@ -14,13 +15,15 @@ namespace Vereesa.Core.Services
 {
     public class GoogleSheetService
     {
+        private ILogger<GoogleSheetService> _logger;
         private EventHubService _eventHubService;
         private GoogleSheetSettings _settings;
         private Timer _checkInterval;
         private int _previousRowCount;
 
-        public GoogleSheetService(GoogleSheetSettings settings, EventHubService eventHubService)
+        public GoogleSheetService(GoogleSheetSettings settings, EventHubService eventHubService, ILogger<GoogleSheetService> logger)
         {
+            _logger = logger;
             _eventHubService = eventHubService;
             _settings = settings;
             _previousRowCount = -1;
@@ -47,19 +50,20 @@ namespace Vereesa.Core.Services
 
             using (var client = new HttpClient())
             {
-                try 
+                try
                 {
                     response = await client.GetAsync(_settings.GoogleSheetCsvUrl);
                 }
-                catch (TaskCanceledException) 
+                catch (TaskCanceledException)
                 {
                     //aw well
                 }
-                catch (Exception) 
+                catch (Exception ex)
                 {
+                    _logger.LogError(ex.Message, ex);
                 }
             }
-                
+
             if (response != null && response.StatusCode == HttpStatusCode.OK)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();

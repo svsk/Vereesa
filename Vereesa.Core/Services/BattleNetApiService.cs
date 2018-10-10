@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using RestSharp;
@@ -15,11 +16,13 @@ namespace Vereesa.Core.Services
 {
     public class BattleNetApiService
     {
+        private ILogger<BattleNetApiService> _logger;
         private BattleNetApiSettings _settings;
         private Dictionary<string, (string token, DateTime expiryDateTime)> _regionTokens = new Dictionary<string, (string token, DateTime expiryDateTime)>();
 
-        public BattleNetApiService(BattleNetApiSettings settings)
+        public BattleNetApiService(BattleNetApiSettings settings, ILogger<BattleNetApiService> logger)
         {
+            _logger = logger;
             _settings = settings;
         }
 
@@ -79,15 +82,15 @@ namespace Vereesa.Core.Services
 
         public WowCharacter GetCharacterData(string realm, string characterName, string region)
         {
-            var host = $"";
             var endpoint = $"wow/character/{realm}/{characterName}?fields=stats,items&locale=en_GB";
 
             try
             {
                 return ExecuteApiRequest<WowCharacter>(region, endpoint, Method.GET);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex.Message, ex);
                 return null;
             }
         }

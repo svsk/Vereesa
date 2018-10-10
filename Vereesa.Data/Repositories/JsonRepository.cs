@@ -22,8 +22,6 @@ namespace Vereesa.Data.Repositories
             }
 
             _context = new List<T>();
-
-            Console.WriteLine($"Initialized JsonRepository for type {typeof(T).Name} at {_filePath}.");
         }
 
         private List<FileInfo> GetRepositoryFiles()
@@ -51,7 +49,7 @@ namespace Vereesa.Data.Repositories
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                throw ex;
             }
 
             return _context;
@@ -59,7 +57,6 @@ namespace Vereesa.Data.Repositories
 
         public void Add(T entity)
         {
-            Console.WriteLine($"Adding new entity of type {typeof(T).Name}.");
             _context.Add(entity);
         }
 
@@ -67,8 +64,6 @@ namespace Vereesa.Data.Repositories
         {
             try
             {
-                Console.WriteLine($"Saving entities of type {typeof(T).Name}.");
-
                 var savedEntities = 0;
 
                 foreach (var entity in _context)
@@ -80,15 +75,14 @@ namespace Vereesa.Data.Repositories
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Failed save entity: {entity.Id} ({typeof(T).Name}).", ex);
+                        throw ex;
                     }
                 }
 
-                Console.WriteLine($"Saved {savedEntities} entities of type {typeof(T).Name}.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                throw ex;
             }
         }
 

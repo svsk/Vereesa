@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
@@ -12,13 +13,15 @@ namespace Vereesa.Core.Services
 {
     public class VoiceChannelTrackerService
     {
+        private ILogger<VoiceChannelTrackerService> _logger;
         private DiscordSocketClient _discord;
         private VoiceChannelTrackerSettings _settings;
         private ISocketMessageChannel _announcementChannel;
         private Timer _clearOldMessagesInterval;
 
-        public VoiceChannelTrackerService(DiscordSocketClient discord, VoiceChannelTrackerSettings settings)
+        public VoiceChannelTrackerService(DiscordSocketClient discord, VoiceChannelTrackerSettings settings, ILogger<VoiceChannelTrackerService> logger)
         {
+            _logger = logger;
             _discord = discord;
             _discord.GuildAvailable += InitailizeVoiceChannelTracker;
             _settings = settings;
@@ -39,9 +42,9 @@ namespace Vereesa.Core.Services
                     }
                 });
             }
-            catch
+            catch (Exception ex)
             {
-                //Well shit
+                _logger.LogError(ex.Message, ex);
             }
             
         }

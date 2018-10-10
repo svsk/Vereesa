@@ -8,6 +8,7 @@ using System.Timers;
 using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Exceptions;
@@ -18,14 +19,16 @@ namespace Vereesa.Core.Services
 {
     public class SignupsService
     {
+        private ILogger<SignupsService> _logger;
         private SignupsSettings _settings;
         private long _lastEventUpdate;
         private Timer _refreshInterval;
         private SignupReport _lastSignupReport;
         private bool _runningRefresh;
 
-        public SignupsService(DiscordSocketClient discord, SignupsSettings settings)
+        public SignupsService(DiscordSocketClient discord, SignupsSettings settings, ILogger<SignupsService> logger)
         {
+            _logger = logger;
             _settings = settings;
             discord.MessageReceived += EvaluateMessage;
         }
@@ -67,7 +70,7 @@ namespace Vereesa.Core.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                _logger.LogError(ex.Message, ex);
                 await targetChannel.SendMessageAsync("I wasn't able to check for the signups to the next raid. Sorry!");
             }
         }

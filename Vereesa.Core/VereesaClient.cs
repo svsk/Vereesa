@@ -1,11 +1,13 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Services;
 using Vereesa.Data;
@@ -87,13 +89,15 @@ namespace Vereesa.Core
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
                 .AddScoped<JsonRepository<GamblingStandings>>()
-                .AddScoped<JsonRepository<Command>>();
+                .AddScoped<JsonRepository<Command>>()
+                .AddLogging(config => { 
+                    config.AddConsole();
+                });
 
             //Build the service provider
             _serviceProvider = services.BuildServiceProvider();
 
             //Start the desired services
-            await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
             _serviceProvider.GetRequiredService<EventHubService>();
             _serviceProvider.GetRequiredService<GameTrackerService>();
             _serviceProvider.GetRequiredService<GiveawayService>();
@@ -103,6 +107,7 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<RoleGiverService>();
             _serviceProvider.GetRequiredService<CommandService>();
             _serviceProvider.GetRequiredService<SignupsService>();
+            await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
         }
 
         public void Shutdown() 

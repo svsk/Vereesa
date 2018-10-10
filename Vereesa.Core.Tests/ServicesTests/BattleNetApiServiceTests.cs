@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Services;
+using Vereesa.Core.Tests.Mocks;
 
 namespace Vereesa.Core.Tests.ServicesTests
 {
@@ -26,7 +27,7 @@ namespace Vereesa.Core.Tests.ServicesTests
             _battleNetApiSettings = new BattleNetApiSettings();
             config.GetSection(nameof(BattleNetApiSettings)).Bind(_battleNetApiSettings);
 
-            _battleNetApiService = new BattleNetApiService(_battleNetApiSettings);
+            _battleNetApiService = new BattleNetApiService(_battleNetApiSettings, new ILoggerMock<BattleNetApiService>());
         }
 
         [TestMethod]

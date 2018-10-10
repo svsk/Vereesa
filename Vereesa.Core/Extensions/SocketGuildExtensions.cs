@@ -7,7 +7,8 @@ namespace Vereesa.Core.Extensions
     {
         public static ISocketMessageChannel GetChannelByName(this SocketGuild guild, string channelName)
         {
-            return guild.Channels.FirstOrDefault(c => c.Name == channelName) as ISocketMessageChannel;
+            ISocketMessageChannel channel = guild.Channels.FirstOrDefault(c => c.Name == channelName) as ISocketMessageChannel;
+            return channel;
         }
     }
 }

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Vereesa.Core.Configuration;
 using Vereesa.Data.Models.GameTracking;
@@ -20,14 +21,16 @@ namespace Vereesa.Core.Services
         private DiscordSocketClient _discord;
         private JsonRepository<GameTrackMember> _trackingRepo;
         private GameStateEmissionSettings _options;
+        private ILogger<GameTrackerService> _logger;
 
-        public GameTrackerService(DiscordSocketClient discord, JsonRepository<GameTrackMember> trackingRepo, GameStateEmissionSettings emissionSettings)
+        public GameTrackerService(DiscordSocketClient discord, JsonRepository<GameTrackMember> trackingRepo, GameStateEmissionSettings emissionSettings, ILogger<GameTrackerService> logger)
         {
             _discord = discord;
             _trackingRepo = trackingRepo;
             _discord.GuildAvailable += OnGuildAvailable;
             _discord.GuildMemberUpdated += OnMemberUpdated;
             _options = emissionSettings;
+            _logger = logger;
         }
 
         private async Task OnGuildAvailable(SocketGuild guild)
@@ -114,7 +117,7 @@ namespace Vereesa.Core.Services
 
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    Console.WriteLine(responseContent);
+                    _logger.LogWarning("Failed to emit game state.", responseContent);
                 }
             }
         }

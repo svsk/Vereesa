@@ -13,7 +13,8 @@
 		"CheckIntervalSeconds": 3000
 	},
 	"GuildApplicationSettings": {
-		"NotificationMessageChannelName": ""
+		"NotificationMessageChannelName": "",
+		"SourceTimeZone": ""
 	},
 	"GamblingSettings": {
 		"GamblingChannelName": ""
