@@ -14,7 +14,8 @@
 	},
 	"GuildApplicationSettings": {
 		"NotificationMessageChannelName": "",
-		"SourceTimeZone": ""
+		"SourceTimeZone": "",
+		"NotificationRoleId": ""
 	},
 	"GamblingSettings": {
 		"GamblingChannelName": ""

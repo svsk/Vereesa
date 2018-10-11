@@ -22,6 +22,10 @@ namespace Vereesa.Core.Services
         private GuildApplicationSettings _settings;
         private Dictionary<int, Application> _cachedApplications;
 
+        //Dictionary where the key is an application's ID and the value is a list containing numbers representing hour 
+        //thresholds for when reminders were sent to nofity officers of an overdue application.
+        private Dictionary<int, List<int>> _notificationCache;
+
         public GuildApplicationService(NeonApiService neonApiService, DiscordSocketClient discord, GuildApplicationSettings settings, BattleNetApiService battleNetApi, ILogger<GuildApplicationService> logger)
         {
             _logger = logger;
@@ -30,10 +34,10 @@ namespace Vereesa.Core.Services
             _settings = settings;
             _neonApiService = neonApiService;
 
-            Start();
+            _discord.Ready += Start;
         }
 
-        private void Start()
+        private async Task Start()
         {
             TimerHelpers.SetTimeout(() =>
             {
@@ -42,8 +46,54 @@ namespace Vereesa.Core.Services
                 if (applications != null)
                 {
                     CheckForNewApplications(applications).GetAwaiter().GetResult();
+                    CheckForOverdueApplications(applications).GetAwaiter().GetResult();
                 }
             }, 30000, true, true);
+        }
+
+        private async Task CheckForOverdueApplications(IEnumerable<Application> applications)
+        {
+            var isFirstRun = _notificationCache == null;
+            _notificationCache = isFirstRun ? new Dictionary<int, List<int>>() : _notificationCache;
+            var notificationHourThresholds = new int[] { 36, 48 }; //Config?
+
+            foreach (var application in applications) 
+            {
+                if (application.CurrentStatusString == "Pending") 
+                {
+                    _notificationCache[application.Id] = _notificationCache.ContainsKey(application.Id) ? _notificationCache[application.Id] : new List<int>();
+
+                    var timeSinceAppSubmission = DateTime.UtcNow - application.GetCreatedDateUtc(_settings.SourceTimeZone);
+                    var hoursPending = (int)Math.Floor(timeSinceAppSubmission.TotalHours);
+                    var shouldNotify = false;
+                    var previousNotificationTimes = _notificationCache[application.Id];
+
+                    foreach (var threshold in notificationHourThresholds) 
+                    {
+                        if (hoursPending >= threshold && !previousNotificationTimes.Contains(threshold)) 
+                        {
+                            shouldNotify = true;
+                            previousNotificationTimes.Add(threshold);
+                        }
+                    }
+
+                    if (shouldNotify && !isFirstRun)
+                    {
+                        await SendOverdueNotification(application, hoursPending);
+                    }
+                }
+            }   
+        }
+
+        private async Task SendOverdueNotification(Application application, int hoursPending)
+        {
+            _logger.LogInformation($"Application {application.Id} has now been pending for {hoursPending} hours.");
+
+            var playerName = application.GetFirstAnswerByEitherQuestionPart("your name", "full name");
+
+            var notificationChannel = GetNotificationChannel();
+
+            await notificationChannel?.SendMessageAsync($"<@&{_settings.NotificationRoleId}> {playerName}'s application has now been pending for more than {hoursPending} hours. Please review it and respond as soon as possible.");
         }
 
         private async Task CheckForNewApplications(IEnumerable<Application> applications)
@@ -64,45 +114,30 @@ namespace Vereesa.Core.Services
                 }
 
                 _cachedApplications[application.Id] = application;
-
-                if (application.CurrentStatusString == "Pending") 
-                {
-                    var fortyEightHours = new TimeSpan(hours: 48, minutes: 0, seconds: 0);
-                    var thirtySixHours = new TimeSpan(hours: 36, minutes: 0, seconds: 0);
-                    var timeSinceAppSubmission = DateTime.UtcNow - application.GetCreatedDateUtc(_settings.SourceTimeZone);
-
-                    //Handle first run somehow...
-
-                    if (timeSinceAppSubmission > fortyEightHours) 
-                    {
-                        //Notify officers of pending application. 
-                        //Remember that 48 hour notification has been sent.
-                    } 
-                    else if (timeSinceAppSubmission > thirtySixHours) 
-                    {
-                        //Notify officers of pending application. 
-                        //Remember that 36 hour notification has been sent.
-                    }
-                }
             }
         }
 
         private async Task AnnounceNewApplication(Application application)
         {
-            var notificationChannel = _discord.Guilds.FirstOrDefault()?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName) as ISocketMessageChannel;
+            var notificationChannel = GetNotificationChannel();
             if (notificationChannel != null)
             {
                 try
                 {
                     //await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
                     var applicationEmbed = GetApplicationEmbed(application).Build();
-                    await notificationChannel.SendMessageAsync("", false, applicationEmbed);
+                    await notificationChannel.SendMessageAsync(string.Empty, false, applicationEmbed);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex.Message, ex);
                 }
             }
+        }
+
+        private ISocketMessageChannel GetNotificationChannel()
+        {
+            return _discord.Guilds.FirstOrDefault()?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName) as ISocketMessageChannel;
         }
 
         private EmbedBuilder GetApplicationEmbed(Application application)
@@ -150,7 +185,8 @@ namespace Vereesa.Core.Services
             var name = realmAndNameSplit.Skip(0).Take(1).First();
             var realm = realmAndNameSplit.Skip(1).Take(1).First();
 
-            return new {
+            return new 
+            {
                 realm = realm,
                 name = name
             };

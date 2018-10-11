@@ -11,7 +11,6 @@ namespace Vereesa.Data.Models.NeonApi
         public int Id { get; set; }
         public string Key { get; set; }
         public IList<ApplicationQuestion> ApplicationQuestions { get; set; }
-
         public string CurrentStatusString { get; set; }
         
         public DateTime GetCreatedDateUtc(string timestampTimeZone)
