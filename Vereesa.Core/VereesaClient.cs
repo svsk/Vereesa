@@ -86,10 +86,13 @@ namespace Vereesa.Core
                 .AddSingleton<RoleGiverService>()    
                 .AddSingleton<CommandService>()
                 .AddSingleton<SignupsService>()
+                
+                .AddSingleton<MovieSuggestionService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
                 .AddScoped<JsonRepository<GamblingStandings>>()
                 .AddScoped<JsonRepository<Command>>()
+                
                 .AddLogging(config => { 
                     config.AddConsole();
                 });
@@ -107,6 +110,7 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<RoleGiverService>();
             _serviceProvider.GetRequiredService<CommandService>();
             _serviceProvider.GetRequiredService<SignupsService>();
+            _serviceProvider.GetRequiredService<MovieSuggestionService>();
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
         }
 
