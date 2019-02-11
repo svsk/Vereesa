@@ -82,5 +82,11 @@ namespace Vereesa.Core.Tests.ServicesTests
                 Assert.AreEqual("image/jpeg", thumbnailRequestResult.Content.Headers.ContentType.MediaType);
             }
         }
+
+        [TestMethod]
+        public void Something() 
+        {
+            _battleNetApiService.GetAuctionPrice("stuff");
+        }
     }
 }

@@ -52,6 +52,12 @@ namespace Vereesa.Core.Services
             return _regionTokens[region].token;
         }
 
+        public void GetAuctionPrice(string itemName) 
+        {
+            var auctionFiles = ExecuteApiRequest<AuctionFileResponse>("eu", "/wow/auction/data/karazhan", Method.GET);
+
+        }
+
         private T ExecuteApiRequest<T>(string region, string endpoint, Method method)
         {
             var client = new RestClient($"https://{region}.api.blizzard.com");
