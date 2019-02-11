@@ -44,20 +44,30 @@ namespace Vereesa.Core.Services
             var beforeGame = userBeforeChange.Activity;
             var afterGame = userAfterChange.Activity;
 
-            if (beforeGame != null && (afterGame == null || afterGame.Name != beforeGame.Name))
+            try 
             {
-                UpdateUserGameState(userBeforeChange, "stopped");
-                gameChangeHappened = true;
-            }
+                if (beforeGame != null && (afterGame == null || afterGame.Name != beforeGame.Name))
+                {
+                    gameChangeHappened = true;
+                    _logger.LogInformation($"{userBeforeChange.Nickname} stopped playing {beforeGame.Name}.");
+                    UpdateUserGameState(userBeforeChange, "stopped");
+                }
 
-            if (afterGame != null)
+                if (afterGame != null)
+                {
+                    gameChangeHappened = true;
+                    _logger.LogInformation($"{userBeforeChange.Nickname} started playing {afterGame.Name}.");
+                    UpdateUserGameState(userAfterChange, "started");
+                }
+            }
+            catch (Exception ex)
             {
-                UpdateUserGameState(userAfterChange, "started");
-                gameChangeHappened = true;
+                _logger.LogError("Failed to update player game history.", ex);
             }
-
+            
             if (gameChangeHappened)
             {
+                _logger.LogInformation("Emitting game state.");
                 await EmitGameState(userAfterChange.Guild);
             }
         }
@@ -104,7 +114,11 @@ namespace Vereesa.Core.Services
                 });
             }
 
-            var serializedGameState = JsonConvert.SerializeObject(gameState);
+            var serializedGameState = JsonConvert.SerializeObject(gameState, Formatting.Indented);
+            
+            _logger.LogInformation("Emitting the following game state");
+            _logger.LogInformation(serializedGameState);
+
             var buffer = System.Text.Encoding.UTF8.GetBytes(serializedGameState);
             var byteGamestate = new ByteArrayContent(buffer);
             byteGamestate.Headers.ContentType = new MediaTypeHeaderValue("application/json");
