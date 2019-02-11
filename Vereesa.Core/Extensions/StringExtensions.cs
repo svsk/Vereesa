@@ -16,9 +16,20 @@ namespace Vereesa.Core.Extensions
             return rawMessage.Split(' ').First();
         }
 
-        public static string[] Split(this string rawString, string separator) 
+        public static string[] Split(this string rawString, string separator)
         {
             return rawString.Split(new string[] { separator }, StringSplitOptions.None);
+        }
+
+        public static string StripTrim(this string inputString)
+        {
+            inputString = inputString.Replace(Environment.NewLine, string.Empty);
+            inputString = inputString.Replace("\n", string.Empty);
+            inputString = inputString.Replace("\r", string.Empty);
+            inputString = string.Join(' ', inputString.Split(' ').Where(slug => slug != ""));
+            inputString = inputString.Trim();
+
+            return inputString;
         }
     }
 }

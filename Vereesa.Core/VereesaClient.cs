@@ -10,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Services;
+using Vereesa.Core.Integrations;
+using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Data;
 using Vereesa.Data.Models.Commands;
 using Vereesa.Data.Models.Gambling;
@@ -86,13 +88,13 @@ namespace Vereesa.Core
                 .AddSingleton<RoleGiverService>()    
                 .AddSingleton<CommandService>()
                 .AddSingleton<SignupsService>()
-                
+                .AddSingleton<TodayInWoWService>()
                 .AddSingleton<MovieSuggestionService>()
                 .AddScoped<JsonRepository<GameTrackMember>>()
                 .AddScoped<JsonRepository<Giveaway>>()
                 .AddScoped<JsonRepository<GamblingStandings>>()
                 .AddScoped<JsonRepository<Command>>()
-                
+                .AddScoped<IWowheadClient, WowheadClient>()
                 .AddLogging(config => { 
                     config.AddConsole();
                 });
@@ -111,6 +113,7 @@ namespace Vereesa.Core
             _serviceProvider.GetRequiredService<CommandService>();
             _serviceProvider.GetRequiredService<SignupsService>();
             _serviceProvider.GetRequiredService<MovieSuggestionService>();
+            _serviceProvider.GetRequiredService<TodayInWoWService>();
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
         }
 
