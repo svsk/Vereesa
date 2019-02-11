@@ -113,6 +113,24 @@ namespace Vereesa.Core.Services
                     await AnnounceNewApplication(application);
                 }
 
+                if (_cachedApplications.ContainsKey(application.Id))  
+                {
+                    Application cachedApplication = _cachedApplications[application.Id];
+
+                    if (cachedApplication.CurrentStatusString != application.CurrentStatusString) 
+                    {
+                        //status changed
+                        var appMessage = RetrieveApplicationMessage(application.Id);
+                        if (appMessage != null) 
+                        {
+                            await appMessage.ModifyAsync((msg) => 
+                            {
+                                msg.Embed = GetApplicationEmbed(application).Build();
+                            });
+                        }
+                    }
+                }
+
                 _cachedApplications[application.Id] = application;
             }
         }
@@ -140,6 +158,22 @@ namespace Vereesa.Core.Services
             return _discord.Guilds.FirstOrDefault()?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName) as ISocketMessageChannel;
         }
 
+        private IUserMessage RetrieveApplicationMessage(int applicationId) 
+        {
+            ISocketMessageChannel channel = GetNotificationChannel();
+            IAsyncEnumerable<IMessage> messages = channel.GetMessagesAsync(100).Flatten();
+            IUserMessage applicationEmbedMessage = null;
+
+            messages.ForEach((msg) => {
+                var embed = msg.Embeds.FirstOrDefault();
+                if (embed != null && embed.Author != null && embed.Author.Value.Url.Contains($"id={applicationId}")) {
+                    applicationEmbedMessage = msg as IUserMessage;
+                }
+            });
+
+            return applicationEmbedMessage;
+        }
+
         private EmbedBuilder GetApplicationEmbed(Application application)
         {
             var armoryProfileUrl = application.GetFirstAnswerByQuestionPart("wow-armory profile");
@@ -157,7 +191,7 @@ namespace Vereesa.Core.Services
 
             var embed = new EmbedBuilder();
             embed.Color = new Color(155, 89, 182);
-            embed.WithAuthor($"New application @ neon.gg/applications", null, "https://www.neon.gg/applications/");
+            embed.WithAuthor($"New application @ neon.gg/applications", null, $"https://www.neon.gg/applications/?id={application.Id}");
             embed.WithThumbnailUrl(avatar);
 
             var title = $"{characterName} - {characterSpec} {characterClass}";
@@ -165,6 +199,7 @@ namespace Vereesa.Core.Services
             embed.AddField("__Real Name__", playerName, true);
             embed.AddField("__Age__", playerAge, true);
             embed.AddField("__Country__", playerCountry, true);
+            embed.AddField("__Status__", GetIconedStatusString(application.CurrentStatusString), true);
             embed.AddField("__Character Stats__", $"**Heart of Azeroth level:** {artifactLevel} \r\n**Avg ilvl:** {character.Items.AverageItemLevelEquipped}\r\n**Achi points:** {character.AchievementPoints} | **Total HKs:** {character.TotalHonorableKills}", false);
             embed.AddField("__External sites__", $@"[Armory]({armoryProfileUrl}) | [RaiderIO](https://raider.io/characters/eu/{charAndRealm.realm}/{charAndRealm.name}) | [WoWProgress](https://www.wowprogress.com/character/eu/{charAndRealm.realm}/{charAndRealm.name}) | [WarcraftLogs](https://www.warcraftlogs.com/character/eu/{charAndRealm.realm}/{charAndRealm.name})", false);
 
@@ -173,6 +208,21 @@ namespace Vereesa.Core.Services
             embed.Footer.Text = $"Requested by Veinlash - Today at {DateTime.UtcNow.ToCentralEuropeanTime().ToString("HH:mm")}";
 
             return embed;
+        }
+
+        private string GetIconedStatusString(string currentStatusString)
+        {
+            switch (currentStatusString) 
+            {
+                case "Pending":
+                    return "⚠️ Pending";
+                case "Declined":
+                    return "🛑 Declined";
+                case "Accepted":
+                    return "✅ Accepted";
+                default:
+                    return currentStatusString;
+            }
         }
 
         //handles:
