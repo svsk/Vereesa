@@ -32,13 +32,13 @@ namespace Vereesa.Core.Services
 
             _isInitialized = true;
 
-            TimerHelpers.SetTimeout(() => {
-                DateTime cetNow = DateTime.UtcNow.ToCentralEuropeanTime();
-                if (cetNow.Hour == 9 && cetNow.Minute == 0) 
-                {
-                    AnnounceTodayInWow();
-                }
-            }, 1000 * 60, true, true);
+            // TimerHelpers.SetTimeout(() => {
+            //     DateTime cetNow = DateTime.UtcNow.ToCentralEuropeanTime();
+            //     if (cetNow.Hour == 9 && cetNow.Minute == 0) 
+            //     {
+            //         AnnounceTodayInWow();
+            //     }
+            // }, 1000 * 60, true, true);
         }
 
         private void AnnounceTodayInWow()
