@@ -44,7 +44,7 @@ namespace Vereesa.Core
             _config = builder.Build();
             
             var discordSettings = new DiscordSettings();
-            //var channelRuleSettings = new ChannelRuleSettings();
+            var channelRuleSettings = new ChannelRuleSettings();
             var battleNetApiSettings = new BattleNetApiSettings();
             var gameStateEmissionSettings = new GameStateEmissionSettings();
             var gamblingSettings = new GamblingSettings();
@@ -53,7 +53,7 @@ namespace Vereesa.Core
             var signupsSettings = new SignupsSettings();
 
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
-            //_config.GetSection(nameof(ChannelRuleSettings)).Bind(channelRuleSettings);
+            _config.GetSection(nameof(ChannelRuleSettings)).Bind(channelRuleSettings);
             _config.GetSection(nameof(BattleNetApiSettings)).Bind(battleNetApiSettings);
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
             _config.GetSection(nameof(GamblingSettings)).Bind(gamblingSettings);
@@ -72,14 +72,14 @@ namespace Vereesa.Core
             IServiceCollection services = new ServiceCollection()
                 .AddSingleton(_discord)
                 .AddSingleton(discordSettings)
-                //.AddSingleton(channelRuleSettings)
+                .AddSingleton(channelRuleSettings)
                 .AddSingleton(battleNetApiSettings)
                 .AddSingleton(gameStateEmissionSettings)
                 .AddSingleton(gamblingSettings)
                 .AddSingleton(voiceChannelTrackerSettings)
                 .AddSingleton(guildApplicationSettings)
                 .AddSingleton(signupsSettings)
-                //.AddSingleton<ChannelRuleService>()
+                .AddSingleton<ChannelRuleService>()
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<EventHubService>()
@@ -109,7 +109,7 @@ namespace Vereesa.Core
 
             //Start the desired services
             _serviceProvider.GetRequiredService<EventHubService>();
-           // _serviceProvider.GetRequiredService<ChannelRuleService>();
+            _serviceProvider.GetRequiredService<ChannelRuleService>();
             _serviceProvider.GetRequiredService<GameTrackerService>();
             _serviceProvider.GetRequiredService<GiveawayService>();
             _serviceProvider.GetRequiredService<GuildApplicationService>();
