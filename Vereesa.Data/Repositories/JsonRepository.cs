@@ -8,7 +8,7 @@ using Vereesa.Data.Models.Giveaways;
 
 namespace Vereesa.Data.Repositories
 {
-    public class JsonRepository<T> where T : IEntity
+    public class JsonRepository<T> : IRepository<T> where T : IEntity
     {
         private List<T> _context;
         private string _filePath;
@@ -55,9 +55,10 @@ namespace Vereesa.Data.Repositories
             return _context;
         }
 
-        public void Add(T entity)
+        public T Add(T entity)
         {
             _context.Add(entity);
+            return entity;
         }
 
         public void Save()

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using Vereesa.Core.Extensions;
+using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Commands;
 using Vereesa.Data.Repositories;
 
@@ -14,9 +15,9 @@ namespace Vereesa.Core.Services
     public class CommandService
     {
         private DiscordSocketClient _discord;
-        private JsonRepository<Command> _commandRepo;
+        private IRepository<Command> _commandRepo;
 
-        public CommandService(DiscordSocketClient discord, JsonRepository<Command> commandRepo)
+        public CommandService(DiscordSocketClient discord, IRepository<Command> commandRepo)
         {
             _discord = discord;
             _commandRepo = commandRepo;

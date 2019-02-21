@@ -18,7 +18,8 @@ using Vereesa.Data.Models.Gambling;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Models.Giveaways;
 using Vereesa.Data.Repositories;
- 
+using Vereesa.Data.Interfaces;
+
 namespace Vereesa.Core
 {
     public class VereesaClient
@@ -43,6 +44,7 @@ namespace Vereesa.Core
             _config = builder.Build();
             
             var discordSettings = new DiscordSettings();
+            //var channelRuleSettings = new ChannelRuleSettings();
             var battleNetApiSettings = new BattleNetApiSettings();
             var gameStateEmissionSettings = new GameStateEmissionSettings();
             var gamblingSettings = new GamblingSettings();
@@ -51,6 +53,7 @@ namespace Vereesa.Core
             var signupsSettings = new SignupsSettings();
 
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
+            //_config.GetSection(nameof(ChannelRuleSettings)).Bind(channelRuleSettings);
             _config.GetSection(nameof(BattleNetApiSettings)).Bind(battleNetApiSettings);
             _config.GetSection(nameof(GameStateEmissionSettings)).Bind(gameStateEmissionSettings);
             _config.GetSection(nameof(GamblingSettings)).Bind(gamblingSettings);
@@ -69,12 +72,14 @@ namespace Vereesa.Core
             IServiceCollection services = new ServiceCollection()
                 .AddSingleton(_discord)
                 .AddSingleton(discordSettings)
+                //.AddSingleton(channelRuleSettings)
                 .AddSingleton(battleNetApiSettings)
                 .AddSingleton(gameStateEmissionSettings)
                 .AddSingleton(gamblingSettings)
                 .AddSingleton(voiceChannelTrackerSettings)
                 .AddSingleton(guildApplicationSettings)
                 .AddSingleton(signupsSettings)
+                //.AddSingleton<ChannelRuleService>()
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
                 .AddSingleton<EventHubService>()
@@ -90,10 +95,10 @@ namespace Vereesa.Core
                 .AddSingleton<SignupsService>()
                 .AddSingleton<TodayInWoWService>()
                 .AddSingleton<MovieSuggestionService>()
-                .AddScoped<JsonRepository<GameTrackMember>>()
-                .AddScoped<JsonRepository<Giveaway>>()
-                .AddScoped<JsonRepository<GamblingStandings>>()
-                .AddScoped<JsonRepository<Command>>()
+                .AddScoped<IRepository<GameTrackMember>, LiteDBRepository<GameTrackMember>>()
+                .AddScoped<IRepository<Giveaway>, LiteDBRepository<Giveaway>>()
+                .AddScoped<IRepository<GamblingStandings>, LiteDBRepository<GamblingStandings>>()
+                .AddScoped<IRepository<Command>, LiteDBRepository<Command>>()
                 .AddScoped<IWowheadClient, WowheadClient>()
                 .AddLogging(config => { 
                     config.AddConsole();
@@ -104,6 +109,7 @@ namespace Vereesa.Core
 
             //Start the desired services
             _serviceProvider.GetRequiredService<EventHubService>();
+           // _serviceProvider.GetRequiredService<ChannelRuleService>();
             _serviceProvider.GetRequiredService<GameTrackerService>();
             _serviceProvider.GetRequiredService<GiveawayService>();
             _serviceProvider.GetRequiredService<GuildApplicationService>();

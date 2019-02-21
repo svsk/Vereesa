@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Vereesa.Core.Configuration;
+using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Repositories;
 
@@ -19,11 +20,11 @@ namespace Vereesa.Core.Services
     public class GameTrackerService
     {
         private DiscordSocketClient _discord;
-        private JsonRepository<GameTrackMember> _trackingRepo;
+        private IRepository<GameTrackMember> _trackingRepo;
         private GameStateEmissionSettings _options;
         private ILogger<GameTrackerService> _logger;
 
-        public GameTrackerService(DiscordSocketClient discord, JsonRepository<GameTrackMember> trackingRepo, GameStateEmissionSettings emissionSettings, ILogger<GameTrackerService> logger)
+        public GameTrackerService(DiscordSocketClient discord, IRepository<GameTrackMember> trackingRepo, GameStateEmissionSettings emissionSettings, ILogger<GameTrackerService> logger)
         {
             _discord = discord;
             _trackingRepo = trackingRepo;

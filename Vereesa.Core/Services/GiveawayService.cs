@@ -8,6 +8,7 @@ using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Extensions;
+using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Giveaways;
 using Vereesa.Data.Repositories;
 
@@ -18,7 +19,7 @@ namespace Vereesa.Core.Services
         private DiscordSocketClient _discord;
         private Random _rng;
         private ILogger<GiveawayService> _logger;
-        private JsonRepository<Giveaway> _giveawayRepo;
+        private IRepository<Giveaway> _giveawayRepo;
         private Giveaway _giveawayBeingCreated;
         private ISocketMessageChannel _configChannel;
         private Timer _updater;
@@ -29,7 +30,7 @@ namespace Vereesa.Core.Services
         private string _prizePromptMessage = ":tada: Ok! {0} winners it is! Finally, what do you want to give away?\r\n\r\n`Please enter the giveaway prize. This will also begin the giveaway.`";
 
 
-        public GiveawayService(DiscordSocketClient discord, JsonRepository<Giveaway> giveawayRepo, Random rng, ILogger<GiveawayService> logger)
+        public GiveawayService(DiscordSocketClient discord, IRepository<Giveaway> giveawayRepo, Random rng, ILogger<GiveawayService> logger)
         {
             _discord = discord;
             _giveawayRepo = giveawayRepo;

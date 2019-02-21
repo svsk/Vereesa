@@ -7,6 +7,7 @@ using Discord.WebSocket;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
+using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Gambling;
 using Vereesa.Data.Repositories;
 
@@ -17,7 +18,7 @@ namespace Vereesa.Core.Services
         private GamblingSettings _settings;
         private DiscordSocketClient _discord;
         private Random _rng;
-        private JsonRepository<GamblingStandings> _standings;
+        private IRepository<GamblingStandings> _standings;
         private GamblingRound _currentRound;
         private ISocketMessageChannel _gamblingChannel;
         private List<string> _gameCommands = new List<string> { "!roll", "!jb" };
@@ -26,7 +27,7 @@ namespace Vereesa.Core.Services
         private Timer _rollRemindTimer;
         private Timer _roundTimeoutTimer;
 
-        public GamblingService(GamblingSettings settings, DiscordSocketClient discord, Random rng, JsonRepository<GamblingStandings> standings)
+        public GamblingService(GamblingSettings settings, DiscordSocketClient discord, Random rng, IRepository<GamblingStandings> standings)
         {
             _settings = settings;
             _discord = discord;
