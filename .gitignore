@@ -29,8 +29,11 @@ msbuild.err
 msbuild.wrn
 
 *.Local.*
+deploy.ps1
 
 # Visual Studio 2015
 .vs/
 /test-cert.pfx
 launchSettings.json
+
+*.db

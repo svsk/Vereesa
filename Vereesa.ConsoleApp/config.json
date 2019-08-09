@@ -4,6 +4,9 @@
 	"DiscordSettings": {
 		"Token": null
 	},
+	"AzureStorageSettings": {
+		"ConnectionString": ""
+	},
 	"GameStateEmissionSettings": {
 		"EmissionEndpoint": "",
 		"EmissionEndpointUserKey": ""
@@ -26,6 +29,14 @@
 	"BattleNetApiSettings": {
 		"ClientId": "",
 		"ClientSecret": ""
+	},
+	"TwitterSettings": {
+		"ClientId": "",
+		"ClientSecret": "",
+		"SourceTwitterUser": "",
+		"TargetDiscordGuild": "",
+        "TargetDiscordChannel": "",
+        "CheckIntervalSeconds": 300
 	},
 	"SignupsSettings": {
 		"EventsUrl": "",

@@ -2,9 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 
@@ -22,10 +20,10 @@ namespace Vereesa.Core.Services
             _discord = discord;
             _logger = logger;
 
-            _discord.Disconnected -= HandleDisconnected;
-            _discord.Disconnected += HandleDisconnected;
-            _discord.Connected -= HandleConnected;
-            _discord.Connected += HandleConnected;
+            // _discord.Disconnected -= HandleDisconnected;
+            // _discord.Disconnected += HandleDisconnected;
+            // _discord.Connected -= HandleConnected;
+            // _discord.Connected += HandleConnected;
             _discord.Log += HandleLogMessage;
         }
 
@@ -48,6 +46,7 @@ namespace Vereesa.Core.Services
 
             if (_reconnectAttemptTimer == null)
             {
+                _logger.LogInformation("Attempting to reconnect in 5 seconds.");
                 _reconnectAttemptTimer = new Timer(5000);
                 _reconnectAttemptTimer.Elapsed += AttemptReconnect;
                 _reconnectAttemptTimer.AutoReset = true;

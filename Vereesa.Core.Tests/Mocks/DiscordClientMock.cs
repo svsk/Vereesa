@@ -1,13 +1,19 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Discord;
+using Discord.WebSocket;
+using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Core.Tests.Mocks;
 
 namespace Vereesa.Core.Tests.Mocks
 {
-    public class DiscordClientMock : IDiscordClient
+    public class DiscordClientMock : IDiscordSocketClient
     {
+        public event Func<Task> Ready;
+        public event Func<SocketMessage, Task> MessageReceived;
+
         private ChannelMock _channel;
 
         public ConnectionState ConnectionState => throw new System.NotImplementedException();
@@ -104,6 +110,11 @@ namespace Vereesa.Core.Tests.Mocks
         public Task StopAsync()
         {
             throw new System.NotImplementedException();
+        }
+
+        public Task<int> GetRecommendedShardCountAsync(RequestOptions options = null)
+        {
+            throw new NotImplementedException();
         }
     }
 }

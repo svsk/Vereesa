@@ -8,7 +8,6 @@ using Discord.WebSocket;
 using Vereesa.Core.Extensions;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Commands;
-using Vereesa.Data.Repositories;
 
 namespace Vereesa.Core.Services
 {

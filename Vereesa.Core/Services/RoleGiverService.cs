@@ -17,7 +17,7 @@ namespace Vereesa.Core.Services
             { "!leave", LeaveRole }
         };
 
-        private List<string> _allowedRoles => new List<string> { "Voice Chat Activity", "Gambler" }; //Todo: move this to config or json storage
+        private List<string> _allowedRoles => new List<string> { "Voice Chat Activity", "Gambler", "Healer", "Raider", "Tank", "Damage Dealer" }; //Todo: move this to config or json storage
 
         public RoleGiverService(DiscordSocketClient discord)
         {

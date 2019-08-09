@@ -25,7 +25,25 @@ namespace Vereesa.Core.Services
             _triggerInterval = TimerHelpers.SetTimeout(TriggerScheduledRulesets, 30000, true, false);
             _rulesets = new List<ChannelRuleset>();
 
-            
+            //Define in config later
+            //124446036637908995 botplayground channel id
+            //screenshot channel 544279733530263593
+            var ruleset = new ChannelRuleset(544279733530263593, RuleComplianceLevel.Any);
+            ruleset.Triggers.Add(RulesetTriggers.Periodic);
+            ruleset.Triggers.Add(RulesetTriggers.OnMessage);
+
+            ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainImage));
+            ruleset.AddRulesBrokenReaction(new RuleReaction(ChannelRuleReactions.DeleteMessage));
+            ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRules, "Sorry! :sparkles: Only images :frame_photo: and direct links to images :link: can be posted in this channel! :pray:"));
+
+            //Test rules and reactions
+            // ruleset.AddRule(new ChannelRule<string>(ChannelRuleEvaluators.MessageTextMustContain, "Yas"));
+            // ruleset.AddRulesUpheldReaction(new RuleReaction<string>(ChannelRuleReactions.ReactToMessage, ":pogchamp:"));
+            // ruleset.AddRulesUpheldReaction(new RuleReaction<string>(ChannelRuleReactions.RespondToMessage, "nice"));
+            // ruleset.AddRulesUpheldReaction(new RuleReaction(ChannelRuleReactions.PinMessage));
+            //ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.RespondToMessage, "Only image posts and direct links to images can be posted in this channel."));
+
+            _rulesets.Add(ruleset);
         }
 
         private void TriggerScheduledRulesets()

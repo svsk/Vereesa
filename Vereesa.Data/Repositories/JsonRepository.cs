@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Vereesa.Data.Interfaces;
-using Vereesa.Data.Models.Giveaways;
 
 namespace Vereesa.Data.Repositories
 {
@@ -97,6 +96,16 @@ namespace Vereesa.Data.Repositories
             {
                 Add(entity);
             }
+        }
+
+        public void Delete(T entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public T FindById(string id)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -19,6 +19,16 @@ namespace Vereesa.Core.Tests.Mocks
 
         public ulong Id => throw new NotImplementedException();
 
+        public Task DeleteMessageAsync(ulong messageId, RequestOptions options = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteMessageAsync(IMessage message, RequestOptions options = null)
+        {
+            throw new NotImplementedException();
+        }
+
         public IDisposable EnterTypingState(RequestOptions options = null)
         {
             throw new NotImplementedException();
@@ -65,6 +75,16 @@ namespace Vereesa.Core.Tests.Mocks
         }
 
         public Task<IUserMessage> SendFileAsync(Stream stream, string filename, string text = null, bool isTTS = false, RequestOptions options = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IUserMessage> SendFileAsync(string filePath, string text = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, bool isSpoiler = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IUserMessage> SendFileAsync(Stream stream, string filename, string text = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, bool isSpoiler = false)
         {
             throw new NotImplementedException();
         }

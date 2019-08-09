@@ -1,8 +1,5 @@
 using System;
-using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
-using System.Timers;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
@@ -12,13 +9,14 @@ using Vereesa.Core.Configuration;
 using Vereesa.Core.Services;
 using Vereesa.Core.Integrations;
 using Vereesa.Core.Integrations.Interfaces;
-using Vereesa.Data;
 using Vereesa.Data.Models.Commands;
 using Vereesa.Data.Models.Gambling;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Models.Giveaways;
 using Vereesa.Data.Repositories;
 using Vereesa.Data.Interfaces;
+using Vereesa.Data.Models.Reminders;
+using Vereesa.Data.Configuration;
 
 namespace Vereesa.Core
 {
@@ -51,6 +49,8 @@ namespace Vereesa.Core
             var voiceChannelTrackerSettings = new VoiceChannelTrackerSettings();
             var guildApplicationSettings = new GuildApplicationSettings();
             var signupsSettings = new SignupsSettings();
+            var twitterSettings = new TwitterSettings();
+            var storageSettings = new AzureStorageSettings();
 
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             _config.GetSection(nameof(ChannelRuleSettings)).Bind(channelRuleSettings);
@@ -60,6 +60,8 @@ namespace Vereesa.Core
             _config.GetSection(nameof(VoiceChannelTrackerSettings)).Bind(voiceChannelTrackerSettings);
             _config.GetSection(nameof(GuildApplicationSettings)).Bind(guildApplicationSettings);
             _config.GetSection(nameof(SignupsSettings)).Bind(signupsSettings);
+            _config.GetSection(nameof(TwitterSettings)).Bind(twitterSettings);
+            _config.GetSection(nameof(AzureStorageSettings)).Bind(storageSettings);
 
             //Set up discord client
             _discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -70,7 +72,8 @@ namespace Vereesa.Core
 
             //Set up a service provider with all relevant resources for DI
             IServiceCollection services = new ServiceCollection()
-                .AddSingleton(_discord)
+                .AddSingleton<DiscordSocketClient>(_discord)
+                .AddSingleton<IDiscordSocketClient>(new InterfacedDiscordSocketClient(_discord))
                 .AddSingleton(discordSettings)
                 .AddSingleton(channelRuleSettings)
                 .AddSingleton(battleNetApiSettings)
@@ -79,6 +82,8 @@ namespace Vereesa.Core
                 .AddSingleton(voiceChannelTrackerSettings)
                 .AddSingleton(guildApplicationSettings)
                 .AddSingleton(signupsSettings)
+                .AddSingleton(twitterSettings)
+                .AddSingleton(storageSettings)
                 .AddSingleton<ChannelRuleService>()
                 .AddSingleton<Random>()
                 .AddSingleton<StartupService>()
@@ -95,10 +100,13 @@ namespace Vereesa.Core
                 .AddSingleton<SignupsService>()
                 .AddSingleton<TodayInWoWService>()
                 .AddSingleton<MovieSuggestionService>()
-                .AddScoped<IRepository<GameTrackMember>, LiteDBRepository<GameTrackMember>>()
-                .AddScoped<IRepository<Giveaway>, LiteDBRepository<Giveaway>>()
-                .AddScoped<IRepository<GamblingStandings>, LiteDBRepository<GamblingStandings>>()
-                .AddScoped<IRepository<Command>, LiteDBRepository<Command>>()
+                .AddSingleton<TwitterService>()
+                .AddSingleton<RemindMeService>()
+                .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
+                .AddScoped<IRepository<Giveaway>, AzureStorageRepository<Giveaway>>()
+                .AddScoped<IRepository<GamblingStandings>, AzureStorageRepository<GamblingStandings>>()
+                .AddScoped<IRepository<Reminder>, AzureStorageRepository<Reminder>>()
+                .AddScoped<IRepository<Command>, AzureStorageRepository<Command>>()
                 .AddScoped<IWowheadClient, WowheadClient>()
                 .AddLogging(config => { 
                     config.AddConsole();
@@ -108,18 +116,27 @@ namespace Vereesa.Core
             _serviceProvider = services.BuildServiceProvider();
 
             //Start the desired services
-            _serviceProvider.GetRequiredService<EventHubService>();
-            _serviceProvider.GetRequiredService<ChannelRuleService>();
-            _serviceProvider.GetRequiredService<GameTrackerService>();
-            _serviceProvider.GetRequiredService<GiveawayService>();
-            _serviceProvider.GetRequiredService<GuildApplicationService>();
-            _serviceProvider.GetRequiredService<GamblingService>();
-            _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
-            _serviceProvider.GetRequiredService<RoleGiverService>();
-            _serviceProvider.GetRequiredService<CommandService>();
-            _serviceProvider.GetRequiredService<SignupsService>();
-            _serviceProvider.GetRequiredService<MovieSuggestionService>();
-            _serviceProvider.GetRequiredService<TodayInWoWService>();
+            try 
+            {
+                _serviceProvider.GetRequiredService<EventHubService>();
+                _serviceProvider.GetRequiredService<ChannelRuleService>();
+                _serviceProvider.GetRequiredService<GameTrackerService>();
+                _serviceProvider.GetRequiredService<GiveawayService>();
+                _serviceProvider.GetRequiredService<GuildApplicationService>();
+                _serviceProvider.GetRequiredService<GamblingService>();
+                _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
+                _serviceProvider.GetRequiredService<RoleGiverService>();
+                _serviceProvider.GetRequiredService<CommandService>();
+                _serviceProvider.GetRequiredService<SignupsService>();
+                _serviceProvider.GetRequiredService<MovieSuggestionService>();
+                _serviceProvider.GetRequiredService<TodayInWoWService>();
+                _serviceProvider.GetRequiredService<TwitterService>();
+                _serviceProvider.GetRequiredService<RemindMeService>();
+            }
+            catch (Exception ex) {
+
+            }
+            
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
         }
 

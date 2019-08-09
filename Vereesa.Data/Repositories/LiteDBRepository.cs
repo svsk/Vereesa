@@ -87,5 +87,19 @@ namespace Vereesa.Data.Repositories
                 collection.Update(entity);
             }
         }
+
+        public void Delete(T entity)
+        {
+            using (var db = new LiteDatabase(DatabaseName)) 
+            {
+                var collection = db.GetCollection<T>(_entityName);
+                collection.Delete(entity.Id);
+            }
+        }
+
+        public T FindById(string id)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

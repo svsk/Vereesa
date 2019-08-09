@@ -50,14 +50,14 @@ namespace Vereesa.Core.Services
                 if (beforeGame != null && (afterGame == null || afterGame.Name != beforeGame.Name))
                 {
                     gameChangeHappened = true;
-                    _logger.LogInformation($"{userBeforeChange.Nickname} stopped playing {beforeGame.Name}.");
+                    _logger.LogInformation($"{userBeforeChange.Username} stopped playing {beforeGame.Name}.");
                     UpdateUserGameState(userBeforeChange, "stopped");
                 }
 
-                if (afterGame != null)
+                if (afterGame != null && (beforeGame == null || beforeGame.Name != afterGame.Name))
                 {
                     gameChangeHappened = true;
-                    _logger.LogInformation($"{userBeforeChange.Nickname} started playing {afterGame.Name}.");
+                    _logger.LogInformation($"{userBeforeChange.Username} started playing {afterGame.Name}.");
                     UpdateUserGameState(userAfterChange, "started");
                 }
             }
@@ -77,14 +77,17 @@ namespace Vereesa.Core.Services
         {
             var userHistory = GetGameTrackMember(user);
             var gameName = user.Activity.Name;
+
             var gameHistory = userHistory.GetGameHistory(gameName);
             gameHistory.Add(GameTrackEntry.CreateInstance(eventType));
+            
+            _trackingRepo.AddOrEdit(userHistory);
             _trackingRepo.Save();
         }
 
         private GameTrackMember GetGameTrackMember(SocketGuildUser user)
         {
-            var member = _trackingRepo.GetAll().FirstOrDefault(m => m.Id == user.Id.ToString());
+            var member = _trackingRepo.FindById(user.Id.ToString());
             if (member == null)
             {
                 member = new GameTrackMember();

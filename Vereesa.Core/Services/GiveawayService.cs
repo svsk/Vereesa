@@ -38,6 +38,8 @@ namespace Vereesa.Core.Services
             _rng = rng;
             _logger = logger;
             InitiateUpdateTimer();
+
+            _logger.LogInformation($"{this.GetType().Name} loaded.");
         }
 
         private async Task EvaluateMessage(SocketMessage message)
@@ -473,9 +475,9 @@ namespace Vereesa.Core.Services
                 //emojiString.Replace("<:", string.Empty).Replace(">", string.Empty))
 
                 if (emojiIsCustom)
-                    reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction));
+                    reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction, 200).FlattenAsync());
                 else
-                    reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction));
+                    reactingUsers.AddRange(await message.GetReactionUsersAsync(reaction, 200).FlattenAsync());
             }
 
             return reactingUsers.GroupBy(u => u.Id).Select(c => c.First()).ToList();

@@ -16,7 +16,7 @@ namespace Vereesa.Core.Services
 {
     public class NewsFeedService
     {
-        private IDiscordClient _discord;
+        private IDiscordSocketClient _discord;
         private Timer _interval;
         private event EventHandler _changeHappened;
         private NewsFeedServiceSettings _settings;
@@ -24,7 +24,7 @@ namespace Vereesa.Core.Services
         private IWebClientWrapper _webClient;
 
         
-        public NewsFeedService(IDiscordClient discord, NewsFeedServiceSettings settings, IWebClientWrapper webClient)
+        public NewsFeedService(IDiscordSocketClient discord, NewsFeedServiceSettings settings, IWebClientWrapper webClient)
         {
             _discord = discord;
             _settings = settings;
