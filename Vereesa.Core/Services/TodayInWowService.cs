@@ -25,10 +25,10 @@ namespace Vereesa.Core.Services
             _discord.Ready += InitializeServiceAsync;
         }
 
-        private async Task InitializeServiceAsync()
+        private Task InitializeServiceAsync()
         {
             if (_isInitialized)
-                return;
+                return Task.CompletedTask;
 
             _isInitialized = true;
 
@@ -39,6 +39,8 @@ namespace Vereesa.Core.Services
             //         AnnounceTodayInWow();
             //     }
             // }, 1000 * 60, true, true);
+
+            return Task.CompletedTask;
         }
 
         private void AnnounceTodayInWow()

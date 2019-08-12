@@ -17,11 +17,6 @@ namespace Vereesa.Core.Services
         {
             _discord = discord;
 
-            _discord.Ready += Initialize;
-        }
-
-        private async Task Initialize()
-        {
             _discord.MessageReceived += CheckMessage;
         }
 
@@ -37,11 +32,11 @@ namespace Vereesa.Core.Services
                 {
                     ValidateArgs(args);
                 }
-                catch (InvalidConversionArgsException ex) 
+                catch (InvalidConversionArgsException) 
                 {
                     await message.Channel.SendMessageAsync(Explaination);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
 
                 }

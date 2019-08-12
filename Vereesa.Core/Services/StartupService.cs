@@ -40,7 +40,7 @@ namespace Vereesa.Core.Services
             await _discord.StartAsync();
         }
 
-        private async Task HandleDisconnected(Exception arg)
+        private Task HandleDisconnected(Exception arg)
         {
             _logger.LogInformation("Disconnected!");
 
@@ -52,6 +52,8 @@ namespace Vereesa.Core.Services
                 _reconnectAttemptTimer.AutoReset = true;
                 _reconnectAttemptTimer.Start();
             }
+
+            return Task.CompletedTask;
         }
 
         private async void AttemptReconnect(object sender, ElapsedEventArgs e)
@@ -60,7 +62,7 @@ namespace Vereesa.Core.Services
             await this.StartAsync();
         }
 
-        private async Task HandleConnected()
+        private Task HandleConnected()
         {
             _logger.LogInformation("Connected!");
 
@@ -68,9 +70,11 @@ namespace Vereesa.Core.Services
             {
                 _reconnectAttemptTimer.Stop();
             }
+
+            return Task.CompletedTask;
         }
 
-        private async Task HandleLogMessage(LogMessage logMessage)
+        private Task HandleLogMessage(LogMessage logMessage)
         {
             switch (logMessage.Severity)
             {
@@ -97,6 +101,8 @@ namespace Vereesa.Core.Services
                     _logger.Log(LogLevel.Information, logMessage.Message, logMessage.Exception);
                     break;
             }
+
+            return Task.CompletedTask;
         }
     }
 }
