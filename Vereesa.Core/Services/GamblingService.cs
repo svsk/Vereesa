@@ -43,7 +43,7 @@ namespace Vereesa.Core.Services
         private async Task StartGamblingService()
         {
             //_gamblingChannel = guild.GetChannelByName(_settings.GamblingChannelName);
-            _gamblingChannel = (ISocketMessageChannel)_discord.GetGuildChannelByName("Neon", _settings.GamblingChannelName);
+            _gamblingChannel = (ISocketMessageChannel)(await _discord.GetGuildChannelByNameAsync("Neon", _settings.GamblingChannelName));
         }
 
         private async Task EvaluateMessage(SocketMessage message)

@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Discord;
 
 namespace Vereesa.Core.Extensions
 {
     public static class IDiscordClientExtensions
     {
-        public static IMessageChannel GetGuildChannelByName(this IDiscordClient client, string guildName, string channelName) 
+        public static async Task<IMessageChannel> GetGuildChannelByNameAsync(this IDiscordClient client, string guildName, string channelName) 
         {
-            IReadOnlyCollection<IGuild> guilds = client.GetGuildsAsync().GetAwaiter().GetResult();
+            IReadOnlyCollection<IGuild> guilds = await client.GetGuildsAsync();
             List<IGuild> matchingGuilds = guilds.Where(g => g.Name == guildName).ToList();
             
             if (matchingGuilds.Count > 1) 
@@ -24,7 +25,7 @@ namespace Vereesa.Core.Extensions
 
             IGuild guild = matchingGuilds.First();
             channelName = channelName.Replace("#", string.Empty);
-            IReadOnlyCollection<IChannel> channels = guild.GetChannelsAsync().GetAwaiter().GetResult();
+            IReadOnlyCollection<IChannel> channels = await guild.GetChannelsAsync();
             List<IChannel> matchingChannels = channels.Where(c => c.Name == channelName).ToList();
 
             if (matchingChannels.Count > 1) 

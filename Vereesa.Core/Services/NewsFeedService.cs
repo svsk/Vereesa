@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Threading.Tasks;
 using System.Timers;
 using Discord;
 using HtmlAgilityPack;
@@ -18,32 +17,35 @@ namespace Vereesa.Core.Services
     {
         private IDiscordSocketClient _discord;
         private Timer _interval;
-        private event EventHandler _changeHappened;
+        private Func<object, Task> _changeHappened;
         private NewsFeedServiceSettings _settings;
         private string _previousState;
         private IWebClientWrapper _webClient;
-
         
+
         public NewsFeedService(IDiscordSocketClient discord, NewsFeedServiceSettings settings, IWebClientWrapper webClient)
         {
             _discord = discord;
             _settings = settings;
             _webClient = webClient;
-            _changeHappened += HandleChangeHappened;
-
-            StartCheckingForChanges();
+            _changeHappened += HandleChangeHappenedAsync;
         }
 
-        private void StartCheckingForChanges()
+        public async Task InitializeServiceAsync() 
         {
-            _interval = TimerHelpers.SetTimeout(CheckForChange, _settings.CheckInterval, true, true);
+            await StartCheckingForChangesAsync();
         }
 
-        private void CheckForChange()
+        private async Task StartCheckingForChangesAsync()
+        {
+            _interval = await TimerHelpers.SetTimeoutAsync(CheckForChangeAsync, _settings.CheckInterval, true, true);
+        }
+
+        private async Task CheckForChangeAsync()
         {
             if (TargetHasChanged())
             {
-                _changeHappened?.Invoke(this, new EventArgs());
+                await _changeHappened?.Invoke(this);
             }
         }
 
@@ -60,11 +62,11 @@ namespace Vereesa.Core.Services
             return hasChanged;
         }
 
-        private void HandleChangeHappened(object sender, EventArgs e)
+        private async Task HandleChangeHappenedAsync(object sender)
         {
             var newsItem = GetNewsItem();
             var embed = BuildDiscordEmbed(newsItem);
-            SendNewsItemEmbed(embed);
+            await SendNewsItemEmbedAsync(embed);
         }
 
         private HtmlNode SelectElement(string html, string selector)
@@ -138,10 +140,10 @@ namespace Vereesa.Core.Services
             return embedBuilder.Build();
         }
 
-        public void SendNewsItemEmbed(Embed embed) 
+        public async Task SendNewsItemEmbedAsync(Embed embed) 
         {
-            var channel = _discord.GetChannelAsync(_settings.ChannelId).GetAwaiter().GetResult();
-            ((IMessageChannel)channel).SendMessageAsync(text: string.Empty, embed: embed).GetAwaiter().GetResult();
+            var channel = await _discord.GetChannelAsync(_settings.ChannelId);
+            await ((IMessageChannel)channel).SendMessageAsync(text: string.Empty, embed: embed);
         }
     }
 }

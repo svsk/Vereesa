@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
 using Discord.WebSocket;
-using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
 using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Data.Interfaces;
@@ -24,14 +22,14 @@ namespace Vereesa.Core.Services
         public RemindMeService(IDiscordSocketClient discord, IRepository<Reminder> reminderRepository)
         {
             _discord = discord;
-            _discord.Ready += Initialize;
+            _discord.Ready += InitializeAsync;
             _reminderRepository = reminderRepository;
         }
 
-        private async Task Initialize()
+        private async Task InitializeAsync()
         {
             _timer?.Stop();
-            _timer = TimerHelpers.SetTimeout(HandleCheckIntervalElapsed, 10000, true, true);
+            _timer = await TimerHelpers.SetTimeoutAsync(HandleCheckIntervalElapsedAsync, 10000, true, true);
             _discord.MessageReceived += HandleMessageReceived;
         }
 
@@ -40,19 +38,19 @@ namespace Vereesa.Core.Services
             if (TryParseReminder(receivedMessage, out var reminder))
             {
                 AddReminder(reminder);
-                AnnounceReminderAdded(receivedMessage.Channel.Id, receivedMessage.Author.Id);
+                await AnnounceReminderAddedAsync(receivedMessage.Channel.Id, receivedMessage.Author.Id);
             }
         }
 
-        private IMessageChannel GetChannel(ulong channelId)
+        private async Task<IMessageChannel> GetChannelAsync(ulong channelId)
         {
-            return (IMessageChannel)_discord.GetChannelAsync(channelId).GetAwaiter().GetResult();
+            return (IMessageChannel)(await _discord.GetChannelAsync(channelId));
         }
 
-        private void AnnounceReminderAdded(ulong channelId, ulong reminderUser)
+        private async Task AnnounceReminderAddedAsync(ulong channelId, ulong reminderUser)
         {
-            var channel = GetChannel(channelId);
-            channel.SendMessageAsync($"OK, <@{reminderUser}>! I'll remind you! :sparkles:").GetAwaiter().GetResult();
+            var channel = await GetChannelAsync(channelId);
+            await channel.SendMessageAsync($"OK, <@{reminderUser}>! I'll remind you! :sparkles:");
         }
 
         private void AddReminder(Reminder reminder)
@@ -142,13 +140,13 @@ namespace Vereesa.Core.Services
             return msgContent.Replace($"{_commandWord} ", string.Empty).Replace($"\"{reminderMessage}\"", string.Empty).ToLowerInvariant();
         }
 
-        private void HandleCheckIntervalElapsed()
+        private async Task HandleCheckIntervalElapsedAsync()
         {
             var overdueReminders = GetOverdueReminders();
 
             foreach (var reminder in overdueReminders)
             {
-                if (TryAnnounceReminder(reminder))
+                if (await TryAnnounceReminderAsync(reminder))
                 {
                     RemoveReminder(reminder);
                 }
@@ -160,12 +158,12 @@ namespace Vereesa.Core.Services
             _reminderRepository.Delete(reminder);
         }
 
-        private bool TryAnnounceReminder(Reminder reminder)
+        private async Task<bool> TryAnnounceReminderAsync(Reminder reminder)
         {
             try
             {
-                var channel = GetChannel(reminder.ChannelId);
-                channel.SendMessageAsync($"<@{reminder.UserId}> Remember! {reminder.Message}");
+                var channel = await GetChannelAsync(reminder.ChannelId);
+                await channel.SendMessageAsync($"<@{reminder.UserId}> Remember! {reminder.Message}");
             }
             catch
             {

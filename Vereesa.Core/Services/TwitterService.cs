@@ -25,32 +25,32 @@ namespace Vereesa.Core.Services
         {
             _settings = settings;
             _discord = discord;
-            _discord.Ready += InitializeService;
+            _discord.Ready += InitializeServiceAsync;
         }
 
-        private async Task InitializeService()
+        private async Task InitializeServiceAsync()
         {
-            _checkInterval = TimerHelpers.SetTimeout(() => { CheckForNewTweets(); }, _settings.CheckIntervalSeconds * 1000, true, true);
+            _checkInterval = await TimerHelpers.SetTimeoutAsync(async () => { await CheckForNewTweetsAsync(); }, _settings.CheckIntervalSeconds * 1000, true, true);
         }
 
-        private void CheckForNewTweets()
+        private async Task CheckForNewTweetsAsync()
         {
-            var latestTweets = GetLatestTweets();
+            var latestTweets = await GetLatestTweetsAsync();
             var lastTweet = latestTweets.FirstOrDefault();
 
             if (_lastTweetIDSeen != null && _lastTweetIDSeen != lastTweet?.Id)
             {
-                SendTweetToTargetChannel(lastTweet);
+                await SendTweetToTargetChannelAsync(lastTweet);
             }
 
             _lastTweetIDSeen = lastTweet != null ? lastTweet.Id : -1;
         }
 
-        public void SendTweetToTargetChannel(Tweet tweet)
+        public async Task SendTweetToTargetChannelAsync(Tweet tweet)
         {
-            var channel = _discord.GetGuildChannelByName(_settings.TargetDiscordGuild, _settings.TargetDiscordChannel);
+            var channel =  await _discord.GetGuildChannelByNameAsync(_settings.TargetDiscordGuild, _settings.TargetDiscordChannel);
             var embed = BuildEmbed(tweet);
-            channel.SendMessageAsync(string.Empty, embed: embed);
+            await channel.SendMessageAsync(string.Empty, embed: embed);
         }
 
         public Embed BuildEmbed(Tweet tweet)
@@ -68,7 +68,7 @@ namespace Vereesa.Core.Services
             return builder.Build();
         }
 
-        private string GetToken()
+        private async Task<string> GetTokenAsync()
         {
             var restClient = new RestClient("https://api.twitter.com");
             var request = new RestRequest("/oauth2/token", Method.POST);
@@ -76,7 +76,7 @@ namespace Vereesa.Core.Services
             request.AddHeader("Authorization", $"Basic {GetEncodedCredentials()}");
             request.AddParameter("grant_type", "client_credentials");
 
-            var response = restClient.Execute(request);
+            var response = await restClient.ExecuteTaskAsync(request);
             var result = JsonConvert.DeserializeObject<dynamic>(response.Content);
 
             return result["access_token"];
@@ -89,9 +89,9 @@ namespace Vereesa.Core.Services
             return Convert.ToBase64String(new UTF8Encoding().GetBytes(clientId + ":" + clientSecret));
         }
 
-        public IList<Tweet> GetLatestTweets()
+        public async Task<IList<Tweet>> GetLatestTweetsAsync()
         {
-            var token = GetToken();
+            var token = await GetTokenAsync();
 
             var client = new RestClient("https://api.twitter.com");
             var request = new RestRequest("/1.1/statuses/user_timeline.json", Method.GET);

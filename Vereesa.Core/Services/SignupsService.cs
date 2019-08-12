@@ -30,18 +30,18 @@ namespace Vereesa.Core.Services
         {
             _logger = logger;
             _settings = settings;
-            discord.MessageReceived += EvaluateMessage;
+            discord.MessageReceived += EvaluateMessageAsync;
         }
 
-        private async Task EvaluateMessage(SocketMessage message)
+        private async Task EvaluateMessageAsync(SocketMessage message)
         {
             if (message.Content.GetCommand() == "!signups")
             {
-                await AnnounceSignupsDeprecation(message.Channel);
+                await AnnounceSignupsDeprecationAsync(message.Channel);
             }
         }
 
-        private async Task AnnounceSignupsDeprecation(ISocketMessageChannel channel)
+        private async Task AnnounceSignupsDeprecationAsync(ISocketMessageChannel channel)
         {
             await channel.SendMessageAsync("Since Blizzard's 8.0.0 update to World of Warcraft, changing guilds to communities, I am no longer able to check signups for guild events. Tell Blizzard you want calendar data through official APIs in this forum thread and it may yet return: https://us.battle.net/forums/en/bnet/topic/13979457879");
         }
@@ -64,8 +64,8 @@ namespace Vereesa.Core.Services
                     };
 
                     _runningRefresh = true;
-                    await RefreshSignups();
-                    InitializeRefreshChecker();
+                    await RefreshSignupsAsync();
+                    await InitializeRefreshCheckerAsync();
                 }
             }
             catch (Exception ex)
@@ -75,7 +75,7 @@ namespace Vereesa.Core.Services
             }
         }
 
-        private async Task UpdateExistingEventEmbed(IEnumerable<CalendarEvent> events)
+        private async Task UpdateExistingEventEmbedAsync(IEnumerable<CalendarEvent> events)
         {
             if (_lastSignupReport == null)
                 return;
@@ -109,7 +109,7 @@ namespace Vereesa.Core.Services
             }
         }
 
-        private async Task RefreshSignups()
+        private async Task RefreshSignupsAsync()
         {
             using (var client = new HttpClient())
             {
@@ -118,9 +118,9 @@ namespace Vereesa.Core.Services
             }
         }
 
-        private void InitializeRefreshChecker()
+        private async Task InitializeRefreshCheckerAsync()
         {
-            _refreshInterval = TimerHelpers.SetTimeout(async () =>
+            _refreshInterval = await TimerHelpers.SetTimeoutAsync(async () =>
             {
                 var previousLastRefresh = _lastEventUpdate;
                 var events = await GetEventsAsync();
@@ -129,7 +129,7 @@ namespace Vereesa.Core.Services
                 {
                     _refreshInterval.Stop();
                     _runningRefresh = false;
-                    await UpdateExistingEventEmbed(events);
+                    await UpdateExistingEventEmbedAsync(events);
                 }
             }, 10000, true);
         }

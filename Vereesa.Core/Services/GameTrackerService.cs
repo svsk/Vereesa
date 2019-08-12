@@ -5,15 +5,12 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using Discord;
 using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Vereesa.Core.Configuration;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.GameTracking;
-using Vereesa.Data.Repositories;
 
 namespace Vereesa.Core.Services
 {
@@ -24,22 +21,23 @@ namespace Vereesa.Core.Services
         private GameStateEmissionSettings _options;
         private ILogger<GameTrackerService> _logger;
 
+        /// This service is fully async
         public GameTrackerService(DiscordSocketClient discord, IRepository<GameTrackMember> trackingRepo, GameStateEmissionSettings emissionSettings, ILogger<GameTrackerService> logger)
         {
             _discord = discord;
             _trackingRepo = trackingRepo;
-            _discord.GuildAvailable += OnGuildAvailable;
-            _discord.GuildMemberUpdated += OnMemberUpdated;
+            _discord.GuildAvailable += OnGuildAvailableAsync;
+            _discord.GuildMemberUpdated += OnMemberUpdatedAsync;
             _options = emissionSettings;
             _logger = logger;
         }
 
-        private async Task OnGuildAvailable(SocketGuild guild)
+        private async Task OnGuildAvailableAsync(SocketGuild guild)
         {
             await EmitGameState(guild);
         }
 
-        private async Task OnMemberUpdated(SocketGuildUser userBeforeChange, SocketGuildUser userAfterChange)
+        private async Task OnMemberUpdatedAsync(SocketGuildUser userBeforeChange, SocketGuildUser userAfterChange)
         {
             var gameChangeHappened = false;
             var beforeGame = userBeforeChange.Activity;

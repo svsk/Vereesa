@@ -26,11 +26,6 @@ namespace Vereesa.Core
         private IServiceProvider _serviceProvider;
         private DiscordSocketClient _discord;
 
-        public VereesaClient()
-        {
-            StartupAsync().GetAwaiter().GetResult();
-        }
-
         public async Task StartupAsync()
         {
             //Set up configuration
@@ -89,6 +84,7 @@ namespace Vereesa.Core
                 .AddSingleton<StartupService>()
                 .AddSingleton<EventHubService>()
                 .AddSingleton<NeonApiService>()
+                .AddSingleton<PingService>()
                 .AddSingleton<BattleNetApiService>()
                 .AddSingleton<GameTrackerService>()
                 .AddSingleton<GiveawayService>()
@@ -118,6 +114,7 @@ namespace Vereesa.Core
             //Start the desired services
             try 
             {
+                _serviceProvider.GetRequiredService<PingService>();
                 _serviceProvider.GetRequiredService<EventHubService>();
                 _serviceProvider.GetRequiredService<ChannelRuleService>();
                 _serviceProvider.GetRequiredService<GameTrackerService>();
@@ -126,15 +123,15 @@ namespace Vereesa.Core
                 _serviceProvider.GetRequiredService<GamblingService>();
                 _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
                 _serviceProvider.GetRequiredService<RoleGiverService>();
-                _serviceProvider.GetRequiredService<CommandService>();
+                 _serviceProvider.GetRequiredService<CommandService>();
                 _serviceProvider.GetRequiredService<SignupsService>();
                 _serviceProvider.GetRequiredService<MovieSuggestionService>();
                 _serviceProvider.GetRequiredService<TodayInWoWService>();
                 _serviceProvider.GetRequiredService<TwitterService>();
                 _serviceProvider.GetRequiredService<RemindMeService>();
             }
-            catch (Exception ex) {
-
+            catch (Exception) 
+            {
             }
             
             await _serviceProvider.GetRequiredService<StartupService>().StartAsync();

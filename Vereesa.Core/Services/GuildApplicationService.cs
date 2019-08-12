@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -8,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
-using Vereesa.Data.Models.EventHub;
 using Vereesa.Data.Models.NeonApi;
 
 namespace Vereesa.Core.Services
@@ -26,6 +26,7 @@ namespace Vereesa.Core.Services
         //thresholds for when reminders were sent to nofity officers of an overdue application.
         private Dictionary<int, List<int>> _notificationCache;
 
+        /// This service is fully async
         public GuildApplicationService(NeonApiService neonApiService, DiscordSocketClient discord, GuildApplicationSettings settings, BattleNetApiService battleNetApi, ILogger<GuildApplicationService> logger)
         {
             _logger = logger;
@@ -39,14 +40,18 @@ namespace Vereesa.Core.Services
 
         private async Task Start()
         {
-            TimerHelpers.SetTimeout(() =>
+            await TimerHelpers.SetTimeoutAsync(async () =>
             {
-                var applications = _neonApiService.GetApplications();
+                var sw = new Stopwatch();
+                sw.Start();
+                _logger.LogInformation("Getting applications.");
+                var applications = await _neonApiService.GetApplicationsAsync();
 
                 if (applications != null)
                 {
-                    CheckForNewApplications(applications).GetAwaiter().GetResult();
-                    CheckForOverdueApplications(applications).GetAwaiter().GetResult();
+                    _logger.LogInformation($"Getting {applications.Count()} took {sw.ElapsedMilliseconds / 1000} seconds.");
+                    await CheckForNewApplications(applications);
+                    await CheckForOverdueApplications(applications);
                 }
             }, 30000, true, true);
         }
