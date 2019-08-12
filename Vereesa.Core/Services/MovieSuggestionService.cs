@@ -15,15 +15,10 @@ namespace Vereesa.Core.Services
         public MovieSuggestionService(DiscordSocketClient discord)
         {
             _discord = discord;
-            discord.Ready += Initialize;
+            _discord.MessageReceived += HandleMessageReceivedAsync;
         }
 
-        private async Task Initialize()
-        {
-            _discord.MessageReceived += HandleMessageReceived;
-        }
-
-        private async Task HandleMessageReceived(SocketMessage message)
+        private async Task HandleMessageReceivedAsync(SocketMessage message)
         {
             string command = message.GetCommand().ToLowerInvariant();
 

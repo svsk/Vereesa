@@ -24,7 +24,7 @@ namespace Vereesa.Core.Tests.ServicesTests
             var target = new TwitterService(settings, discord);
 
             //Act
-            var tweets = target.GetLatestTweets();
+            var tweets = target.GetLatestTweetsAsync().GetAwaiter().GetResult();
 
             //Assert
             Assert.IsTrue(tweets[0].IsRetweet);

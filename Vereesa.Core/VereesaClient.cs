@@ -123,7 +123,7 @@ namespace Vereesa.Core
                 _serviceProvider.GetRequiredService<GamblingService>();
                 _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
                 _serviceProvider.GetRequiredService<RoleGiverService>();
-                 _serviceProvider.GetRequiredService<CommandService>();
+                _serviceProvider.GetRequiredService<CommandService>();
                 _serviceProvider.GetRequiredService<SignupsService>();
                 _serviceProvider.GetRequiredService<MovieSuggestionService>();
                 _serviceProvider.GetRequiredService<TodayInWoWService>();

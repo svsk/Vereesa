@@ -22,8 +22,13 @@ namespace Vereesa.Core.Services
         {
             _discord = discord;
             _discord.MessageReceived += MessageReceivedHandler;
-            _triggerInterval = TimerHelpers.SetTimeout(TriggerScheduledRulesets, 30000, true, false);
+            _discord.Ready += InitializeServiceAsync;
+        }
+
+        private async Task InitializeServiceAsync()
+        {
             _rulesets = new List<ChannelRuleset>();
+            _triggerInterval = await TimerHelpers.SetTimeoutAsync(TriggerScheduledRulesetsAsync, 30000, true, false);
 
             //Define in config later
             //124446036637908995 botplayground channel id
@@ -33,8 +38,8 @@ namespace Vereesa.Core.Services
             ruleset.Triggers.Add(RulesetTriggers.OnMessage);
 
             ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainImage));
-            ruleset.AddRulesBrokenReaction(new RuleReaction(ChannelRuleReactions.DeleteMessage));
-            ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRules, "Sorry! :sparkles: Only images :frame_photo: and direct links to images :link: can be posted in this channel! :pray:"));
+            ruleset.AddRulesBrokenReaction(new RuleReaction(ChannelRuleReactions.DeleteMessageAsync));
+            ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRulesAsync, "Sorry! :sparkles: Only images :frame_photo: and direct links to images :link: can be posted in this channel! :pray:"));
 
             //Test rules and reactions
             // ruleset.AddRule(new ChannelRule<string>(ChannelRuleEvaluators.MessageTextMustContain, "Yas"));
@@ -46,7 +51,7 @@ namespace Vereesa.Core.Services
             _rulesets.Add(ruleset);
         }
 
-        private void TriggerScheduledRulesets()
+        private async Task TriggerScheduledRulesetsAsync()
         {
             var channelRulesets = _rulesets.Where(rs => rs.Triggers.Contains(RulesetTriggers.Periodic)).GroupBy(rs => rs.ChannelId);
 
@@ -55,11 +60,11 @@ namespace Vereesa.Core.Services
                 try 
                  {
                     var messageChannel = (IMessageChannel)_discord.GetChannel(channelRuleset.Key);
-                    var messages = messageChannel.GetMessagesAsync(20).Flatten().ToList().GetAwaiter().GetResult();
+                    var messages = await messageChannel.GetMessagesAsync(20).Flatten().ToList();
 
                     foreach (var message in messages) 
                     {
-                        EvaluateMessage(message, channelRuleset.ToList());
+                        await EvaluateMessageAsync(message, channelRuleset.ToList());
                     }
                 }
                 catch 
@@ -73,10 +78,10 @@ namespace Vereesa.Core.Services
         {
             var onMessageRulesets = _rulesets.Where(rs => rs.ChannelId == receivedMessage.Channel.Id && rs.Triggers.Contains(RulesetTriggers.OnMessage)).ToList();
 
-            EvaluateMessage(receivedMessage, onMessageRulesets);
+            await EvaluateMessageAsync(receivedMessage, onMessageRulesets);
         }
 
-        private void EvaluateMessage(IMessage message, List<ChannelRuleset> activeRulesets)
+        private async Task EvaluateMessageAsync(IMessage message, List<ChannelRuleset> activeRulesets)
         {
             if (message.Author.IsBot)
                 return;
@@ -93,9 +98,9 @@ namespace Vereesa.Core.Services
 
                 
                 if (messageComplies)
-                    ruleset.InvokeRulesUpheldReactions(message);
+                    await ruleset.InvokeRulesUpheldReactionsAsync(message);
                 else
-                    ruleset.InvokeRulesBrokenReactions(message);
+                    await ruleset.InvokeRulesBrokenReactionsAsync(message);
             }
         }
     }
@@ -145,14 +150,20 @@ namespace Vereesa.Core.Services
             _rulesUpheldReactions.Add(ruleReaction);
         }
 
-        public void InvokeRulesUpheldReactions(IMessage message)
+        public async Task InvokeRulesUpheldReactionsAsync(IMessage message)
         {
-            _rulesUpheldReactions.ForEach(reaction => reaction.Invoke(message));
+            foreach (var reaction in _rulesUpheldReactions) 
+            {
+                await reaction.InvokeAsync(message);
+            }
         }
 
-        public void InvokeRulesBrokenReactions(IMessage message)
+        public async Task InvokeRulesBrokenReactionsAsync(IMessage message)
         {
-            _rulesBrokenReactions.ForEach(reaction => reaction.Invoke(message));
+            foreach (var reaction in _rulesBrokenReactions)
+            {
+                await reaction.InvokeAsync(message);
+            }
         }
     }
 
@@ -228,59 +239,59 @@ namespace Vereesa.Core.Services
 
     public interface IRuleReaction
     {
-        void Invoke(IMessage message);
+        Task InvokeAsync(IMessage message);
     }
 
     public class RuleReaction : IRuleReaction
     {
-        private Action<IMessage> _reactionAction;
+        private Func<IMessage, Task> _reactionAction;
 
-        public RuleReaction(Action<IMessage> reactionAction)
+        public RuleReaction(Func<IMessage, Task> reactionAction)
         {
             _reactionAction = reactionAction;
         }
 
-        public void Invoke(IMessage message)
+        public async Task InvokeAsync(IMessage message)
         {
-            _reactionAction.Invoke(message);
+            await _reactionAction.Invoke(message);
         }
     }
 
     public class RuleReaction<T> : IRuleReaction
     {
         private T _reactionParameter;
-        private Action<IMessage, T> _reactionAction;
+        private Func<IMessage, T, Task> _reactionAction;
 
-        public RuleReaction(Action<IMessage, T> reactionAction, T reactionParameter)
+        public RuleReaction(Func<IMessage, T, Task> reactionAction, T reactionParameter)
         {
             _reactionAction = reactionAction;
             _reactionParameter = reactionParameter;
         }
 
-        public void Invoke(IMessage message)
+        public async Task InvokeAsync(IMessage message)
         {
-            _reactionAction.Invoke(message, _reactionParameter);
+            await _reactionAction.Invoke(message, _reactionParameter);
         }
     }
 
     public class ChannelRuleReactions
     {
-        public static void RespondToMessage(IMessage message, string response)
+        public static async Task RespondToMessageAsync(IMessage message, string response)
         {
-            message.Channel.SendMessageAsync(response).GetAwaiter().GetResult();
+            await message.Channel.SendMessageAsync(response);
         }
 
-        public static void DeleteMessage(IMessage message)
+        public static async Task DeleteMessageAsync(IMessage message)
         {
-            message.DeleteAsync().GetAwaiter().GetResult();
+            await message.DeleteAsync();
         }
 
-        public static void PinMessage(IMessage message)
+        public static async Task PinMessageAsync(IMessage message)
         {
-            ((IUserMessage)message).PinAsync().GetAwaiter().GetResult();
+            await ((IUserMessage)message).PinAsync();
         }
 
-        public static void ReactToMessage(IMessage message, string reactionEmoji)
+        public static async Task ReactToMessageAsync(IMessage message, string reactionEmoji)
         {
             IEmote emote = null;
 
@@ -297,19 +308,19 @@ namespace Vereesa.Core.Services
 
             if (emote != null)
             {
-                ((IUserMessage)message).AddReactionAsync(emote).GetAwaiter().GetResult();
+                await ((IUserMessage)message).AddReactionAsync(emote);
             }
         }
 
-        public static void AnnounceChannelRules(IMessage message, string channelRules)
+        public static async Task AnnounceChannelRulesAsync(IMessage message, string channelRules)
         {
             //Check if rules have been posted lately (within the last 5 posts).
-            var previousMessages = message.Channel.GetMessagesAsync(5).Flatten().ToList().GetAwaiter().GetResult();
+            var previousMessages = await message.Channel.GetMessagesAsync(5).Flatten().ToList();
             var shouldPostRules = previousMessages.Any(msg => msg.Author.IsBot && msg.Content == channelRules) == false;
 
             if (shouldPostRules) 
             {
-                message.Channel.SendMessageAsync(channelRules).GetAwaiter().GetResult();    
+                await message.Channel.SendMessageAsync(channelRules);
             }
         }
     }
