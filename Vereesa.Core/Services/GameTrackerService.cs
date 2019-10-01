@@ -49,14 +49,14 @@ namespace Vereesa.Core.Services
                 {
                     gameChangeHappened = true;
                     _logger.LogInformation($"{userBeforeChange.Username} stopped playing {beforeGame.Name}.");
-                    UpdateUserGameState(userBeforeChange, "stopped");
+                    await UpdateUserGameState(userBeforeChange, "stopped");
                 }
 
                 if (afterGame != null && (beforeGame == null || beforeGame.Name != afterGame.Name))
                 {
                     gameChangeHappened = true;
                     _logger.LogInformation($"{userBeforeChange.Username} started playing {afterGame.Name}.");
-                    UpdateUserGameState(userAfterChange, "started");
+                    await UpdateUserGameState(userAfterChange, "started");
                 }
             }
             catch (Exception ex)
@@ -67,32 +67,32 @@ namespace Vereesa.Core.Services
             if (gameChangeHappened)
             {
                 _logger.LogInformation("Emitting game state.");
-                await EmitGameState(userAfterChange.Guild);
+                await EmitGameState(userAfterChange.Guild);    
             }
         }
 
-        private void UpdateUserGameState(SocketGuildUser user, string eventType)
+        private async Task UpdateUserGameState(SocketGuildUser user, string eventType)
         {
-            var userHistory = GetGameTrackMember(user);
+            var userHistory = await GetGameTrackMemberAsync(user);
             var gameName = user.Activity.Name;
 
             var gameHistory = userHistory.GetGameHistory(gameName);
             gameHistory.Add(GameTrackEntry.CreateInstance(eventType));
             
-            _trackingRepo.AddOrEdit(userHistory);
-            _trackingRepo.Save();
+            await _trackingRepo.AddOrEditAsync(userHistory);
+            await _trackingRepo.SaveAsync();
         }
 
-        private GameTrackMember GetGameTrackMember(SocketGuildUser user)
+        private async Task<GameTrackMember> GetGameTrackMemberAsync(SocketGuildUser user)
         {
-            var member = _trackingRepo.FindById(user.Id.ToString());
+            var member = await _trackingRepo.FindByIdAsync(user.Id.ToString());
             if (member == null)
             {
                 member = new GameTrackMember();
                 member.Id = user.Id.ToString();
                 member.Username = user.Username;
                 member.GameHistory = new Dictionary<string, ICollection<GameTrackEntry>>();
-                _trackingRepo.Add(member);
+                await _trackingRepo.AddAsync(member);
             }
 
             return member;

@@ -161,8 +161,8 @@ namespace Vereesa.Core.Services
             var channel = _discord.GetChannel(_giveawayBeingCreated.TargetChannel.ToChannelId().Value) as ISocketMessageChannel;
             var announcementMessage = await channel.SendMessageAsync(":tada:  **G I V E A W A Y**  :tada:", false, embed);
             _giveawayBeingCreated.AnnouncementMessageId = announcementMessage.Id;
-            _giveawayRepo.Add(_giveawayBeingCreated);
-            _giveawayRepo.Save();
+            await _giveawayRepo.AddAsync(_giveawayBeingCreated);
+            await _giveawayRepo.SaveAsync();
         }
 
         private async Task CancelGiveawayConfiguration(SocketMessage message)
@@ -192,7 +192,7 @@ namespace Vereesa.Core.Services
 
         private async Task CancelGiveaway(SocketMessage message)
         {
-            var giveaway = _giveawayRepo.GetAll()
+            var giveaway = (await _giveawayRepo.GetAllAsync())
                 .Where(g =>
                     g.TargetChannel.ToChannelId() == message.Channel.Id &&
                     g.WinnerNames == null &&
@@ -210,7 +210,7 @@ namespace Vereesa.Core.Services
 
         private async Task RerollGiveaway(SocketMessage message)
         {
-            var giveaway = _giveawayRepo.GetAll()
+            var giveaway = (await _giveawayRepo.GetAllAsync())
                 .Where(g =>
                     g.TargetChannel.ToChannelId() == message.Channel.Id &&
                     g.WinnerNames != null &&
@@ -382,8 +382,8 @@ namespace Vereesa.Core.Services
         private async void UpdateActiveGiveaways(object sender, ElapsedEventArgs args)
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var progressingGiveaways = _giveawayRepo.GetAll().Where(ga => now < ga.CreatedTimestamp + ga.Duration);
-            var unreslovedGiveaways = _giveawayRepo.GetAll().Where(ga => now > ga.CreatedTimestamp + ga.Duration && ga.WinnerNames == null);
+            var progressingGiveaways = (await _giveawayRepo.GetAllAsync()).Where(ga => now < ga.CreatedTimestamp + ga.Duration);
+            var unreslovedGiveaways = (await _giveawayRepo.GetAllAsync()).Where(ga => now > ga.CreatedTimestamp + ga.Duration && ga.WinnerNames == null);
 
             foreach (var giveaway in progressingGiveaways)
             {
@@ -449,8 +449,8 @@ namespace Vereesa.Core.Services
                 }
 
                 giveaway.WinnerNames = winners.Select(w => w.Username).ToList();
-                _giveawayRepo.AddOrEdit(giveaway);
-                _giveawayRepo.Save();
+                await _giveawayRepo.AddOrEditAsync(giveaway);
+                await _giveawayRepo.SaveAsync();
 
                 await message.ModifyAsync((msg) =>
                 {

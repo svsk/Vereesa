@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using LiteDB;
 using Vereesa.Data.Interfaces;
 
@@ -98,6 +99,36 @@ namespace Vereesa.Data.Repositories
         }
 
         public T FindById(string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<T> FindByIdAsync(string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<T>> GetAllAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<T> AddAsync(T entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task AddOrEditAsync(T entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SaveAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteAsync(T entity)
         {
             throw new NotImplementedException();
         }

@@ -1,6 +1,6 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RestSharp;
@@ -27,6 +27,22 @@ namespace Vereesa.Core.Services
             }
 
             return null;
+        }
+
+        public async Task<IEnumerable<ApplicationListItem>> GetApplicationListAsync() 
+        {
+            var restClient = new RestClient("https://api.neon.gg/");
+            var restRequest = new RestRequest("/application/list");
+            var result = await restClient.ExecuteTaskAsync<List<ApplicationListItem>>(restRequest);
+            return result.Data;
+        }
+
+        public async Task<Application> GetApplicationByIdAsync(string applicationId) 
+        {
+            var restClient = new RestClient("https://api.neon.gg/");
+            var restRequest = new RestRequest($"/application/{applicationId}");
+            var result = await restClient.ExecuteTaskAsync<Application>(restRequest);
+            return result.Data;
         }
     }
 }

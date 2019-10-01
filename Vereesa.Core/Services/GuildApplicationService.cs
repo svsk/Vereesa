@@ -20,11 +20,11 @@ namespace Vereesa.Core.Services
         private DiscordSocketClient _discord;
         private BattleNetApiService _battleNetApi;
         private GuildApplicationSettings _settings;
-        private Dictionary<int, Application> _cachedApplications;
+        private Dictionary<string, ApplicationListItem> _cachedApplications;
 
         //Dictionary where the key is an application's ID and the value is a list containing numbers representing hour 
         //thresholds for when reminders were sent to nofity officers of an overdue application.
-        private Dictionary<int, List<int>> _notificationCache;
+        private Dictionary<string, List<int>> _notificationCache;
 
         /// This service is fully async
         public GuildApplicationService(NeonApiService neonApiService, DiscordSocketClient discord, GuildApplicationSettings settings, BattleNetApiService battleNetApi, ILogger<GuildApplicationService> logger)
@@ -45,30 +45,30 @@ namespace Vereesa.Core.Services
                 var sw = new Stopwatch();
                 sw.Start();
                 _logger.LogInformation("Getting applications.");
-                var applications = await _neonApiService.GetApplicationsAsync();
+                var applications = await _neonApiService.GetApplicationListAsync();
 
                 if (applications != null)
                 {
-                    _logger.LogInformation($"Getting {applications.Count()} took {sw.ElapsedMilliseconds / 1000} seconds.");
+                    _logger.LogInformation($"Getting {applications.Count()} applications took {sw.ElapsedMilliseconds} ms.");
                     await CheckForNewApplications(applications);
                     await CheckForOverdueApplications(applications);
                 }
-            }, 30000, true, true);
+            }, 60000 * 2, true, true);
         }
 
-        private async Task CheckForOverdueApplications(IEnumerable<Application> applications)
+        private async Task CheckForOverdueApplications(IEnumerable<ApplicationListItem> applications)
         {
             var isFirstRun = _notificationCache == null;
-            _notificationCache = isFirstRun ? new Dictionary<int, List<int>>() : _notificationCache;
+            _notificationCache = isFirstRun ? new Dictionary<string, List<int>>() : _notificationCache;
             var notificationHourThresholds = new int[] { 36, 48 }; //Config?
 
             foreach (var application in applications) 
             {
-                if (application.CurrentStatusString == "Pending") 
+                if (application.Status == "Pending") 
                 {
                     _notificationCache[application.Id] = _notificationCache.ContainsKey(application.Id) ? _notificationCache[application.Id] : new List<int>();
 
-                    var timeSinceAppSubmission = DateTime.UtcNow - application.GetCreatedDateUtc(_settings.SourceTimeZone);
+                    var timeSinceAppSubmission = DateTime.UtcNow - application.Timestamp.ToUtc(_settings.SourceTimeZone);
                     var hoursPending = (int)Math.Floor(timeSinceAppSubmission.TotalHours);
                     var shouldNotify = false;
                     var previousNotificationTimes = _notificationCache[application.Id];
@@ -84,15 +84,17 @@ namespace Vereesa.Core.Services
 
                     if (shouldNotify && !isFirstRun)
                     {
-                        await SendOverdueNotification(application, hoursPending);
+                        await SendOverdueNotification(application.Id, hoursPending);
                     }
                 }
             }   
         }
 
-        private async Task SendOverdueNotification(Application application, int hoursPending)
+        private async Task SendOverdueNotification(string applicationId, int hoursPending)
         {
-            _logger.LogInformation($"Application {application.Id} has now been pending for {hoursPending} hours.");
+            _logger.LogInformation($"Application {applicationId} has now been pending for {hoursPending} hours.");
+
+            Application application = await _neonApiService.GetApplicationByIdAsync(applicationId);
 
             var playerName = application.GetFirstAnswerByEitherQuestionPart("your name", "full name");
 
@@ -101,13 +103,12 @@ namespace Vereesa.Core.Services
             await notificationChannel?.SendMessageAsync($"<@&{_settings.NotificationRoleId}> {playerName}'s application has now been pending for more than {hoursPending} hours. Please review it and respond as soon as possible.");
         }
 
-        private async Task CheckForNewApplications(IEnumerable<Application> applications)
+        private async Task CheckForNewApplications(IEnumerable<ApplicationListItem> applications)
         {
             var isFirstRun = _cachedApplications == null;
-
             if (isFirstRun)
             {
-                _cachedApplications = new Dictionary<int, Application>();
+                _cachedApplications = new Dictionary<string, ApplicationListItem>();
             }
 
             foreach (var application in applications)
@@ -115,22 +116,22 @@ namespace Vereesa.Core.Services
                 if (!_cachedApplications.ContainsKey(application.Id) && !isFirstRun)
                 {
                     _logger.LogInformation($"Found new app! Announcing!");
-                    await AnnounceNewApplication(application);
+                    await AnnounceNewApplication(application.Id);
                 }
 
                 if (_cachedApplications.ContainsKey(application.Id))  
                 {
-                    Application cachedApplication = _cachedApplications[application.Id];
+                    ApplicationListItem cachedApplication = _cachedApplications[application.Id];
 
-                    if (cachedApplication.CurrentStatusString != application.CurrentStatusString) 
+                    if (cachedApplication.Status != application.Status) 
                     {
                         //status changed
                         var appMessage = RetrieveApplicationMessage(application.Id);
                         if (appMessage != null) 
                         {
-                            await appMessage.ModifyAsync((msg) => 
+                            await appMessage.ModifyAsync(async (msg) => 
                             {
-                                msg.Embed = GetApplicationEmbed(application).Build();
+                                msg.Embed = (await GetApplicationEmbedAsync(application.Id)).Build();
                             });
                         }
                     }
@@ -140,7 +141,7 @@ namespace Vereesa.Core.Services
             }
         }
 
-        private async Task AnnounceNewApplication(Application application)
+        private async Task AnnounceNewApplication(string applicationId)
         {
             var notificationChannel = GetNotificationChannel();
             if (notificationChannel != null)
@@ -148,7 +149,7 @@ namespace Vereesa.Core.Services
                 try
                 {
                     //await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
-                    var applicationEmbed = GetApplicationEmbed(application).Build();
+                    var applicationEmbed = (await GetApplicationEmbedAsync(applicationId)).Build();
                     await notificationChannel.SendMessageAsync(string.Empty, false, applicationEmbed);
                 }
                 catch (Exception ex)
@@ -163,7 +164,7 @@ namespace Vereesa.Core.Services
             return _discord.Guilds.FirstOrDefault()?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName) as ISocketMessageChannel;
         }
 
-        private IUserMessage RetrieveApplicationMessage(int applicationId) 
+        private IUserMessage RetrieveApplicationMessage(string applicationId) 
         {
             ISocketMessageChannel channel = GetNotificationChannel();
             IAsyncEnumerable<IMessage> messages = channel.GetMessagesAsync(100).Flatten();
@@ -179,8 +180,10 @@ namespace Vereesa.Core.Services
             return applicationEmbedMessage;
         }
 
-        private EmbedBuilder GetApplicationEmbed(Application application)
+        private async Task<EmbedBuilder> GetApplicationEmbedAsync(string applicationId)
         {
+            var application = await _neonApiService.GetApplicationByIdAsync(applicationId);
+
             var armoryProfileUrl = application.GetFirstAnswerByQuestionPart("wow-armory profile");
             var charAndRealm = ParseArmoryLink(armoryProfileUrl);
             var character = _battleNetApi.GetCharacterData(charAndRealm.realm, charAndRealm.name, "eu");

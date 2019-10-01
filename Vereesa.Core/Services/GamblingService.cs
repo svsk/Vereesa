@@ -130,7 +130,7 @@ namespace Vereesa.Core.Services
 
         private async Task ShowHallOfShame()
         {
-            var standings = _standings.GetAll().FirstOrDefault();
+            var standings = (await _standings.GetAllAsync()).FirstOrDefault();
 
             if (standings == null)
                 return;
@@ -141,7 +141,7 @@ namespace Vereesa.Core.Services
 
         private async Task ShowHallOfFame()
         {
-            var standings = _standings.GetAll().FirstOrDefault();
+            var standings = (await _standings.GetAllAsync()).FirstOrDefault();
 
             if (standings == null)
                 return;
@@ -199,7 +199,7 @@ namespace Vereesa.Core.Services
 
                 await _gamblingChannel.SendMessageAsync($"{losersString} owes {winnersString} {prize} gold.");
                 
-                UpdateStandings(winningRolls, losingRolls, prize);
+                await UpdateStandingsAsync(winningRolls, losingRolls, prize);
             }
             else
             {
@@ -212,14 +212,14 @@ namespace Vereesa.Core.Services
             _roundTimeoutTimer?.Stop();
         }
 
-        private void UpdateStandings(IEnumerable<KeyValuePair<ulong, int?>> winningRolls, IEnumerable<KeyValuePair<ulong, int?>> losingRolls, int prize)
+        private async Task UpdateStandingsAsync(IEnumerable<KeyValuePair<ulong, int?>> winningRolls, IEnumerable<KeyValuePair<ulong, int?>> losingRolls, int prize)
         {
-            var standings = _standings.GetAll().FirstOrDefault();
+            var standings = (await _standings.GetAllAsync()).FirstOrDefault();
 
             if (standings == null)
             {
                 standings = new GamblingStandings();
-                _standings.Add(standings);
+                await _standings.AddAsync(standings);
             }
 
             foreach (var roll in winningRolls) {
@@ -238,7 +238,7 @@ namespace Vereesa.Core.Services
                 standings.Ranking[roll.Key] -= prize;
             }
 
-            _standings.Save();
+            await _standings.SaveAsync();
         }
 
         private async Task RemindRollers()

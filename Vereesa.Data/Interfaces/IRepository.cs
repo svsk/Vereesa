@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Vereesa.Data.Models.Reminders;
 
 namespace Vereesa.Data.Interfaces 
 {
@@ -10,5 +12,12 @@ namespace Vereesa.Data.Interfaces
         void Save();
         void Delete(T entity);
         T FindById(string id);
+
+        Task<IEnumerable<T>> GetAllAsync();
+        Task<T> AddAsync(T entity);
+        Task AddOrEditAsync(T entity);
+        Task SaveAsync();
+        Task DeleteAsync(T entity);
+        Task<T> FindByIdAsync(string id);
     }
 }

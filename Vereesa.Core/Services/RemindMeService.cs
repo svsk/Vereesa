@@ -37,7 +37,7 @@ namespace Vereesa.Core.Services
         {
             if (TryParseReminder(receivedMessage, out var reminder))
             {
-                AddReminder(reminder);
+                await AddReminderAsync(reminder);
                 await AnnounceReminderAddedAsync(receivedMessage.Channel.Id, receivedMessage.Author.Id);
             }
         }
@@ -53,9 +53,9 @@ namespace Vereesa.Core.Services
             await channel.SendMessageAsync($"OK, <@{reminderUser}>! I'll remind you! :sparkles:");
         }
 
-        private void AddReminder(Reminder reminder)
+        private async Task AddReminderAsync(Reminder reminder)
         {
-            _reminderRepository.Add(reminder);
+            await _reminderRepository.AddAsync(reminder);
         }
 
         private bool TryParseReminder(SocketMessage message, out Reminder reminder)
@@ -142,20 +142,20 @@ namespace Vereesa.Core.Services
 
         private async Task HandleCheckIntervalElapsedAsync()
         {
-            var overdueReminders = GetOverdueReminders();
+            var overdueReminders = await GetOverdueRemindersAsync();
 
             foreach (var reminder in overdueReminders)
             {
                 if (await TryAnnounceReminderAsync(reminder))
                 {
-                    RemoveReminder(reminder);
+                    await RemoveReminderAsync(reminder);
                 }
             }
         }
 
-        private void RemoveReminder(Reminder reminder)
+        private async Task RemoveReminderAsync(Reminder reminder)
         {
-            _reminderRepository.Delete(reminder);
+            await _reminderRepository.DeleteAsync(reminder);
         }
 
         private async Task<bool> TryAnnounceReminderAsync(Reminder reminder)
@@ -173,9 +173,9 @@ namespace Vereesa.Core.Services
             return true;
         }
 
-        private List<Reminder> GetOverdueReminders()
+        private async Task<List<Reminder>> GetOverdueRemindersAsync()
         {
-            return _reminderRepository.GetAll().Where(r => r.RemindTime < DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToList();
+            return (await _reminderRepository.GetAllAsync()).Where(r => r.RemindTime < DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToList();
         }
     }
 }

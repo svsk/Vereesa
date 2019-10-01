@@ -30,16 +30,16 @@ namespace Vereesa.Core.Services
 
             if (command == "!addcmd" && srcMessage.Author.Username == "Veinlash")
             {
-                TryAddCommand(srcMessage);
+                await TryAddCommandAsync(srcMessage);
             }
 
             if (command.StartsWith("!"))
             {
-                await TryTriggerCommand(command, srcMessage.Channel);
+                await TryTriggerCommandAsync(command, srcMessage.Channel);
             }
         }
 
-        private void TryAddCommand(SocketMessage srcMessage)
+        private async Task TryAddCommandAsync(SocketMessage srcMessage)
         {
             var parameters = srcMessage.GetCommandArgs();
 
@@ -49,7 +49,7 @@ namespace Vereesa.Core.Services
 
             trigger = trigger.StartsWith("!") ? trigger : "!" + trigger;
 
-            _commandRepo.Add(new Command
+            await _commandRepo.AddAsync(new Command
             {
                 Id = Guid.NewGuid().ToString(),
                 TriggerCommands = new List<string> { trigger },
@@ -57,12 +57,12 @@ namespace Vereesa.Core.Services
                 ReturnMessage = returnMessage
             });
 
-            _commandRepo.Save();
+            await _commandRepo.SaveAsync();
         }
 
-        private async Task TryTriggerCommand(string command, IMessageChannel responseChannel)
+        private async Task TryTriggerCommandAsync(string command, IMessageChannel responseChannel)
         {
-            var triggeredCommands = _commandRepo.GetAll().Where(cmd => cmd.TriggerCommands.Contains(command));
+            var triggeredCommands = (await _commandRepo.GetAllAsync()).Where(cmd => cmd.TriggerCommands.Contains(command));
 
 
             if (triggeredCommands.Any())
