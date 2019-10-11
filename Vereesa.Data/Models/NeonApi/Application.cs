@@ -10,7 +10,7 @@ namespace Vereesa.Data.Models.NeonApi
     {
         public string Id { get; set; }
         public string Key { get; set; }
-        public IList<ApplicationQuestion> ApplicationQuestions { get; set; }
+        public List<ApplicationQuestion> ApplicationQuestions { get; set; }
         public string CurrentStatusString { get; set; }
 
         public string GetFirstAnswerByQuestionPart(string questionPart)
