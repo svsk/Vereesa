@@ -44,7 +44,8 @@ namespace Vereesa.Core
             var voiceChannelTrackerSettings = new VoiceChannelTrackerSettings();
             var guildApplicationSettings = new GuildApplicationSettings();
             var signupsSettings = new SignupsSettings();
-            var twitterSettings = new TwitterSettings();
+            var twitterClientSettings = new TwitterClientSettings();
+            var twitterServiceSettings = new TwitterServiceSettings();
             var storageSettings = new AzureStorageSettings();
 
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
@@ -55,7 +56,8 @@ namespace Vereesa.Core
             _config.GetSection(nameof(VoiceChannelTrackerSettings)).Bind(voiceChannelTrackerSettings);
             _config.GetSection(nameof(GuildApplicationSettings)).Bind(guildApplicationSettings);
             _config.GetSection(nameof(SignupsSettings)).Bind(signupsSettings);
-            _config.GetSection(nameof(TwitterSettings)).Bind(twitterSettings);
+            _config.GetSection(nameof(TwitterClientSettings)).Bind(twitterClientSettings);
+            _config.GetSection(nameof(TwitterServiceSettings)).Bind(twitterServiceSettings);
             _config.GetSection(nameof(AzureStorageSettings)).Bind(storageSettings);
 
             //Set up discord client
@@ -77,7 +79,8 @@ namespace Vereesa.Core
                 .AddSingleton(voiceChannelTrackerSettings)
                 .AddSingleton(guildApplicationSettings)
                 .AddSingleton(signupsSettings)
-                .AddSingleton(twitterSettings)
+                .AddSingleton(twitterClientSettings)
+                .AddSingleton(twitterServiceSettings)
                 .AddSingleton(storageSettings)
                 .AddSingleton<ChannelRuleService>()
                 .AddSingleton<Random>()
@@ -104,6 +107,7 @@ namespace Vereesa.Core
                 .AddScoped<IRepository<Reminder>, AzureStorageRepository<Reminder>>()
                 .AddScoped<IRepository<Command>, AzureStorageRepository<Command>>()
                 .AddScoped<IWowheadClient, WowheadClient>()
+                .AddTransient<TwitterClient>()
                 .AddLogging(config => { 
                     config.AddConsole();
                 });

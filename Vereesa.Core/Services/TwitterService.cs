@@ -1,30 +1,30 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
 using Newtonsoft.Json;
-using RestSharp;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
+using Vereesa.Core.Integrations;
 using Vereesa.Core.Integrations.Interfaces;
 
 namespace Vereesa.Core.Services
 {
     public class TwitterService
     {
-        private TwitterSettings _settings;
+        private TwitterServiceSettings _settings;
         private IDiscordSocketClient _discord;
+        private TwitterClient _twitter;
         private Timer _checkInterval;
         private long? _lastTweetIDSeen;
 
-        public TwitterService(TwitterSettings settings, IDiscordSocketClient discord)
+        public TwitterService(TwitterServiceSettings settings, TwitterClient twitterClient, IDiscordSocketClient discord)
         {
             _settings = settings;
             _discord = discord;
+            _twitter = twitterClient;
             _discord.Ready += InitializeServiceAsync;
         }
 
@@ -35,7 +35,7 @@ namespace Vereesa.Core.Services
 
         private async Task CheckForNewTweetsAsync()
         {
-            var latestTweets = await GetLatestTweetsAsync();
+            var latestTweets = await _twitter.GetLatestTweetsAsync(_settings.SourceTwitterUser);
             var lastTweet = latestTweets.FirstOrDefault();
 
             if (_lastTweetIDSeen != null && _lastTweetIDSeen != lastTweet?.Id)
@@ -46,14 +46,14 @@ namespace Vereesa.Core.Services
             _lastTweetIDSeen = lastTweet != null ? lastTweet.Id : -1;
         }
 
-        public async Task SendTweetToTargetChannelAsync(Tweet tweet)
+        private async Task SendTweetToTargetChannelAsync(Tweet tweet)
         {
             var channel =  await _discord.GetGuildChannelByNameAsync(_settings.TargetDiscordGuild, _settings.TargetDiscordChannel);
             var embed = BuildEmbed(tweet);
             await channel.SendMessageAsync(string.Empty, embed: embed);
         }
 
-        public Embed BuildEmbed(Tweet tweet)
+        private Embed BuildEmbed(Tweet tweet)
         {
             var builder = new EmbedBuilder();
 
@@ -68,47 +68,7 @@ namespace Vereesa.Core.Services
             return builder.Build();
         }
 
-        private async Task<string> GetTokenAsync()
-        {
-            var restClient = new RestClient("https://api.twitter.com");
-            var request = new RestRequest("/oauth2/token", Method.POST);
-
-            request.AddHeader("Authorization", $"Basic {GetEncodedCredentials()}");
-            request.AddParameter("grant_type", "client_credentials");
-
-            var response = await restClient.ExecuteTaskAsync(request);
-            var result = JsonConvert.DeserializeObject<dynamic>(response.Content);
-
-            return result["access_token"];
-        }
-
-        private string GetEncodedCredentials()
-        {
-            var clientId = _settings.ClientId;
-            var clientSecret = _settings.ClientSecret;
-            return Convert.ToBase64String(new UTF8Encoding().GetBytes(clientId + ":" + clientSecret));
-        }
-
-        public async Task<IList<Tweet>> GetLatestTweetsAsync()
-        {
-            var token = await GetTokenAsync();
-
-            var client = new RestClient("https://api.twitter.com");
-            var request = new RestRequest("/1.1/statuses/user_timeline.json", Method.GET);
-            request.AddQueryParameter("screen_name", _settings.SourceTwitterUser);
-            request.AddQueryParameter("count", "3");
-            request.AddQueryParameter("tweet_mode", "extended");
-            request.AddQueryParameter("exclude_replies", "true");
-            request.AddQueryParameter("include_rts", "false");
-
-            request.AddHeader("Authorization", $"Bearer {token}");
-
-            var response = client.Execute(request);
-
-            var tweets = JsonConvert.DeserializeObject<List<Tweet>>(response.Content);
-
-            return tweets;
-        }
+        
     }
 
 

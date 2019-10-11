@@ -30,9 +30,11 @@
 		"ClientId": "",
 		"ClientSecret": ""
 	},
-	"TwitterSettings": {
+	"TwitterClientSettings": {
 		"ClientId": "",
 		"ClientSecret": "",
+	},
+	"TwitterServiceSettings": {
 		"SourceTwitterUser": "",
 		"TargetDiscordGuild": "",
         "TargetDiscordChannel": "",
