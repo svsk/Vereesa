@@ -46,7 +46,7 @@ namespace Vereesa.Core.Services
             _lastTweetIDSeen = lastTweet != null ? lastTweet.Id : -1;
         }
 
-        private async Task SendTweetToTargetChannelAsync(Tweet tweet)
+        protected virtual async Task SendTweetToTargetChannelAsync(Tweet tweet)
         {
             var channel =  await _discord.GetGuildChannelByNameAsync(_settings.TargetDiscordGuild, _settings.TargetDiscordChannel);
             var embed = BuildEmbed(tweet);

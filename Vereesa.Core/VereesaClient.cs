@@ -47,6 +47,7 @@ namespace Vereesa.Core
             var twitterClientSettings = new TwitterClientSettings();
             var twitterServiceSettings = new TwitterServiceSettings();
             var storageSettings = new AzureStorageSettings();
+            var announcementServiceSettings = new AnnouncementServiceSettings();
 
             _config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
             _config.GetSection(nameof(ChannelRuleSettings)).Bind(channelRuleSettings);
@@ -59,6 +60,7 @@ namespace Vereesa.Core
             _config.GetSection(nameof(TwitterClientSettings)).Bind(twitterClientSettings);
             _config.GetSection(nameof(TwitterServiceSettings)).Bind(twitterServiceSettings);
             _config.GetSection(nameof(AzureStorageSettings)).Bind(storageSettings);
+            _config.GetSection(nameof(AnnouncementServiceSettings)).Bind(announcementServiceSettings);
 
             //Set up discord client
             _discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -81,6 +83,7 @@ namespace Vereesa.Core
                 .AddSingleton(signupsSettings)
                 .AddSingleton(twitterClientSettings)
                 .AddSingleton(twitterServiceSettings)
+                .AddSingleton(announcementServiceSettings)
                 .AddSingleton(storageSettings)
                 .AddSingleton<ChannelRuleService>()
                 .AddSingleton<Random>()
@@ -101,6 +104,7 @@ namespace Vereesa.Core
                 .AddSingleton<MovieSuggestionService>()
                 .AddSingleton<TwitterService>()
                 .AddSingleton<RemindMeService>()
+                .AddSingleton<AnnouncementService>()
                 .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
                 .AddScoped<IRepository<Giveaway>, AzureStorageRepository<Giveaway>>()
                 .AddScoped<IRepository<GamblingStandings>, AzureStorageRepository<GamblingStandings>>()
@@ -133,6 +137,7 @@ namespace Vereesa.Core
                 _serviceProvider.GetRequiredService<TodayInWoWService>();
                 _serviceProvider.GetRequiredService<TwitterService>();
                 _serviceProvider.GetRequiredService<RemindMeService>();
+                _serviceProvider.GetRequiredService<AnnouncementService>();
             }
             catch (Exception) 
             {

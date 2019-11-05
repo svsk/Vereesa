@@ -44,5 +44,11 @@
 		"EventsUrl": "",
 		"EventsUpdateUrl": "",
 		"ApiKey": ""
+	},
+	"AnnouncementServiceSettings": {
+		"SourceTwitterUser": "",
+		"TargetDiscordGuild": "",
+        "TargetDiscordChannel": "",
+        "CheckIntervalSeconds": 300
 	}
 }
