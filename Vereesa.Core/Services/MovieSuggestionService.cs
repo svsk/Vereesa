@@ -20,7 +20,7 @@ namespace Vereesa.Core.Services
 
         private async Task HandleMessageReceivedAsync(SocketMessage message)
         {
-            string command = message.GetCommand().ToLowerInvariant();
+            string command = message.GetCommand()?.ToLowerInvariant();
 
             switch (command) 
             {

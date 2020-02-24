@@ -28,6 +28,11 @@ namespace Vereesa.Core.Services
         {            
             var command = srcMessage.GetCommand();
 
+            if (command == null) 
+            {
+                return;
+            }
+
             if (command == "!addcmd" && srcMessage.Author.Username == "Veinlash")
             {
                 await TryAddCommandAsync(srcMessage);
