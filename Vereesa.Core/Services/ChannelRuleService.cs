@@ -31,16 +31,18 @@ namespace Vereesa.Core.Services
             _triggerInterval = await TimerHelpers.SetTimeoutAsync(TriggerScheduledRulesetsAsync, 30000, true, false);
 
             //Define in config later
-            //124446036637908995 botplayground channel id
-            //screenshot channel 544279733530263593
-            var ruleset = new ChannelRuleset(544279733530263593, RuleComplianceLevel.Any);
+            //ulong mediaChannelId = 124446036637908995; //botplayground channel id
+            ulong mediaChannelId = 544279733530263593; // Media channel
+            
+            var ruleset = new ChannelRuleset(mediaChannelId, RuleComplianceLevel.Any); 
             ruleset.Triggers.Add(RulesetTriggers.Periodic);
             ruleset.Triggers.Add(RulesetTriggers.OnMessage);
 
             ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainImage));
             ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainYoutubeLink));
+            ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainTwitchLink));
             ruleset.AddRulesBrokenReaction(new RuleReaction(ChannelRuleReactions.DeleteMessageAsync));
-            ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRulesAsync, "Sorry! :sparkles: Only images :frame_photo:, direct links to images :link:, and links to YouTube videos :tv: can be posted in this channel! :pray:"));
+            ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRulesAsync, "Sorry! :sparkles: Only images :frame_photo:, direct links to images :link:, and links to YouTube or Twitch videos :tv: can be posted in this channel! :pray:"));
 
             //Test rules and reactions
             // ruleset.AddRule(new ChannelRule<string>(ChannelRuleEvaluators.MessageTextMustContain, "Yas"));
@@ -240,6 +242,18 @@ namespace Vereesa.Core.Services
                 return true;
             }
             
+            return false;
+        }
+
+        public static bool MessageMustContainTwitchLink(IMessage message)
+        {
+            var twitchPattern = @"http(?:s?):\/\/www.twitch.tv\/videos\/(\d{1,20})";
+
+            if (Regex.IsMatch(message.Content, twitchPattern) || message.Attachments.Any(att => Regex.IsMatch(att.Url, twitchPattern)))
+            {
+                return true;
+            }
+
             return false;
         }
     }
