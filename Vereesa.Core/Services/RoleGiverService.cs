@@ -29,7 +29,7 @@ namespace Vereesa.Core.Services
         {
             var command = message.GetCommand();
             
-            if (_commandMap.TryGetValue(command, out var action))
+            if (command != null && _commandMap.TryGetValue(command, out var action))
                 await action.Invoke(message);
         }
 
