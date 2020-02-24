@@ -38,8 +38,9 @@ namespace Vereesa.Core.Services
             ruleset.Triggers.Add(RulesetTriggers.OnMessage);
 
             ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainImage));
+            ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainYoutubeLink));
             ruleset.AddRulesBrokenReaction(new RuleReaction(ChannelRuleReactions.DeleteMessageAsync));
-            ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRulesAsync, "Sorry! :sparkles: Only images :frame_photo: and direct links to images :link: can be posted in this channel! :pray:"));
+            ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRulesAsync, "Sorry! :sparkles: Only images :frame_photo:, direct links to images :link:, and links to YouTube videos :tv: can be posted in this channel! :pray:"));
 
             //Test rules and reactions
             // ruleset.AddRule(new ChannelRule<string>(ChannelRuleEvaluators.MessageTextMustContain, "Yas"));
@@ -223,6 +224,18 @@ namespace Vereesa.Core.Services
             }
 
             if (message.Embeds.Any(embed => embed.Image != null)) 
+            {
+                return true;
+            }
+            
+            return false;
+        }
+
+        public static bool MessageMustContainYoutubeLink(IMessage message) 
+        {
+            var youtubePattern = @"http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\\_]*)(&(amp;)?‌​[\w\?‌​=]*)?";
+
+            if (Regex.IsMatch(message.Content, youtubePattern) || message.Attachments.Any(att => Regex.IsMatch(att.Url, youtubePattern)))
             {
                 return true;
             }
