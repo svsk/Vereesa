@@ -17,6 +17,7 @@ using Vereesa.Data.Repositories;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Reminders;
 using Vereesa.Data.Configuration;
+using Vereesa.Data.Models.Statistics;
 
 namespace Vereesa.Core
 {
@@ -105,11 +106,13 @@ namespace Vereesa.Core
                 .AddSingleton<TwitterService>()
                 .AddSingleton<RemindMeService>()
                 .AddSingleton<AnnouncementService>()
+                .AddSingleton<CoronaService>()
                 .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
                 .AddScoped<IRepository<Giveaway>, AzureStorageRepository<Giveaway>>()
                 .AddScoped<IRepository<GamblingStandings>, AzureStorageRepository<GamblingStandings>>()
                 .AddScoped<IRepository<Reminder>, AzureStorageRepository<Reminder>>()
                 .AddScoped<IRepository<Command>, AzureStorageRepository<Command>>()
+                .AddScoped<IRepository<Statistics>, AzureStorageRepository<Statistics>>()
                 .AddScoped<IWowheadClient, WowheadClient>()
                 .AddTransient<TwitterClient>()
                 .AddLogging(config => { 
@@ -138,6 +141,7 @@ namespace Vereesa.Core
                 _serviceProvider.GetRequiredService<TwitterService>();
                 _serviceProvider.GetRequiredService<RemindMeService>();
                 _serviceProvider.GetRequiredService<AnnouncementService>();
+                _serviceProvider.GetRequiredService<CoronaService>();
             }
             catch (Exception) 
             {
