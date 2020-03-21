@@ -17,7 +17,8 @@ namespace Vereesa.Core.Services
         private DiscordSocketClient _discord;
         private IRepository<Statistics> _statRepository;
         private ILogger<CoronaService> _logger;
-        private Statistics _coronaStats => _statRepository.FindById("corona") ?? new Statistics { Id = "corona", Stats = new Dictionary<string, object>() };
+        private Statistics _coronaStats => _statRepository.FindById("corona") ?? new Statistics { Id = "corona" };
+        private Statistics _flags => _statRepository.FindById("flags") ?? new Statistics { Id = "flags" };
 
         public CoronaService(DiscordSocketClient discord, IRepository<Statistics> statRepository, ILogger<CoronaService> logger)
         {
@@ -31,7 +32,7 @@ namespace Vereesa.Core.Services
 
         private async Task EvaluateMessageAsync(SocketMessage message)
         {
-            var command = message.GetCommand();
+            var command = message?.GetCommand();
             
             if (command == null)
             {
@@ -51,6 +52,11 @@ namespace Vereesa.Core.Services
             if (command == "!addcoronacountry") 
             {
                 await message.Channel.SendMessageAsync(AddRelevantCountry(message.GetCommandArgs()));
+            }
+
+            if (command == "!removecoronacountry") 
+            {
+                await message.Channel.SendMessageAsync(RemoveRelevantCountry(message.GetCommandArgs()));
             }
 
             if (command == "!listcoronacountries") 
@@ -97,6 +103,25 @@ namespace Vereesa.Core.Services
             return $"Added {country} to the watch list.";
         }
 
+        private string RemoveRelevantCountry(string[] countryWords)
+        {
+            if (countryWords == null || !countryWords.Any()) 
+            {
+                return "Please specify a country";
+            }
+
+            var country = string.Join(" ", countryWords);
+            var existingCountries = GetRelevantCountries();
+            if (!existingCountries.Contains(country)) 
+            {
+                return "I don't have that country on my watch list.";
+            }
+
+            DeleteRelevantCountry(country);
+
+            return $"Removed {country} from the watch list.";
+        }
+
         private string SetGuildInfected(string[] commandArgs)
         {
             if (!int.TryParse(commandArgs.FirstOrDefault(), out var numberOfInfected)) 
@@ -128,6 +153,7 @@ namespace Vereesa.Core.Services
         {
             var relevantCountries = GetRelevantCountries();
             var countries = GetCoronaWorldStats();
+            var flags = _flags;
 
             var sb = new StringBuilder();
             sb.AppendLine();
@@ -141,8 +167,9 @@ namespace Vereesa.Core.Services
                 var confirmedChange = current.Confirmed - previous.Confirmed;
                 var deathsChange = current.Deaths - previous.Deaths;
                 var recoveredChange = current.Recovered - previous.Recovered;
+                var flag = flags.Get<string>(country);
 
-                sb.AppendLine($"**{country}**");
+                sb.AppendLine($"**{(flag == null ? "" : flag + " ")}{country}**");
                 sb.AppendLine($"Confirmed cases: {current.Confirmed} ({(confirmedChange >= 0 ? "+" : "")}{confirmedChange})");
                 sb.AppendLine($"Deaths: {current.Deaths} ({(deathsChange >= 0 ? "+" : "")}{deathsChange})");
                 sb.AppendLine($"Recovered: {current.Recovered} ({(recoveredChange >= 0 ? "+" : "")}{recoveredChange})");
@@ -154,15 +181,7 @@ namespace Vereesa.Core.Services
 
         private List<string> GetRelevantCountries()
         {
-            try 
-            {
-                _coronaStats.Stats.TryGetValue("countries", out var result);
-                return JsonConvert.DeserializeObject<List<string>>(result.ToString());
-            } 
-            catch 
-            {
-                return new List<string>();
-            }
+            return _coronaStats.Get<List<string>>("countries") ?? new List<string>();
         }
 
         private void SaveRelevantCountry(string country) 
@@ -170,16 +189,21 @@ namespace Vereesa.Core.Services
             var stats = _coronaStats;
             var targetKey = "countries";
 
-            if (stats.Stats.ContainsKey(targetKey)) 
-            {
-                var existingValue = GetRelevantCountries();
-                existingValue.Add(country);
-                stats.Stats[targetKey] = existingValue;
-            } 
-            else 
-            {
-                stats.Stats.Add(targetKey, new string[] { country });
-            }
+            var countries = GetRelevantCountries();
+            countries.Add(country);
+            stats.Upsert(targetKey, countries);
+
+            _statRepository.Add(stats);
+        }
+
+        private void DeleteRelevantCountry(string country) 
+        {
+            var stats = _coronaStats;
+            var targetKey = "countries";
+
+            var countries = GetRelevantCountries();
+            countries.Remove(country);
+            stats.Upsert(targetKey, countries);
 
             _statRepository.Add(stats);
         }
@@ -188,8 +212,7 @@ namespace Vereesa.Core.Services
         {
             try 
             {
-                _coronaStats.Stats.TryGetValue("guildInfected", out var result);
-                return int.Parse(result?.ToString());
+                return _coronaStats.Get<int>("guildInfected");
             } 
             catch 
             {

@@ -107,6 +107,7 @@ namespace Vereesa.Core
                 .AddSingleton<RemindMeService>()
                 .AddSingleton<AnnouncementService>()
                 .AddSingleton<CoronaService>()
+                .AddSingleton<FlagService>()
                 .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
                 .AddScoped<IRepository<Giveaway>, AzureStorageRepository<Giveaway>>()
                 .AddScoped<IRepository<GamblingStandings>, AzureStorageRepository<GamblingStandings>>()
@@ -142,6 +143,7 @@ namespace Vereesa.Core
                 _serviceProvider.GetRequiredService<RemindMeService>();
                 _serviceProvider.GetRequiredService<AnnouncementService>();
                 _serviceProvider.GetRequiredService<CoronaService>();
+                _serviceProvider.GetRequiredService<FlagService>();
             }
             catch (Exception) 
             {
