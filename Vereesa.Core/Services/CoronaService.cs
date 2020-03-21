@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,10 +16,10 @@ namespace Vereesa.Core.Services
     {
         private DiscordSocketClient _discord;
         private IRepository<Statistics> _statRepository;
-        private ILogger<GiveawayService> _logger;
+        private ILogger<CoronaService> _logger;
         private Statistics _coronaStats => _statRepository.FindById("corona") ?? new Statistics { Id = "corona", Stats = new Dictionary<string, object>() };
 
-        public CoronaService(DiscordSocketClient discord, IRepository<Statistics> statRepository, ILogger<GiveawayService> logger)
+        public CoronaService(DiscordSocketClient discord, IRepository<Statistics> statRepository, ILogger<CoronaService> logger)
         {
             _discord = discord;
             _discord.MessageReceived += EvaluateMessageAsync;
