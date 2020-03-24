@@ -58,23 +58,6 @@ namespace Vereesa.Core.Services
             {
                 await message.Channel.SendMessageAsync(RemoveRelevantCountry(message.GetCommandArgs()));
             }
-
-            if (command == "!listcoronacountries") 
-            {
-                await message.Channel.SendMessageAsync(ListCoronaCountries());
-            }
-        }
-
-        private string ListCoronaCountries()
-        {
-            var worldStats = GetCoronaWorldStats();
-            var sb = new StringBuilder();
-            foreach (var item in worldStats.Keys.OrderBy(c => c)) 
-            {
-                sb.AppendLine(item);
-            }
-
-            return sb.ToString();
         }
 
         private string AddRelevantCountry(string[] countryWords)
@@ -85,8 +68,8 @@ namespace Vereesa.Core.Services
             }
 
             var country = string.Join(" ", countryWords);
-            var countries = GetCoronaWorldStats();
-            if (!countries.ContainsKey(country)) 
+            var countryStats = GetCountryStats(country);
+            if (countryStats == null) 
             {
                 return "Couldn't find that country in my stats. Please ensure that you spelt it correctly and that it has Title Casing.";
             }
@@ -136,45 +119,68 @@ namespace Vereesa.Core.Services
 
         private string GetCoronaReport()
         {
-            var neonInfected = GetInfectedStat() ?? 0;
-            return $"**:rotating_light: Corona virus pandemic is ongoing :rotating_light:** {GenerateRelevantCountryReport()} There {(neonInfected == 1 ? "is" : "are")} {neonInfected} Neon member{(neonInfected == 1 ? "" : "s")} infected.";
+            return $"**:rotating_light: Corona virus pandemic is ongoing :rotating_light:** {GenerateRelevantCountryReport()}";
         }
 
-        private Dictionary<string, List<CoronaCountryTimeEntry>> GetCoronaWorldStats() 
+        private CoronaCountryStats GetCountryStats(string countryName) 
         {
-            var restClient = new RestClient("https://pomber.github.io"); 
-            var restRequest = new RestRequest("/covid19/timeseries.json", Method.GET);
+            var restClient = new RestClient("https://corona.lmao.ninja/countries/");
+            var restRequest = new RestRequest(countryName, Method.GET);
+
             var response = restClient.Execute(restRequest);
-            var countries = JsonConvert.DeserializeObject<Dictionary<string, List<CoronaCountryTimeEntry>>>(response.Content);
-            return countries;
+
+            if (!response.IsSuccessful) 
+            {
+                return null;
+            }
+
+            try 
+            {
+                return JsonConvert.DeserializeObject<CoronaCountryStats>(response.Content);
+            }
+            catch 
+            {
+                return null;
+            }
         }
 
         private string GenerateRelevantCountryReport() 
         {
             var relevantCountries = GetRelevantCountries();
-            var countries = GetCoronaWorldStats();
             var flags = _flags;
 
             var sb = new StringBuilder();
             sb.AppendLine();
 
+            void AppendRow(StringBuilder builder, CoronaCountryStats countryStats) 
+            {
+                var flag = flags.Get<string>(countryStats.Name);
+
+                builder.AppendLine($"**{(flag == null ? "" : flag + " ")}{countryStats.Name}**");
+                builder.AppendLine($"Confirmed cases: {countryStats.Cases} (+{countryStats.TodayCases})");
+                builder.AppendLine($"Deaths: {countryStats.Deaths} (+{countryStats.TodayDeaths})");
+                builder.AppendLine($"Recovered: {countryStats.Recovered}");
+                builder.AppendLine();
+            };
+
             foreach (var country in relevantCountries.Distinct()) 
             {
-                var lastTwo = countries[country].TakeLast(2);
-                var previous = lastTwo.First();
-                var current = lastTwo.Last();
+                var stats = GetCountryStats(country);
+                if (stats == null)
+                    continue;
 
-                var confirmedChange = current.Confirmed - previous.Confirmed;
-                var deathsChange = current.Deaths - previous.Deaths;
-                var recoveredChange = current.Recovered - previous.Recovered;
-                var flag = flags.Get<string>(country);
-
-                sb.AppendLine($"**{(flag == null ? "" : flag + " ")}{country}**");
-                sb.AppendLine($"Confirmed cases: {current.Confirmed} ({(confirmedChange >= 0 ? "+" : "")}{confirmedChange})");
-                sb.AppendLine($"Deaths: {current.Deaths} ({(deathsChange >= 0 ? "+" : "")}{deathsChange})");
-                sb.AppendLine($"Recovered: {current.Recovered} ({(recoveredChange >= 0 ? "+" : "")}{recoveredChange})");
-                sb.AppendLine();
+                AppendRow(sb, stats);
             }
+
+            var neonInfected = GetInfectedStat() ?? 0;
+            AppendRow(sb, new CoronaCountryStats {
+                Name = "Neon",
+                Cases = neonInfected,
+                TodayCases = 0,
+                Deaths = 0,
+                TodayDeaths = 0,
+                Recovered = 0
+            });
             
             return sb.ToString();
         }
@@ -237,19 +243,54 @@ namespace Vereesa.Core.Services
             _statRepository.Add(stats);
         }
 
+        private class CoronaCountryStats 
+        {
+            [JsonProperty("country")]
+            public string Name { get; set; }
+
+
+            [JsonProperty("cases")] // 5560,
+            public int? Cases { get; set; }
+
+            [JsonProperty("todayCases")] // 811,
+            public int? TodayCases { get; set; }
+
+            [JsonProperty("deaths")] // 276,
+            public int? Deaths { get; set; }
+
+            [JsonProperty("todayDeaths")] // 63,
+            public int? TodayDeaths { get; set; }
+
+            [JsonProperty("recovered")] // 2,
+            public int? Recovered { get; set; }
+
+            [JsonProperty("active")] // 5282,
+            public int? Active { get; set; }
+
+            [JsonProperty("critical")] // 435,
+            public int? Critical { get; set; }
+
+            [JsonProperty("casesPerOneMillion")] // 324,
+            public int? CasesPerOneMillion { get; set; }
+
+            [JsonProperty("deathsPerOneMillion")] // 16
+            public int? DeathsPerOneMillion { get; set; }
+
+
+        }
+
         private class CoronaCountryTimeEntry 
         {
-            [JsonProperty("date")]
-            public string Date { get; set; }
+            
             
             [JsonProperty("confirmed")]
-            public int Confirmed { get; set; }
+            public int? Confirmed { get; set; }
             
             [JsonProperty("deaths")]
-            public int Deaths { get; set; }
+            public int? Deaths { get; set; }
             
             [JsonProperty("recovered")]
-            public int Recovered { get; set; }
+            public int? Recovered { get; set; }
         }
     }
 }
