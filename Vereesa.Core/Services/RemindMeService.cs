@@ -29,7 +29,9 @@ namespace Vereesa.Core.Services
         private async Task InitializeAsync()
         {
             _timer?.Stop();
+            _timer?.Dispose();
             _timer = await TimerHelpers.SetTimeoutAsync(HandleCheckIntervalElapsedAsync, 10000, true, true);
+            _discord.MessageReceived -= HandleMessageReceived;
             _discord.MessageReceived += HandleMessageReceived;
         }
 
