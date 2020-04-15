@@ -35,6 +35,7 @@ namespace Vereesa.Core.Services
             _settings = settings;
             _neonApiService = neonApiService;
 
+            _discord.Ready -= Start;
             _discord.Ready += Start;
         }
 

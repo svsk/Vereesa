@@ -22,6 +22,7 @@ namespace Vereesa.Core.Services
         public RemindMeService(IDiscordSocketClient discord, IRepository<Reminder> reminderRepository)
         {
             _discord = discord;
+            _discord.Ready -= InitializeAsync;
             _discord.Ready += InitializeAsync;
             _reminderRepository = reminderRepository;
         }

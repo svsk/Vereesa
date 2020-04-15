@@ -22,6 +22,8 @@ namespace Vereesa.Core.Services
         {
             _discord = discord;
             _discord.MessageReceived += MessageReceivedHandler;
+            
+            _discord.Ready -= InitializeServiceAsync;
             _discord.Ready += InitializeServiceAsync;
         }
 

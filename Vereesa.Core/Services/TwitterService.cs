@@ -25,6 +25,8 @@ namespace Vereesa.Core.Services
             _settings = settings;
             _discord = discord;
             _twitter = twitterClient;
+
+            _discord.Ready -= InitializeServiceAsync;
             _discord.Ready += InitializeServiceAsync;
         }
 

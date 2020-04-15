@@ -34,7 +34,9 @@ namespace Vereesa.Core.Services
             _rng = rng;
             _standings = standings;
 
+            _discord.Ready -= StartGamblingService;
             _discord.Ready += StartGamblingService;
+
             _discord.MessageReceived += EvaluateMessage;
         }
 

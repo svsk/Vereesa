@@ -15,6 +15,7 @@ namespace Vereesa.Core.Services
         public MessageService(IDiscordSocketClient discord, IMessageProvider messageProvider)
         {
             _discord = discord;
+            _discord.Ready -= InitializeServiceAsync;
             _discord.Ready += InitializeServiceAsync;
             _messageProvider = messageProvider;
         }

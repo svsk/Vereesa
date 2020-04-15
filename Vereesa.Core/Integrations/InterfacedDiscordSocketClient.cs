@@ -15,6 +15,7 @@ namespace Vereesa.Core.Integrations
         public InterfacedDiscordSocketClient(DiscordSocketClient client) 
         {
             _client = client;
+            _client.Ready -= HandleDiscordReady;
             _client.Ready += HandleDiscordReady;
             _client.MessageReceived += HandleMessageReceived;
         }
