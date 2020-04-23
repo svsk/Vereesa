@@ -18,6 +18,7 @@ using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Reminders;
 using Vereesa.Data.Configuration;
 using Vereesa.Data.Models.Statistics;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core
 {
@@ -118,6 +119,7 @@ namespace Vereesa.Core
                 .AddTransient<TwitterClient>()
                 .AddLogging(config => { 
                     config.AddConsole();
+                    config.AddProvider(new DiscordChannelLoggerProvider(_discord, 124446036637908995, LogLevel.Error)); // todo: config the channel id?
                 });
 
             //Build the service provider
