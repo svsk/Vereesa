@@ -71,7 +71,7 @@ namespace Vereesa.Core.Tests.ServicesTests
 
             //Act
             var character = _battleNetApiService.GetCharacterData(realmName, charName, region);
-            var thumbnail = _battleNetApiService.GetCharacterThumbnail(character, region);
+            var thumbnail = _battleNetApiService.GetCharacterThumbnail(region, realmName, charName);
 
             using (var httpClient = new HttpClient()) 
             {

@@ -1,16 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using RestSharp;
 using RestSharp.Authenticators;
 using Vereesa.Core.Configuration;
 using Vereesa.Data.Models.BattleNet;
-using Vereesa.Data.Models.EventHub;
 
 namespace Vereesa.Core.Services
 {
@@ -37,7 +33,7 @@ namespace Vereesa.Core.Services
             request.AddParameter("grant_type", "client_credentials");
 
             var response = client.Execute(request);
-
+            
             if (!response.IsSuccessful) 
             {
                 throw new InvalidOperationException("Failed to perform Battle.net authentication.");
@@ -54,7 +50,7 @@ namespace Vereesa.Core.Services
 
         public void GetAuctionPrice(string itemName) 
         {
-            var auctionFiles = ExecuteApiRequest<AuctionFileResponse>("eu", "/wow/auction/data/karazhan", Method.GET);
+            // var auctionFiles = ExecuteApiRequest<AuctionFileResponse>("eu", "/wow/auction/data/karazhan", Method.GET);
 
         }
 
@@ -64,35 +60,45 @@ namespace Vereesa.Core.Services
             var request = new RestRequest(endpoint, method);
             var token = GetAuthToken(region);
 
-            request.AddHeader("Authorization", $"Bearer {token}");
+            request.AddParameter("access_token", token);
+            request.AddParameter("namespace", "profile-eu"); // maybe static-eu or dynamic-eu as well
+            request.AddParameter("locale", "en_GB");
 
             var response = client.Execute(request);
 
             if (!response.IsSuccessful) 
             {
-                throw new InvalidOperationException($"Failed to execute Battle.net API request: {endpoint}.");
+                throw new InvalidOperationException($"Failed to execute Battle.net API request: {endpoint}: {response.StatusCode} {response.Content}");
             }
 
-            var deserializedResponse =JsonConvert.DeserializeObject<T>(response.Content);
+            var deserializedResponse = JsonConvert.DeserializeObject<T>(response.Content);
 
             return deserializedResponse;
         }
 
-        public string GetCharacterThumbnail(WowCharacter character, string region)
-        {
-            if (character == null)
+        public string GetCharacterThumbnail(string region, string realm, string characterName)
+        {   
+            try  
+            {
+                var response = ExecuteApiRequest<BattleNetMediaResponse>(region, $"/profile/wow/character/{realm.ToLowerInvariant()}/{characterName.ToLowerInvariant()}/character-media", Method.GET);
+                return response.AvatarUrl;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get character thumbnail.");
                 return "https://us.battle.net/forums/static/images/avatars/avatar-default.png";
-
-            return $"https://render-{region}.worldofwarcraft.com/character/{character.Thumbnail}";
+            }
         }
 
-        public WowCharacter GetCharacterData(string realm, string characterName, string region)
+        public BattleNetCharacterResponse GetCharacterData(string realm, string characterName, string region)
         {
-            var endpoint = $"wow/character/{realm}/{characterName}?fields=stats,items&locale=en_GB";
+            // var endpoint = $"profile/wow/character///equipment";
+            //var endpoint = $"wow/character/{realm}/{characterName}?fields=stats,items&locale=en_GB";
+            var endpoint = $"/profile/wow/character/{realm.ToLowerInvariant()}/{characterName.ToLowerInvariant()}/equipment";
 
             try
             {
-                return ExecuteApiRequest<WowCharacter>(region, endpoint, Method.GET);
+                return ExecuteApiRequest<BattleNetCharacterResponse>(region, endpoint, Method.GET);
             }
             catch (Exception ex)
             {
@@ -101,34 +107,9 @@ namespace Vereesa.Core.Services
             }
         }
 
-        public int GetCharacterArtifactTraitCount(WowCharacter character)
+        public int GetCharacterHeartOfAzerothLevel(BattleNetCharacterResponse character) 
         {
-            var totalTraits = 0;
-
-            //Get traits from offhand if that's where they are. Otherwise use mainhand.    
-            var artifactItem = character.Items.OffHand != null && character.Items.OffHand.ArtifactTraits.Count > 0 ?
-                character.Items.OffHand :
-                character.Items.MainHand;
-
-            var traits = artifactItem.ArtifactTraits;
-
-            if (traits.Count >= 22 && traits.Last().Rank > 0)
-            {
-                //Character has Concordance. Concordance requires 51 traits to unlock. So do 51 + number of ranks on Concordance.
-                totalTraits = 51 + traits.Last().Rank;
-            }
-            else
-            {
-                //Character does not have Concordance, so it's kind of pointless, but let's do it anyway...
-                totalTraits = traits.Sum(t => t.Rank) - artifactItem.Relics.Count;
-            }
-
-            return totalTraits;
-        }
-
-        public int GetCharacterHeartOfAzerothLevel(WowCharacter character) 
-        {
-            return character.Items?.Neck?.AzeriteItem?.AzeriteLevel ?? 0;
+            return (int)(character?.EquippedItems.FirstOrDefault(i => i.Slot.Name == "Neck" && i.Name == "Heart of Azeroth")?.AzeriteDetails.Level.Value ?? 0);
         }
     }
 }

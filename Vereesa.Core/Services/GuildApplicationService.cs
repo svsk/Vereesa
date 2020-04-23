@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
+using Vereesa.Data.Models.BattleNet;
 using Vereesa.Data.Models.NeonApi;
 
 namespace Vereesa.Core.Services
@@ -206,8 +207,8 @@ namespace Vereesa.Core.Services
 
             var armoryProfileUrl = application.GetFirstAnswerByQuestionPart("wow-armory profile");
             var charAndRealm = ParseArmoryLink(armoryProfileUrl);
-            var character = _battleNetApi.GetCharacterData(charAndRealm.realm, charAndRealm.name, "eu");
-            var avatar = _battleNetApi.GetCharacterThumbnail(character, "eu");
+            var character = (BattleNetCharacterResponse)_battleNetApi.GetCharacterData(charAndRealm.realm, charAndRealm.name, "eu"); // Why is this type not inferred implicitly?
+            var avatar = _battleNetApi.GetCharacterThumbnail("eu", charAndRealm.realm, charAndRealm.name);
             var artifactLevel = _battleNetApi.GetCharacterHeartOfAzerothLevel(character);
 
             var characterName = application.GetFirstAnswerByQuestionPart("main character");
@@ -228,7 +229,7 @@ namespace Vereesa.Core.Services
             embed.AddField("__Age__", playerAge, true);
             embed.AddField("__Country__", playerCountry, true);
             embed.AddField("__Status__", GetIconedStatusString(application.CurrentStatusString), true);
-            embed.AddField("__Character Stats__", $"**Heart of Azeroth level:** {artifactLevel} \r\n**Avg ilvl:** {character.Items.AverageItemLevelEquipped}\r\n**Achi points:** {character.AchievementPoints} | **Total HKs:** {character.TotalHonorableKills}", false);
+            embed.AddField("__Character Stats__", $"**Heart of Azeroth level:** {artifactLevel} \r\n**Avg ilvl:** {/*character?.ItemLevel*/ 0}\r\n**Achi points:** {/*character?.AchievementPoints*/ 0} | **Total HKs:** {/* character?.TotalHonorableKills*/ 0}", false);
             embed.AddField("__External sites__", $@"[Armory]({armoryProfileUrl}) | [RaiderIO](https://raider.io/characters/eu/{charAndRealm.realm}/{charAndRealm.name}) | [WoWProgress](https://www.wowprogress.com/character/eu/{charAndRealm.realm}/{charAndRealm.name}) | [WarcraftLogs](https://www.warcraftlogs.com/character/eu/{charAndRealm.realm}/{charAndRealm.name})", false);
 
             embed.Footer = new EmbedFooterBuilder();
