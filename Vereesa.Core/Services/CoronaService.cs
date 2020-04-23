@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -41,7 +42,11 @@ namespace Vereesa.Core.Services
             
             if (command == "!corona") 
             {
-                await message.Channel.SendMessageAsync(GetCoronaReport());
+                var messageToUpdate = await message.Channel.SendMessageAsync($"OK, checking...");
+                var result = GetCoronaReport(handlers => 
+                    handlers.OnStepCompleted = (progress) => messageToUpdate.ModifyAsync(msg => msg.Content = progress.ToString()).GetAwaiter().GetResult()
+                );
+                await messageToUpdate.ModifyAsync(msg => msg.Content = result);
             }
 
             if (command == "!setneoninfected") 
@@ -58,6 +63,33 @@ namespace Vereesa.Core.Services
             {
                 await message.Channel.SendMessageAsync(RemoveRelevantCountry(message.GetCommandArgs()));
             }
+
+            if (command == "!checkcoronacountry") 
+            {
+                await message.Channel.SendMessageAsync(CheckCoronaCountry(message.GetCommandArgs()));
+            }
+        }
+
+        private string CheckCoronaCountry(string[] countryWords)
+        {
+            if (countryWords == null || !countryWords.Any()) 
+            {
+                return "Please specify a country";
+            }
+
+            var country = string.Join(" ", countryWords);
+            var countryStats = GetCountryStats(country, out var error);
+            if (countryStats == null) 
+            {
+                return "Couldn't find that country in my stats. Please ensure that you spelt it correctly and that it has Title Casing.";
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Here are the Corona stats for {country}");
+
+            AppendRow(sb, countryStats);
+
+            return sb.ToString();
         }
 
         private string AddRelevantCountry(string[] countryWords)
@@ -68,7 +100,7 @@ namespace Vereesa.Core.Services
             }
 
             var country = string.Join(" ", countryWords);
-            var countryStats = GetCountryStats(country);
+            var countryStats = GetCountryStats(country, out var error);
             if (countryStats == null) 
             {
                 return "Couldn't find that country in my stats. Please ensure that you spelt it correctly and that it has Title Casing.";
@@ -117,13 +149,17 @@ namespace Vereesa.Core.Services
             return $"There are now {numberOfInfected} registered cases of Neon members infected with Corona virus.";
         }
 
-        private string GetCoronaReport()
+        private string GetCoronaReport(Action<ProgressHandlers> progress)
         {
-            return $"**:rotating_light: Corona virus pandemic is ongoing :rotating_light:** {GenerateRelevantCountryReport()}";
+            var handlers = new ProgressHandlers();
+            progress.Invoke(handlers);
+
+            return $"**:rotating_light: Corona virus pandemic is ongoing :rotating_light:** {GenerateRelevantCountryReport(handlers)}";
         }
 
-        private CoronaCountryStats GetCountryStats(string countryName) 
+        private CoronaCountryStats GetCountryStats(string countryName, out string error) 
         {
+            error = null;
             var restClient = new RestClient("https://corona.lmao.ninja/countries/");
             var restRequest = new RestRequest(countryName, Method.GET);
 
@@ -131,6 +167,7 @@ namespace Vereesa.Core.Services
 
             if (!response.IsSuccessful) 
             {
+                error = response.StatusDescription;
                 return null;
             }
 
@@ -140,11 +177,23 @@ namespace Vereesa.Core.Services
             }
             catch 
             {
+                error = "Deserialization error";
                 return null;
             }
         }
 
-        private string GenerateRelevantCountryReport() 
+        private void AppendRow(StringBuilder builder, CoronaCountryStats countryStats) 
+        {
+            var flag = _flags.Get<string>(countryStats.Name);
+
+            builder.AppendLine($"**{(flag == null ? "" : flag + " ")}{countryStats.Name}**");
+            builder.AppendLine($"Confirmed cases: {countryStats.Cases} (+{countryStats.TodayCases})");
+            builder.AppendLine($"Deaths: {countryStats.Deaths} (+{countryStats.TodayDeaths})");
+            builder.AppendLine($"Recovered: {countryStats.Recovered}");
+            builder.AppendLine();
+        }
+
+        private string GenerateRelevantCountryReport(ProgressHandlers progressHandlers) 
         {
             var relevantCountries = GetRelevantCountries();
             var flags = _flags;
@@ -152,24 +201,29 @@ namespace Vereesa.Core.Services
             var sb = new StringBuilder();
             sb.AppendLine();
 
-            void AppendRow(StringBuilder builder, CoronaCountryStats countryStats) 
+            void AppendErrorRow(StringBuilder builder, string country, string errorReason) 
             {
-                var flag = flags.Get<string>(countryStats.Name);
-
-                builder.AppendLine($"**{(flag == null ? "" : flag + " ")}{countryStats.Name}**");
-                builder.AppendLine($"Confirmed cases: {countryStats.Cases} (+{countryStats.TodayCases})");
-                builder.AppendLine($"Deaths: {countryStats.Deaths} (+{countryStats.TodayDeaths})");
-                builder.AppendLine($"Recovered: {countryStats.Recovered}");
+                string flag = flags.Get<string>(country);
+                flag = flag == null ? string.Empty : flag + " ";
+                builder.AppendLine($"**{flag}{country}**");
+                builder.AppendLine($"❌ Failed to get data from the data source: {errorReason}");
                 builder.AppendLine();
             };
 
-            foreach (var country in relevantCountries.Distinct()) 
+            var distinctCountries = relevantCountries.Distinct().ToList();
+            foreach (var country in distinctCountries.Select((country, index) => new { Name = country, index })) 
             {
-                var stats = GetCountryStats(country);
-                if (stats == null)
-                    continue;
+                progressHandlers.OnStepCompleted?.Invoke($"`⌛ Checking {country.index+1}/{distinctCountries.Count}: {country.Name}...`");
 
-                AppendRow(sb, stats);
+                var stats = GetCountryStats(country.Name, out var error);
+                if (stats != null) 
+                {
+                    AppendRow(sb, stats);
+                } 
+                else 
+                {
+                    AppendErrorRow(sb, country.Name, error);
+                }
             }
 
             var neonInfected = GetInfectedStat() ?? 0;
@@ -292,5 +346,10 @@ namespace Vereesa.Core.Services
             [JsonProperty("recovered")]
             public int? Recovered { get; set; }
         }
+    }
+
+    public class ProgressHandlers
+    {
+        public Action<object> OnStepCompleted { get; set; }
     }
 }
