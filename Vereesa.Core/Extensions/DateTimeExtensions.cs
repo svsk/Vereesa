@@ -5,10 +5,15 @@ namespace Vereesa.Core.Extensions
 {
     public static class DateTimeExtensions
     {
-        public static DateTime ToCentralEuropeanTime (this DateTime dateTime) 
+        public static DateTimeOffset ToCentralEuropeanTime (this DateTimeOffset dateTimeOffset) 
         {
-            var cetTime = TimeZoneInfo.ConvertTime(dateTime, TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time"));
-            return cetTime;
+            return new ZonedDateTime(Instant.FromDateTimeOffset(dateTimeOffset), DateTimeZoneProviders.Tzdb["Europe/Paris"]).ToDateTimeOffset();
+        }
+
+        public static DateTimeOffset NowInCentralEuropeanTime () 
+        {
+            var zonedDateTime = new ZonedDateTime(SystemClock.Instance.GetCurrentInstant(), DateTimeZoneProviders.Tzdb["Europe/Paris"]);
+            return zonedDateTime.ToDateTimeOffset();
         }
 
         public static DateTime ToUtc(this DateTime dateTime, string timestampTimeZone)

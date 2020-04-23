@@ -214,7 +214,7 @@ namespace Vereesa.Core.Services
 
             embed.Footer = new EmbedFooterBuilder();
             embed.Footer.WithIconUrl("https://render-eu.worldofwarcraft.com/character/karazhan/102/54145126-avatar.jpg");
-            embed.Footer.Text = $"Requested by Veinlash - Today at {DateTime.UtcNow.ToCentralEuropeanTime().ToString("HH:mm")}";
+            embed.Footer.Text = $"Requested by Veinlash - Today at {DateTimeExtensions.NowInCentralEuropeanTime().ToString("HH:mm")}";
 
             return embed;
         }

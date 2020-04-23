@@ -129,7 +129,7 @@ namespace Vereesa.Core.Services
 
             if (DateTime.TryParse(this.TagValue, out var parsedResult)) 
             {
-                result = parsedResult - DateTime.Now.ToCentralEuropeanTime();
+                result = parsedResult - DateTimeExtensions.NowInCentralEuropeanTime();
             }
 
             return result;

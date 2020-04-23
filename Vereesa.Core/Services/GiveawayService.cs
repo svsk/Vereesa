@@ -338,7 +338,7 @@ namespace Vereesa.Core.Services
             else
             {
                 embed.Description += $"Time remaining: **{(endsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToDaysHoursMinutesSeconds()}**";
-                embed.Footer.Text = $"Ends at {DateTimeOffset.FromUnixTimeSeconds(endsAt).DateTime.ToCentralEuropeanTime()} (Server time)";
+                embed.Footer.Text = $"Ends at {DateTimeOffset.FromUnixTimeSeconds(endsAt).ToCentralEuropeanTime()} (Server time)";
             }
 
             embed.Color = new Color(155, 89, 182);
