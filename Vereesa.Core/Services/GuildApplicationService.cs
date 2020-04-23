@@ -55,6 +55,25 @@ namespace Vereesa.Core.Services
                     await CheckForOverdueApplications(applications);
                 }
             }, 60000 * 2, true, true);
+
+            _discord.MessageReceived -= HandleMessage;
+            _discord.MessageReceived += HandleMessage;
+        }
+
+        private async Task HandleMessage(SocketMessage message)
+        {
+            if (message.Content == "!debug applications") 
+            {
+                try 
+                {
+                    var applicationEmbed = (await GetApplicationEmbedAsync(_cachedApplications.Last().Key)).Build();
+                    await message.Channel.SendMessageAsync(null, embed: applicationEmbed);
+                }
+                catch (Exception ex) 
+                {
+                    await message.Channel.SendMessageAsync(ex.Message + " " + ex.StackTrace);
+                }
+            }
         }
 
         private async Task CheckForOverdueApplications(IEnumerable<ApplicationListItem> applications)
