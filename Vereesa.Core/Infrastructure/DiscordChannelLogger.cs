@@ -19,7 +19,7 @@ namespace Vereesa.Core.Infrastructure
             _discord = discord;
             _discord.Ready -= EnableLogger;
             _discord.Ready += EnableLogger;
-            _channelId = _channelId;
+            _channelId = channelId;
             _logLevel = logLevel;
         }
 
