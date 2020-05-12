@@ -12,7 +12,7 @@ using Vereesa.Core.Integrations.Interfaces;
 
 namespace Vereesa.Core.Services
 {
-    public class TwitterService
+    public class TwitterService : BotServiceBase
     {
         private TwitterServiceSettings _settings;
         private IDiscordSocketClient _discord;
@@ -32,6 +32,8 @@ namespace Vereesa.Core.Services
 
         private async Task InitializeServiceAsync()
         {
+            _checkInterval?.Stop();
+            _checkInterval?.Dispose();
             _checkInterval = await TimerHelpers.SetTimeoutAsync(async () => { await CheckForNewTweetsAsync(); }, _settings.CheckIntervalSeconds * 1000, true, true);
         }
 

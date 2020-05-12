@@ -14,7 +14,7 @@ using Vereesa.Data.Models.NeonApi;
 
 namespace Vereesa.Core.Services
 {
-    public class GuildApplicationService
+    public class GuildApplicationService : BotServiceBase
     {
         private NeonApiService _neonApiService;
         private ILogger<GuildApplicationService> _logger;

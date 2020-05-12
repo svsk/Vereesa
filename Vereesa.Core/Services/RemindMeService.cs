@@ -12,7 +12,7 @@ using Vereesa.Data.Models.Reminders;
 
 namespace Vereesa.Core.Services
 {
-    public class RemindMeService
+    public class RemindMeService : BotServiceBase
     {
         private IDiscordSocketClient _discord;
         private Timer _timer;

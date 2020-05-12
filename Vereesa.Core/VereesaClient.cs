@@ -19,6 +19,7 @@ using Vereesa.Data.Models.Reminders;
 using Vereesa.Data.Configuration;
 using Vereesa.Data.Models.Statistics;
 using Vereesa.Core.Infrastructure;
+using System.Linq;
 
 namespace Vereesa.Core
 {
@@ -128,24 +129,12 @@ namespace Vereesa.Core
             //Start the desired services
             try 
             {
-                _serviceProvider.GetRequiredService<PingService>();
-                _serviceProvider.GetRequiredService<EventHubService>();
-                _serviceProvider.GetRequiredService<ChannelRuleService>();
-                _serviceProvider.GetRequiredService<GameTrackerService>();
-                _serviceProvider.GetRequiredService<GiveawayService>();
-                _serviceProvider.GetRequiredService<GuildApplicationService>();
-                _serviceProvider.GetRequiredService<GamblingService>();
-                _serviceProvider.GetRequiredService<VoiceChannelTrackerService>();
-                _serviceProvider.GetRequiredService<RoleGiverService>();
-                _serviceProvider.GetRequiredService<CommandService>();
-                _serviceProvider.GetRequiredService<SignupsService>();
-                _serviceProvider.GetRequiredService<MovieSuggestionService>();
-                _serviceProvider.GetRequiredService<TodayInWoWService>();
-                _serviceProvider.GetRequiredService<TwitterService>();
-                _serviceProvider.GetRequiredService<RemindMeService>();
-                _serviceProvider.GetRequiredService<AnnouncementService>();
-                _serviceProvider.GetRequiredService<CoronaService>();
-                _serviceProvider.GetRequiredService<FlagService>();
+                foreach (var s in services.Where(s => s.ServiceType.BaseType == typeof(BotServiceBase))) 
+                {
+                    _serviceProvider.GetRequiredService(s.ServiceType);
+                }
+
+                _serviceProvider.GetRequiredService<AnnouncementService>(); // todo: make this a BotService
             }
             catch (Exception) 
             {

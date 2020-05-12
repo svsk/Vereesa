@@ -12,7 +12,7 @@ using Vereesa.Core.Helpers;
 
 namespace Vereesa.Core.Services
 {
-    public class ChannelRuleService
+    public class ChannelRuleService : BotServiceBase
     {
         private DiscordSocketClient _discord;
         private List<ChannelRuleset> _rulesets;

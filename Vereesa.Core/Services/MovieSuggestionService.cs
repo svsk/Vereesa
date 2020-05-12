@@ -8,7 +8,7 @@ using Vereesa.Core.Extensions;
 
 namespace Vereesa.Core.Services
 {
-    public class MovieSuggestionService
+    public class MovieSuggestionService : BotServiceBase
     {
         private DiscordSocketClient _discord;
 

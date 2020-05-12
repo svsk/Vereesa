@@ -7,7 +7,7 @@ using Vereesa.Core.Extensions;
 
 namespace Vereesa.Core.Services
 {
-    public class RoleGiverService
+    public class RoleGiverService : BotServiceBase
     {
         private DiscordSocketClient _discord;
         

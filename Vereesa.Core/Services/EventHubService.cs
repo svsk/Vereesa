@@ -5,7 +5,7 @@ using Vereesa.Data.Models.EventHub;
 
 namespace Vereesa.Core.Services
 {
-    public class EventHubService
+    public class EventHubService : BotServiceBase
     {
         private ILogger<EventHubService> _logger;
         private List<EventHubEventListener> _eventListeners;

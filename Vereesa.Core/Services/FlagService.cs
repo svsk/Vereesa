@@ -9,7 +9,7 @@ using Vereesa.Data.Models.Statistics;
 
 namespace Vereesa.Core.Services
 {
-    public class FlagService
+    public class FlagService : BotServiceBase
     {
         private readonly DiscordSocketClient _discord;
         private readonly IRepository<Statistics> _statRepository;
@@ -23,7 +23,7 @@ namespace Vereesa.Core.Services
             _statRepository = statRepository;
             _logger = logger;
 
-            _logger.LogInformation($"{this.GetType().Name} loaded.");
+            _logger.LogWarning($"{this.GetType().Name} loaded.");
         }
 
         private async Task EvaluateMessageAsync(SocketMessage message)

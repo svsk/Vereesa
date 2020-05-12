@@ -11,7 +11,7 @@ using Vereesa.Data.Models.Commands;
 
 namespace Vereesa.Core.Services
 {
-    public class CommandService
+    public class CommandService : BotServiceBase
     {
         private DiscordSocketClient _discord;
         private IRepository<Command> _commandRepo;

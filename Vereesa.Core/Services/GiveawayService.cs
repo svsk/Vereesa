@@ -4,17 +4,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
-using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Extensions;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Giveaways;
-using Vereesa.Data.Repositories;
 
 namespace Vereesa.Core.Services
 {
-    public class GiveawayService
+    public class GiveawayService : BotServiceBase
     {
         private DiscordSocketClient _discord;
         private Random _rng;

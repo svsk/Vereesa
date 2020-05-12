@@ -1,18 +1,15 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using Vereesa.Core.Extensions;
-using Vereesa.Core.Helpers;
-using Vereesa.Core.Integrations;
 using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Data.Models.Wowhead;
 
-namespace Vereesa.Core.Services 
+namespace Vereesa.Core.Services
 {
-    public class TodayInWoWService 
+    public class TodayInWoWService //: BotServiceBase
     {
         private bool _isInitialized = false;
         private DiscordSocketClient _discord;

@@ -9,11 +9,10 @@ using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Gambling;
-using Vereesa.Data.Repositories;
 
 namespace Vereesa.Core.Services
 {
-    public class GamblingService
+    public class GamblingService : BotServiceBase
     {
         private GamblingSettings _settings;
         private DiscordSocketClient _discord;

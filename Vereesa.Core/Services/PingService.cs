@@ -4,7 +4,7 @@ using Discord.WebSocket;
 
 namespace Vereesa.Core.Services
 {
-    public class PingService
+    public class PingService : BotServiceBase
     {
         private DiscordSocketClient _discord;
 

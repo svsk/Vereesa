@@ -13,7 +13,7 @@ using Vereesa.Data.Models.Statistics;
 
 namespace Vereesa.Core.Services
 {
-    public class CoronaService
+    public class CoronaService : BotServiceBase
     {
         private DiscordSocketClient _discord;
         private IRepository<Statistics> _statRepository;

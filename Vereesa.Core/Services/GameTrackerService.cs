@@ -14,7 +14,7 @@ using Vereesa.Data.Models.GameTracking;
 
 namespace Vereesa.Core.Services
 {
-    public class GameTrackerService
+    public class GameTrackerService : BotServiceBase
     {
         private DiscordSocketClient _discord;
         private IRepository<GameTrackMember> _trackingRepo;

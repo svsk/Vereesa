@@ -17,7 +17,7 @@ using Vereesa.Core.Helpers;
 
 namespace Vereesa.Core.Services
 {
-    public class SignupsService
+    public class SignupsService : BotServiceBase
     {
         private ILogger<SignupsService> _logger;
         private SignupsSettings _settings;

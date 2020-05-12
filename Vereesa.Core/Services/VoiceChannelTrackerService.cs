@@ -11,7 +11,7 @@ using Vereesa.Core.Helpers;
 
 namespace Vereesa.Core.Services
 {
-    public class VoiceChannelTrackerService
+    public class VoiceChannelTrackerService : BotServiceBase
     {
         private ILogger<VoiceChannelTrackerService> _logger;
         private DiscordSocketClient _discord;
