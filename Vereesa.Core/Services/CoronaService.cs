@@ -54,6 +54,11 @@ namespace Vereesa.Core.Services
                 await message.Channel.SendMessageAsync(SetGuildInfected(message.GetCommandArgs()));
             }
 
+            if (command == "!setneonrecovered") 
+            {
+                await message.Channel.SendMessageAsync(SetGuildRecovered(message.GetCommandArgs()));
+            }
+
             if (command == "!addcoronacountry") 
             {
                 await message.Channel.SendMessageAsync(AddRelevantCountry(message.GetCommandArgs()));
@@ -144,9 +149,21 @@ namespace Vereesa.Core.Services
                 return "I don't get what you mean. You need to add a number to your command.";
             }
 
-            UpdateInfectedStat(numberOfInfected);
+            UpdateStat(numberOfInfected, "guildInfected");
 
             return $"There are now {numberOfInfected} registered cases of Neon members infected with Corona virus.";
+        }
+
+        private string SetGuildRecovered(string[] commandArgs) 
+        {
+            if (!int.TryParse(commandArgs.FirstOrDefault(), out var numberOfRecovered)) 
+            {
+                return "I don't get what you mean. You need to add a number to your command.";
+            }
+
+            UpdateStat(numberOfRecovered, "guildRecovered");
+
+            return $"There are now {numberOfRecovered} Neon members who have recovered from Corona virus.";
         }
 
         private string GetCoronaReport(Action<ProgressHandlers> progress)
@@ -160,7 +177,7 @@ namespace Vereesa.Core.Services
         private CoronaCountryStats GetCountryStats(string countryName, out string error) 
         {
             error = null;
-            var restClient = new RestClient("https://corona.lmao.ninja/countries/");
+            var restClient = new RestClient("https://disease.sh/v2/countries/");
             var restRequest = new RestRequest(countryName, Method.GET);
 
             var response = restClient.Execute(restRequest);
@@ -226,14 +243,15 @@ namespace Vereesa.Core.Services
                 }
             }
 
-            var neonInfected = GetInfectedStat() ?? 0;
+            var neonInfected = GetStat("guildInfected") ?? 0;
+            var neonRecovered = GetStat("guildRecovered") ?? 0;
             AppendRow(sb, new CoronaCountryStats {
                 Name = "Neon",
                 Cases = neonInfected,
                 TodayCases = 0,
                 Deaths = 0,
                 TodayDeaths = 0,
-                Recovered = 0
+                Recovered = neonRecovered
             });
             
             return sb.ToString();
@@ -268,11 +286,11 @@ namespace Vereesa.Core.Services
             _statRepository.Add(stats);
         }
 
-        private int? GetInfectedStat() 
+        private int? GetStat(string targetKey) 
         {
             try 
             {
-                return _coronaStats.Get<int>("guildInfected");
+                return _coronaStats.Get<int>(targetKey);
             } 
             catch 
             {
@@ -280,18 +298,17 @@ namespace Vereesa.Core.Services
             }
         }
 
-        private void UpdateInfectedStat(int numberOfInfected) 
+        private void UpdateStat(int numberInStat, string targetKey) 
         {
             var stats = _coronaStats;
-            var targetKey = "guildInfected";
 
             if (stats.Stats.ContainsKey(targetKey)) 
             {
-                stats.Stats[targetKey] = numberOfInfected;
+                stats.Stats[targetKey] = numberInStat;
             } 
             else 
             {
-                stats.Stats.Add(targetKey, numberOfInfected);
+                stats.Stats.Add(targetKey, numberInStat);
             }
 
             _statRepository.Add(stats);
