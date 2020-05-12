@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 
 namespace Vereesa.Core.Extensions
@@ -30,6 +31,13 @@ namespace Vereesa.Core.Extensions
             inputString = inputString.Trim();
 
             return inputString;
+        }
+
+        public static NumberFormatInfo GetThousandSeparatorFormat() 
+        {
+            var numberFormat = (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
+            numberFormat.NumberGroupSeparator = " ";
+            return numberFormat;
         }
     }
 }

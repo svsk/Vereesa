@@ -109,6 +109,7 @@ namespace Vereesa.Core
                 .AddSingleton<RemindMeService>()
                 .AddSingleton<AnnouncementService>()
                 .AddSingleton<CoronaService>()
+                .AddSingleton<AuctionHouseService>()
                 .AddSingleton<FlagService>()
                 .AddSingleton<InvasionService>()
                 .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
