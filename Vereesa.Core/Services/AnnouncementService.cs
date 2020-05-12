@@ -1,6 +1,5 @@
 using System.Linq;
 using System.Threading.Tasks;
-using Discord;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Integrations;
