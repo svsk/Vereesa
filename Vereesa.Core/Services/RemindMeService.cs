@@ -66,6 +66,15 @@ namespace Vereesa.Core.Services
             reminder = null;
             var msgContent = message.Content;
 
+            if (msgContent.StartsWith(_commandWord)) 
+            {
+                msgContent = msgContent
+                    .Replace("“", "\"")
+                    .Replace("'", "\"")
+                    .Replace("«", "\"")
+                    .Replace("»", "\"");
+            }
+
             if (msgContent.StartsWith(_commandWord) && msgContent.Contains("\""))
             {
                 string reminderMessage = ExtractReminderMessage(msgContent);
