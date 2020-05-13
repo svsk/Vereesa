@@ -70,6 +70,7 @@ namespace Vereesa.Core.Services
             {
                 msgContent = msgContent
                     .Replace("“", "\"")
+                    .Replace("”", "\"")
                     .Replace("'", "\"")
                     .Replace("«", "\"")
                     .Replace("»", "\"");
