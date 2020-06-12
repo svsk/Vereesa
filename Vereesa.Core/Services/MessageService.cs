@@ -1,18 +1,18 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Discord.WebSocket;
 using Vereesa.Core.Helpers;
-using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Core.Interfaces;
 
 namespace Vereesa.Core.Services
 {
-    public class MessageService
+	public class MessageService
     {
-        private IDiscordSocketClient _discord;
+        private DiscordSocketClient _discord;
         private object _checkInterval;
         private IMessageProvider _messageProvider;
 
-        public MessageService(IDiscordSocketClient discord, IMessageProvider messageProvider)
+        public MessageService(DiscordSocketClient discord, IMessageProvider messageProvider)
         {
             _discord = discord;
             _discord.Ready -= InitializeServiceAsync;

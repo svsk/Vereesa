@@ -13,6 +13,7 @@ namespace Vereesa.Core.Services
 		private DiscordSocketClient _discord;
 
 		public MovieSuggestionService(DiscordSocketClient discord)
+			: base(discord)
 		{
 			_discord = discord;
 			_discord.MessageReceived += HandleMessageReceivedAsync;

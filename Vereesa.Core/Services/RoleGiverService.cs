@@ -20,6 +20,7 @@ namespace Vereesa.Core.Services
         private List<string> _allowedRoles => new List<string> { "Voice Chat Activity", "Gambler", "Healer", "Raider", "Tank", "Damage Dealer", "Goblin" }; //Todo: move this to config or json storage
 
         public RoleGiverService(DiscordSocketClient discord)
+			: base(discord)
         {
             _discord = discord;
             _discord.MessageReceived += EvaluateMessage;

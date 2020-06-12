@@ -11,12 +11,13 @@ using Vereesa.Data.Models.Commands;
 
 namespace Vereesa.Core.Services
 {
-    public class CommandService : BotServiceBase
+	public class CommandService : BotServiceBase
     {
         private DiscordSocketClient _discord;
         private IRepository<Command> _commandRepo;
 
         public CommandService(DiscordSocketClient discord, IRepository<Command> commandRepo)
+			:base(discord)
         {
             _discord = discord;
             _commandRepo = commandRepo;

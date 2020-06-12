@@ -1,18 +1,18 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Discord.WebSocket;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Integrations;
-using Vereesa.Core.Integrations.Interfaces;
 
 namespace Vereesa.Core.Services
 {
-    public class AnnouncementService : TwitterService
+	public class AnnouncementService : TwitterService
     {
-        private IDiscordSocketClient _discord;
+        private DiscordSocketClient _discord;
         private AnnouncementServiceSettings _settings;
 
-        public AnnouncementService(TwitterClient twitter, IDiscordSocketClient discord, AnnouncementServiceSettings settings) 
+        public AnnouncementService(TwitterClient twitter, DiscordSocketClient discord, AnnouncementServiceSettings settings) 
             :base(settings, twitter, discord)
         {
             _discord = discord;
@@ -21,7 +21,7 @@ namespace Vereesa.Core.Services
 
         protected override async Task SendTweetToTargetChannelAsync(Tweet tweet) 
         {
-            var guilds = await _discord.GetGuildsAsync();
+            var guilds = _discord.Guilds;
             
             var targetGuild = guilds.FirstOrDefault(g => g.Name == _settings.TargetDiscordGuild);
             
@@ -36,7 +36,7 @@ namespace Vereesa.Core.Services
 
             if (mentions.Any()) 
             {
-                var guildUsers = await targetGuild.GetUsersAsync();
+                var guildUsers = targetGuild.Users;
 
                 foreach (var mention in mentions) 
                 {   

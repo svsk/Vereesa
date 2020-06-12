@@ -1,11 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Vereesa.Core.Configuration;
-using Vereesa.Core.Services;
-using Vereesa.Core.Tests.Mocks;
 
 namespace Vereesa.Core.Tests.ServicesTests
 {
-    [TestClass]
+	[TestClass]
     public class TwitterServiceTests
     {
         // [TestMethod]

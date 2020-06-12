@@ -75,7 +75,6 @@ namespace Vereesa.Core
             //Set up a service provider with all relevant resources for DI
             IServiceCollection services = new ServiceCollection()
                 .AddSingleton<DiscordSocketClient>(_discord)
-                .AddSingleton<IDiscordSocketClient>(new InterfacedDiscordSocketClient(_discord))
                 .AddSingleton(discordSettings)
                 .AddSingleton(channelRuleSettings)
                 .AddSingleton(battleNetApiSettings)
@@ -112,6 +111,7 @@ namespace Vereesa.Core
                 .AddSingleton<AuctionHouseService>()
                 .AddSingleton<FlagService>()
                 .AddSingleton<InvasionService>()
+				.AddSingleton<BlueTrackerService>()
                 .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
                 .AddScoped<IRepository<Giveaway>, AzureStorageRepository<Giveaway>>()
                 .AddScoped<IRepository<GamblingStandings>, AzureStorageRepository<GamblingStandings>>()

@@ -20,6 +20,7 @@ namespace Vereesa.Core.Services
 		private Timer _clearOldMessagesInterval;
 
 		public VoiceChannelTrackerService(DiscordSocketClient discord, VoiceChannelTrackerSettings settings, ILogger<VoiceChannelTrackerService> logger)
+			: base(discord)
 		{
 			_logger = logger;
 			_discord = discord;

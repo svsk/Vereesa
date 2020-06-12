@@ -10,9 +10,10 @@ namespace Vereesa.Core.Services
 {
     public class InvasionService : BotServiceBase
     {
-        private IDiscordSocketClient _discord;
+        private DiscordSocketClient _discord;
 
-        public InvasionService(IDiscordSocketClient discord) 
+        public InvasionService(DiscordSocketClient discord) 
+			: base(discord)
         {
             _discord = discord;
 

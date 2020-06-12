@@ -9,6 +9,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Vereesa.Core.Configuration;
+using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.GameTracking;
 
@@ -23,6 +24,7 @@ namespace Vereesa.Core.Services
 
         /// This service is fully async
         public GameTrackerService(DiscordSocketClient discord, IRepository<GameTrackMember> trackingRepo, GameStateEmissionSettings emissionSettings, ILogger<GameTrackerService> logger)
+			: base(discord)
         {
             _discord = discord;
             _trackingRepo = trackingRepo;

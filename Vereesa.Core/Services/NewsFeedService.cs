@@ -1,29 +1,30 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
+using Discord.WebSocket;
 using HtmlAgilityPack;
 using HtmlAgilityPack.CssSelectors.NetCore;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Helpers;
-using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Data.Models.NewsFeed;
 
 namespace Vereesa.Core.Services
 {
-    public class NewsFeedService
+	public class NewsFeedService
     {
-        private IDiscordSocketClient _discord;
+        private DiscordSocketClient _discord;
         private Timer _interval;
         private Func<object, Task> _changeHappened;
         private NewsFeedServiceSettings _settings;
         private string _previousState;
-        private IWebClientWrapper _webClient;
+        private WebClient _webClient;
         
 
-        public NewsFeedService(IDiscordSocketClient discord, NewsFeedServiceSettings settings, IWebClientWrapper webClient)
+        public NewsFeedService(DiscordSocketClient discord, NewsFeedServiceSettings settings, WebClient webClient)
         {
             _discord = discord;
             _settings = settings;
@@ -142,7 +143,7 @@ namespace Vereesa.Core.Services
 
         public async Task SendNewsItemEmbedAsync(Embed embed) 
         {
-            var channel = await _discord.GetChannelAsync(_settings.ChannelId);
+            var channel = _discord.GetChannel(_settings.ChannelId);
             await ((IMessageChannel)channel).SendMessageAsync(text: string.Empty, embed: embed);
         }
     }

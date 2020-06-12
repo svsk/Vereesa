@@ -1,16 +1,18 @@
 using System.Collections.Generic;
 using System.Linq;
+using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Data.Models.EventHub;
 
 namespace Vereesa.Core.Services
 {
-    public class EventHubService : BotServiceBase
+	public class EventHubService : BotServiceBase
     {
         private ILogger<EventHubService> _logger;
         private List<EventHubEventListener> _eventListeners;
 
-        public EventHubService(ILogger<EventHubService> logger) 
+        public EventHubService(DiscordSocketClient discord, ILogger<EventHubService> logger) 
+			:base(discord)
         {
             _logger = logger;
             this._eventListeners = new List<EventHubEventListener>();

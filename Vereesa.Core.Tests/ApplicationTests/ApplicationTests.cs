@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Vereesa.Core.Extensions;
 using Vereesa.Data.Models.NeonApi;

@@ -6,20 +6,20 @@ using System.Timers;
 using Discord;
 using Discord.WebSocket;
 using Vereesa.Core.Helpers;
-using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Reminders;
 
 namespace Vereesa.Core.Services
 {
-    public class RemindMeService : BotServiceBase
+	public class RemindMeService : BotServiceBase
     {
-        private IDiscordSocketClient _discord;
+        private DiscordSocketClient _discord;
         private Timer _timer;
         private IRepository<Reminder> _reminderRepository;
         private string _commandWord = "!remindme";
 
-        public RemindMeService(IDiscordSocketClient discord, IRepository<Reminder> reminderRepository)
+        public RemindMeService(DiscordSocketClient discord, IRepository<Reminder> reminderRepository)
+			: base(discord)
         {
             _discord = discord;
             _discord.Ready -= InitializeAsync;
@@ -45,14 +45,15 @@ namespace Vereesa.Core.Services
             }
         }
 
-        private async Task<IMessageChannel> GetChannelAsync(ulong channelId)
+        private IMessageChannel GetChannel(ulong channelId)
         {
-            return (IMessageChannel)(await _discord.GetChannelAsync(channelId));
+			var channel = _discord.GetChannel(channelId);
+            return (IMessageChannel)channel;
         }
 
         private async Task AnnounceReminderAddedAsync(ulong channelId, ulong reminderUser)
         {
-            var channel = await GetChannelAsync(channelId);
+            var channel = GetChannel(channelId);
             await channel.SendMessageAsync($"OK, <@{reminderUser}>! I'll remind you! :sparkles:");
         }
 
@@ -71,7 +72,6 @@ namespace Vereesa.Core.Services
                 msgContent = msgContent
                     .Replace("“", "\"")
                     .Replace("”", "\"")
-                    .Replace("'", "\"")
                     .Replace("«", "\"")
                     .Replace("»", "\"");
             }
@@ -175,7 +175,14 @@ namespace Vereesa.Core.Services
         {
             try
             {
-                var channel = await GetChannelAsync(reminder.ChannelId);
+                var channel = GetChannel(reminder.ChannelId);
+
+				if (channel == null) 
+				{
+					// could not find channel - deleted?
+					return true;
+				}
+
                 await channel.SendMessageAsync($"<@{reminder.UserId}> Remember! {reminder.Message}");
             }
             catch

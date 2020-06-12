@@ -27,6 +27,7 @@ namespace Vereesa.Core.Services
         private bool _runningRefresh;
 
         public SignupsService(DiscordSocketClient discord, SignupsSettings settings, ILogger<SignupsService> logger)
+			: base(discord)
         {
             _logger = logger;
             _settings = settings;

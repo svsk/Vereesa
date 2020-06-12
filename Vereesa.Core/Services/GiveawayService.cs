@@ -7,6 +7,7 @@ using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Extensions;
+using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Giveaways;
 
@@ -29,6 +30,7 @@ namespace Vereesa.Core.Services
 
 
         public GiveawayService(DiscordSocketClient discord, IRepository<Giveaway> giveawayRepo, Random rng, ILogger<GiveawayService> logger)
+			: base(discord)
         {
             _discord = discord;
             _giveawayRepo = giveawayRepo;

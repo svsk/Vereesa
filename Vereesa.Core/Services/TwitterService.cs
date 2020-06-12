@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
+using Discord.WebSocket;
 using Newtonsoft.Json;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
@@ -15,12 +16,13 @@ namespace Vereesa.Core.Services
     public class TwitterService : BotServiceBase
     {
         private TwitterServiceSettings _settings;
-        private IDiscordSocketClient _discord;
+        private DiscordSocketClient _discord;
         private TwitterClient _twitter;
         private Timer _checkInterval;
         private long? _lastTweetIDSeen;
 
-        public TwitterService(TwitterServiceSettings settings, TwitterClient twitterClient, IDiscordSocketClient discord)
+        public TwitterService(TwitterServiceSettings settings, TwitterClient twitterClient, DiscordSocketClient discord)
+			: base(discord)
         {
             _settings = settings;
             _discord = discord;

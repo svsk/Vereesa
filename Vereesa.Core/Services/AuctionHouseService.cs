@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -9,16 +8,16 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using Vereesa.Core.Extensions;
-using Vereesa.Core.Integrations.Interfaces;
 
 namespace Vereesa.Core.Services
 {
-    public class AuctionHouseService : BotServiceBase
+	public class AuctionHouseService : BotServiceBase
     {
         private ILogger<AuctionHouseService> _logger;
         private RestClient _restClient;
 
-        public AuctionHouseService(IDiscordSocketClient discord, ILogger<AuctionHouseService> logger)
+        public AuctionHouseService(DiscordSocketClient discord, ILogger<AuctionHouseService> logger)
+			:base(discord)
         {
             discord.MessageReceived -= HandleMessageReceivedAsync;
             discord.MessageReceived += HandleMessageReceivedAsync;

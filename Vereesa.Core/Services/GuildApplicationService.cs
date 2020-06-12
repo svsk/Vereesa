@@ -29,6 +29,7 @@ namespace Vereesa.Core.Services
 
 		/// This service is fully async
 		public GuildApplicationService(NeonApiService neonApiService, DiscordSocketClient discord, GuildApplicationSettings settings, BattleNetApiService battleNetApi, ILogger<GuildApplicationService> logger)
+			: base(discord)
 		{
 			_logger = logger;
 			_discord = discord;

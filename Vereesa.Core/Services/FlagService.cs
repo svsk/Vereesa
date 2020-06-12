@@ -17,6 +17,7 @@ namespace Vereesa.Core.Services
         private readonly ILogger<FlagService> _logger;
 
         public FlagService(DiscordSocketClient discord, IRepository<Statistics> statRepository, ILogger<FlagService> logger)
+			: base(discord)
         {
             _discord = discord;
             _discord.MessageReceived += EvaluateMessageAsync;

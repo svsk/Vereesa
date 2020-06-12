@@ -19,6 +19,7 @@ namespace Vereesa.Core.Services
 		private Timer _triggerInterval;
 
 		public ChannelRuleService(DiscordSocketClient discord, ChannelRuleSettings config)
+			: base(discord)
 		{
 			_discord = discord;
 			_discord.MessageReceived += MessageReceivedHandler;

@@ -6,12 +6,10 @@ namespace Vereesa.Core.Services
 {
     public class PingService : BotServiceBase
     {
-        private DiscordSocketClient _discord;
-
         public PingService(DiscordSocketClient discord)
+			:base(discord)
         {
-            _discord = discord;
-            _discord.MessageReceived += HandleMessageAsync;
+            Discord.MessageReceived += HandleMessageAsync;
         }
 
         private async Task HandleMessageAsync(SocketMessage message)

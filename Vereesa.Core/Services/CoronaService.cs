@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using Vereesa.Core.Extensions;
+using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Statistics;
 
@@ -22,6 +23,7 @@ namespace Vereesa.Core.Services
         private Statistics _flags => _statRepository.FindById("flags") ?? new Statistics { Id = "flags" };
 
         public CoronaService(DiscordSocketClient discord, IRepository<Statistics> statRepository, ILogger<CoronaService> logger)
+			:base(discord)
         {
             _discord = discord;
             _discord.MessageReceived += EvaluateMessageAsync;

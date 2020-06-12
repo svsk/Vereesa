@@ -12,7 +12,7 @@ using Vereesa.Data.Models.Gambling;
 
 namespace Vereesa.Core.Services
 {
-    public class GamblingService : BotServiceBase
+	public class GamblingService : BotServiceBase
     {
         private GamblingSettings _settings;
         private DiscordSocketClient _discord;
@@ -27,6 +27,7 @@ namespace Vereesa.Core.Services
         private Timer _roundTimeoutTimer;
 
         public GamblingService(GamblingSettings settings, DiscordSocketClient discord, Random rng, IRepository<GamblingStandings> standings)
+			: base(discord)
         {
             _settings = settings;
             _discord = discord;

@@ -1,12 +1,11 @@
 using System.Net;
 using System.Threading;
 using Discord;
+using Discord.WebSocket;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Vereesa.Core.Configuration;
-using Vereesa.Core.Integrations;
-using Vereesa.Core.Integrations.Interfaces;
 using Vereesa.Core.Services;
-using Vereesa.Core.Tests.Mocks;
 using Vereesa.Data.Models.NewsFeed;
 
 namespace Vereesa.Core.Tests.ServicesTests
@@ -15,8 +14,8 @@ namespace Vereesa.Core.Tests.ServicesTests
     public class NewsFeedServiceTests
     {
         private NewsFeedServiceSettings _settings;
-        private DiscordClientMock _discordMock;
-        private IWebClientWrapper _webClient;
+        private DiscordSocketClient _discordMock;
+        private WebClient _webClient;
         private string _newsListPage = "<div class=\"wrapper-div\"><div>Other div</div><a href=\"/test\"><div id=\"target-div\" class=\"test-class\">Value to check</div></a></div>";
         private string _newsItemPage = $"<div><img src=\"/test/img/fresh.jpg\" /><h1>Fresh Prince</h1><div class=\"content\">This is a story all about how my life got flipped right upside down.</div></div>";
 
@@ -36,11 +35,10 @@ namespace Vereesa.Core.Tests.ServicesTests
                 NewsItemTextSelector = ".content"
             };
 
-            _discordMock = new DiscordClientMock();
+            _discordMock = new Mock<DiscordSocketClient>().Object;
 
-            var webClient = new MockWebClientWrapper();
-            webClient.UpsertUrlContent("https://www.vg.no", _newsListPage);
-            webClient.UpsertUrlContent("https://www.vg.no/test", _newsItemPage);
+            var webClient = new Mock<WebClient>().Object;
+            
             _webClient = webClient;
         }
 
@@ -72,7 +70,7 @@ namespace Vereesa.Core.Tests.ServicesTests
             //Arrange
 
             //Act
-            var target = new NewsFeedService(new DiscordClientMock(), _settings, _webClient);
+            var target = new NewsFeedService(_discordMock, _settings, _webClient);
 
             //Assert
             Assert.IsNotNull(target);
@@ -85,9 +83,9 @@ namespace Vereesa.Core.Tests.ServicesTests
             var target = new NewsFeedService(_discordMock, _settings, _webClient);
 
             //Act
-            ((MockWebClientWrapper)_webClient).UpsertUrlContent("https://www.vg.no", _newsListPage.Replace("Value to check", "Changed value"));
+            // ((MockWebClientWrapper)_webClient.UpsertUrlContent("https://www.vg.no", _newsListPage.Replace("Value to check", "Changed value"));
             Thread.Sleep(_settings.CheckInterval + 100);
-            var channelMock = _discordMock.GetChannelAsync(1).GetAwaiter().GetResult();
+            var channelMock = _discordMock.GetChannel(1);
             var message = ((IMessageChannel)channelMock).GetMessageAsync(1).GetAwaiter().GetResult();
 
             //Assert
