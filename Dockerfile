@@ -1,18 +1,24 @@
-FROM microsoft/dotnet:2.1-sdk AS build
+FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-buster-slim AS base
 WORKDIR /app
 
-# copy csproj and restore as distinct layers
-COPY Vereesa.ConsoleApp/*.csproj ./Vereesa.ConsoleApp/
-COPY Vereesa.Core/*.csproj ./Vereesa.Core/
-COPY Vereesa.Data/*.csproj ./Vereesa.Data/
-RUN dotnet restore ./Vereesa.ConsoleApp/Vereesa.ConsoleApp.csproj
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
+WORKDIR /src
+COPY ["Vereesa.ConsoleApp/Vereesa.ConsoleApp.csproj", "Vereesa.ConsoleApp/"]
+COPY ["Vereesa.Core/Vereesa.Core.csproj", "Vereesa.Core/"]
+COPY ["Vereesa.Data/Vereesa.Data.csproj", "Vereesa.Data/"]
+RUN dotnet restore "./Vereesa.ConsoleApp/Vereesa.ConsoleApp.csproj"
 
-# copy and build everything else
-COPY Vereesa.ConsoleApp/. ./Vereesa.ConsoleApp/
-COPY Vereesa.Core/. ./Vereesa.Core/
-COPY Vereesa.Data/. ./Vereesa.Data/
-RUN dotnet publish ./Vereesa.ConsoleApp/Vereesa.ConsoleApp.csproj -c Release -o out
+COPY ["Vereesa.ConsoleApp/.", "./Vereesa.ConsoleApp/"]
+COPY ["Vereesa.Core/.", "./Vereesa.Core/"]
+COPY ["Vereesa.Data/.", "./Vereesa.Data/"]
 
-FROM microsoft/dotnet:2.1-runtime AS runtime
-COPY --from=build /app/Vereesa.ConsoleApp/out .
+WORKDIR "Vereesa.ConsoleApp"
+RUN dotnet build "Vereesa.ConsoleApp.csproj" --no-restore -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "Vereesa.ConsoleApp.csproj" --no-restore -c Release -o /app/publish
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Vereesa.ConsoleApp.dll"]
