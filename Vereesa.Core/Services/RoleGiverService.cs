@@ -2,73 +2,69 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord;
 using Discord.WebSocket;
 using Vereesa.Core.Extensions;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
-    public class RoleGiverService : BotServiceBase
-    {
-        private DiscordSocketClient _discord;
-        
-        private Dictionary<string, Func<SocketMessage, Task>> _commandMap => new Dictionary<string, Func<SocketMessage, Task>> 
-        { 
-            { "!join", JoinRoleAsync },
-            { "!leave", LeaveRoleAsync }
-        };
+	public class RoleGiverService : BotServiceBase
+	{
+		//Todo: move this to config or json storage
+		private List<string> _allowedRoles = new List<string>
+		{
+			"Voice Chat Activity",
+			"Gambler",
+			"Healer",
+			"Raider",
+			"Tank",
+			"Damage Dealer",
+			"Goblin",
+			"PoGo Raider",
+			"Bagbois"
+		};
 
-        private List<string> _allowedRoles => new List<string> { "Voice Chat Activity", "Gambler", "Healer", "Raider", "Tank", "Damage Dealer", "Goblin" }; //Todo: move this to config or json storage
-
-        public RoleGiverService(DiscordSocketClient discord)
+		public RoleGiverService(DiscordSocketClient discord)
 			: base(discord)
-        {
-            _discord = discord;
-            _discord.MessageReceived += EvaluateMessage;
-        }
+		{ }
 
-        private async Task EvaluateMessage(SocketMessage message)
-        {
-            var command = message.GetCommand();
-            
-            if (command != null && _commandMap.TryGetValue(command, out var action))
-                await action.Invoke(message);
-        }
+		[OnCommand("!leave")]
+		public async Task LeaveRoleAsync(IMessage message)
+		{
+			var roleName = message.GetCommandArgs().Join(" ");
+			var role = GetRequestedRole(roleName);
+			if (role == null)
+				return;
 
-        private async Task LeaveRoleAsync(SocketMessage message)
-        {
-            var role = GetRequestedRole(message);
-            if (role == null)
-                return;
+			var guild = Discord.Guilds.FirstOrDefault(g => g.Channels.Any(c => c.Id == message.Channel.Id));
+			await guild.GetUser(message.Author.Id).RemoveRoleAsync(role);
 
-            var guild = _discord.Guilds.FirstOrDefault(g => g.Channels.Any(c => c.Id == message.Channel.Id));
-            await guild.GetUser(message.Author.Id).RemoveRoleAsync(role);
-            await message.Channel.SendMessageAsync($"I have removed the role `{role.Name}` from you, {message.Author.Username}.");
-        }
+			var response = $":magic_wand: I have removed the role `{role.Name}` from you, {message.Author.Mention}.";
+			await message.Channel.SendMessageAsync(response);
+		}
 
-        private async Task JoinRoleAsync(SocketMessage message)
-        {
-            var role = GetRequestedRole(message);
-            if (role == null)
-                return;
+		[OnCommand("!join")]
+		[CommandUsage("Type `!join <role name>` in order to join a role. Role name is case insensivite. " +
+			"Not all roles are joinable.")]
+		public async Task JoinRoleAsync(IMessage message)
+		{
+			var role = GetRequestedRole(message.GetCommandArgs().Join(" "));
+			if (role == null)
+				return;
 
-            var guild = _discord.Guilds.FirstOrDefault(g => g.Channels.Any(c => c.Id == message.Channel.Id));
-            await guild.GetUser(message.Author.Id).AddRoleAsync(role);
-            await message.Channel.SendMessageAsync($"I have granted you the role `{role.Name}`, {message.Author.Username}.");
-        }
+			var guild = Discord.Guilds.FirstOrDefault(g => g.Channels.Any(c => c.Id == message.Channel.Id));
+			await guild.GetUser(message.Author.Id).AddRoleAsync(role);
 
-        private SocketRole GetRequestedRole(SocketMessage message)
-        {
-            var args = message.GetCommandArgs();
-            var roleName = string.Join(" ", args);
-            
-            if (!_allowedRoles.Contains(roleName)) {
-                return null;
-            }
-            
-            var guild = _discord.Guilds.FirstOrDefault(g => g.Channels.Any(c => c.Id == message.Channel.Id));
-            var requestedRole = guild.Roles.FirstOrDefault(role => role.Name == roleName);
+			var response = $":magic_wand: I've given you the role `{role.Name}`, {message.Author.Mention}."
+				+ $"\n\nYou can type `!leave {role.Name}` if you ever want me to remove it again. :sparkles:";
 
-            return requestedRole;
-        }
-    }
+			await message.Channel.SendMessageAsync(response);
+		}
+
+		private SocketRole GetRequestedRole(string requestedRoleName) =>
+			_allowedRoles.Contains(requestedRoleName, StringComparer.InvariantCultureIgnoreCase) ?
+				Discord.GetRolesByName(requestedRoleName).FirstOrDefault() :
+				null;
+	}
 }

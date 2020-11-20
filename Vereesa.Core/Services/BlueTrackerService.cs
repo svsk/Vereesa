@@ -1,4 +1,5 @@
 using Discord.WebSocket;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {

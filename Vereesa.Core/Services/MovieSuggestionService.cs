@@ -1,10 +1,10 @@
 using System;
-using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Vereesa.Core.Extensions;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {

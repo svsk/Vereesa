@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -47,6 +48,20 @@ namespace Vereesa.Core.Extensions
 			}
 
 			return messageChannel;
+		}
+
+		public static SocketRole GetRole(this DiscordSocketClient discord, ulong roleId)
+		{
+			return discord.Guilds.SelectMany(g => g.Roles).FirstOrDefault(r => r.Id == roleId);
+		}
+
+		public static List<SocketRole> GetRolesByName(this DiscordSocketClient discord, string roleName, bool ignoreCase = true)
+		{
+			return discord.Guilds.SelectMany(g => g.Roles).Where(r =>
+				r.Name.Equals(roleName, ignoreCase ?
+					StringComparison.InvariantCultureIgnoreCase :
+					StringComparison.InvariantCulture)
+				).ToList();
 		}
 	}
 }

@@ -8,194 +8,195 @@ using Discord.WebSocket;
 using Vereesa.Core.Helpers;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Reminders;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
 	public class RemindMeService : BotServiceBase
-    {
-        private DiscordSocketClient _discord;
-        private Timer _timer;
-        private IRepository<Reminder> _reminderRepository;
-        private string _commandWord = "!remindme";
+	{
+		private DiscordSocketClient _discord;
+		private Timer _timer;
+		private IRepository<Reminder> _reminderRepository;
+		private string _commandWord = "!remindme";
 
-        public RemindMeService(DiscordSocketClient discord, IRepository<Reminder> reminderRepository)
+		public RemindMeService(DiscordSocketClient discord, IRepository<Reminder> reminderRepository)
 			: base(discord)
-        {
-            _discord = discord;
-            _discord.Ready -= InitializeAsync;
-            _discord.Ready += InitializeAsync;
-            _reminderRepository = reminderRepository;
-        }
+		{
+			_discord = discord;
+			_discord.Ready -= InitializeAsync;
+			_discord.Ready += InitializeAsync;
+			_reminderRepository = reminderRepository;
+		}
 
-        private async Task InitializeAsync()
-        {
-            _timer?.Stop();
-            _timer?.Dispose();
-            _timer = await TimerHelpers.SetTimeoutAsync(HandleCheckIntervalElapsedAsync, 10000, true, true);
-            _discord.MessageReceived -= HandleMessageReceived;
-            _discord.MessageReceived += HandleMessageReceived;
-        }
+		private async Task InitializeAsync()
+		{
+			_timer?.Stop();
+			_timer?.Dispose();
+			_timer = await TimerHelpers.SetTimeoutAsync(HandleCheckIntervalElapsedAsync, 10000, true, true);
+			_discord.MessageReceived -= HandleMessageReceived;
+			_discord.MessageReceived += HandleMessageReceived;
+		}
 
-        private async Task HandleMessageReceived(SocketMessage receivedMessage)
-        {
-            if (TryParseReminder(receivedMessage, out var reminder))
-            {
-                await AddReminderAsync(reminder);
-                await AnnounceReminderAddedAsync(receivedMessage.Channel.Id, receivedMessage.Author.Id);
-            }
-        }
+		private async Task HandleMessageReceived(SocketMessage receivedMessage)
+		{
+			if (TryParseReminder(receivedMessage, out var reminder))
+			{
+				await AddReminderAsync(reminder);
+				await AnnounceReminderAddedAsync(receivedMessage.Channel.Id, receivedMessage.Author.Id);
+			}
+		}
 
-        private IMessageChannel GetChannel(ulong channelId)
-        {
+		private IMessageChannel GetChannel(ulong channelId)
+		{
 			var channel = _discord.GetChannel(channelId);
-            return (IMessageChannel)channel;
-        }
+			return (IMessageChannel)channel;
+		}
 
-        private async Task AnnounceReminderAddedAsync(ulong channelId, ulong reminderUser)
-        {
-            var channel = GetChannel(channelId);
-            await channel.SendMessageAsync($"OK, <@{reminderUser}>! I'll remind you! :sparkles:");
-        }
+		private async Task AnnounceReminderAddedAsync(ulong channelId, ulong reminderUser)
+		{
+			var channel = GetChannel(channelId);
+			await channel.SendMessageAsync($"OK, <@{reminderUser}>! I'll remind you! :sparkles:");
+		}
 
-        private async Task AddReminderAsync(Reminder reminder)
-        {
-            await _reminderRepository.AddAsync(reminder);
-        }
+		private async Task AddReminderAsync(Reminder reminder)
+		{
+			await _reminderRepository.AddAsync(reminder);
+		}
 
-        private bool TryParseReminder(SocketMessage message, out Reminder reminder)
-        {
-            reminder = null;
-            var msgContent = message.Content;
+		private bool TryParseReminder(SocketMessage message, out Reminder reminder)
+		{
+			reminder = null;
+			var msgContent = message.Content;
 
-            if (msgContent.StartsWith(_commandWord)) 
-            {
-                msgContent = msgContent
-                    .Replace("“", "\"")
-                    .Replace("”", "\"")
-                    .Replace("«", "\"")
-                    .Replace("»", "\"");
-            }
+			if (msgContent.StartsWith(_commandWord))
+			{
+				msgContent = msgContent
+					.Replace("“", "\"")
+					.Replace("”", "\"")
+					.Replace("«", "\"")
+					.Replace("»", "\"");
+			}
 
-            if (msgContent.StartsWith(_commandWord) && msgContent.Contains("\""))
-            {
-                string reminderMessage = ExtractReminderMessage(msgContent);
-                string reminderTime = ExtractReminderTime(msgContent, reminderMessage);
-                bool reminderTimeParsed = TryParseReminderTime(reminderTime, out long remindUnixTimestamp);
+			if (msgContent.StartsWith(_commandWord) && msgContent.Contains("\""))
+			{
+				string reminderMessage = ExtractReminderMessage(msgContent);
+				string reminderTime = ExtractReminderTime(msgContent, reminderMessage);
+				bool reminderTimeParsed = TryParseReminderTime(reminderTime, out long remindUnixTimestamp);
 
-                reminder = new Reminder();
-                reminder.Message = reminderMessage;
-                reminder.RemindTime = remindUnixTimestamp;
-                reminder.UserId = message.Author.Id;
-                reminder.ChannelId = message.Channel.Id;
-            }
+				reminder = new Reminder();
+				reminder.Message = reminderMessage;
+				reminder.RemindTime = remindUnixTimestamp;
+				reminder.UserId = message.Author.Id;
+				reminder.ChannelId = message.Channel.Id;
+			}
 
-            return reminder != null;
-        }
+			return reminder != null;
+		}
 
-        private bool TryParseReminderTime(string reminderTime, out long remindUnixTimestamp)
-        {
-            remindUnixTimestamp = 0;
+		private bool TryParseReminderTime(string reminderTime, out long remindUnixTimestamp)
+		{
+			remindUnixTimestamp = 0;
 
-            try
-            {
-                var split = reminderTime.Split(" ");
-                var number = int.Parse(split[0]);
-                var unit = split[1].ToLowerInvariant();
-                var now = DateTimeOffset.UtcNow;
-                var remindTime = now;
+			try
+			{
+				var split = reminderTime.Split(" ");
+				var number = int.Parse(split[0]);
+				var unit = split[1].ToLowerInvariant();
+				var now = DateTimeOffset.UtcNow;
+				var remindTime = now;
 
-                if (unit.Contains("second"))
-                {
-                    remindTime = now.AddSeconds(number);
-                }
-                else if (unit.Contains("minute"))
-                {
-                    remindTime = now.AddMinutes(number);
-                }
-                else if (unit.Contains("hour"))
-                {
-                    remindTime = now.AddHours(number);
-                }
-                else if (unit.Contains("day"))
-                {
-                    remindTime = now.AddDays(number);
-                }
-                else if (unit.Contains("month"))
-                {
-                    remindTime = now.AddMonths((int)number);
-                }
-                else if (unit.Contains("year"))
-                {
-                    remindTime = now.AddYears((int)number);
-                }
-                else
-                {
-                    throw new InvalidOperationException("Couldn't figure out time unit.");
-                }
+				if (unit.Contains("second"))
+				{
+					remindTime = now.AddSeconds(number);
+				}
+				else if (unit.Contains("minute"))
+				{
+					remindTime = now.AddMinutes(number);
+				}
+				else if (unit.Contains("hour"))
+				{
+					remindTime = now.AddHours(number);
+				}
+				else if (unit.Contains("day"))
+				{
+					remindTime = now.AddDays(number);
+				}
+				else if (unit.Contains("month"))
+				{
+					remindTime = now.AddMonths((int)number);
+				}
+				else if (unit.Contains("year"))
+				{
+					remindTime = now.AddYears((int)number);
+				}
+				else
+				{
+					throw new InvalidOperationException("Couldn't figure out time unit.");
+				}
 
-                remindUnixTimestamp = remindTime.ToUnixTimeSeconds();
-            }
-            catch
-            {
-                return false;
-            }
+				remindUnixTimestamp = remindTime.ToUnixTimeSeconds();
+			}
+			catch
+			{
+				return false;
+			}
 
-            return true;
-        }
+			return true;
+		}
 
-        private string ExtractReminderMessage(string msgContent)
-        {
-            return msgContent.Split("\"").Skip(1).FirstOrDefault();
-        }
+		private string ExtractReminderMessage(string msgContent)
+		{
+			return msgContent.Split("\"").Skip(1).FirstOrDefault();
+		}
 
-        private string ExtractReminderTime(string msgContent, string reminderMessage)
-        {
-            return msgContent.Replace($"{_commandWord} ", string.Empty).Replace($"\"{reminderMessage}\"", string.Empty).ToLowerInvariant();
-        }
+		private string ExtractReminderTime(string msgContent, string reminderMessage)
+		{
+			return msgContent.Replace($"{_commandWord} ", string.Empty).Replace($"\"{reminderMessage}\"", string.Empty).ToLowerInvariant();
+		}
 
-        private async Task HandleCheckIntervalElapsedAsync()
-        {
-            var overdueReminders = await GetOverdueRemindersAsync();
+		private async Task HandleCheckIntervalElapsedAsync()
+		{
+			var overdueReminders = await GetOverdueRemindersAsync();
 
-            foreach (var reminder in overdueReminders)
-            {
-                if (await TryAnnounceReminderAsync(reminder))
-                {
-                    await RemoveReminderAsync(reminder);
-                }
-            }
-        }
+			foreach (var reminder in overdueReminders)
+			{
+				if (await TryAnnounceReminderAsync(reminder))
+				{
+					await RemoveReminderAsync(reminder);
+				}
+			}
+		}
 
-        private async Task RemoveReminderAsync(Reminder reminder)
-        {
-            await _reminderRepository.DeleteAsync(reminder);
-        }
+		private async Task RemoveReminderAsync(Reminder reminder)
+		{
+			await _reminderRepository.DeleteAsync(reminder);
+		}
 
-        private async Task<bool> TryAnnounceReminderAsync(Reminder reminder)
-        {
-            try
-            {
-                var channel = GetChannel(reminder.ChannelId);
+		private async Task<bool> TryAnnounceReminderAsync(Reminder reminder)
+		{
+			try
+			{
+				var channel = GetChannel(reminder.ChannelId);
 
-				if (channel == null) 
+				if (channel == null)
 				{
 					// could not find channel - deleted?
 					return true;
 				}
 
-                await channel.SendMessageAsync($"<@{reminder.UserId}> Remember! {reminder.Message}");
-            }
-            catch
-            {
-                return false;
-            }
+				await channel.SendMessageAsync($"<@{reminder.UserId}> Remember! {reminder.Message}");
+			}
+			catch
+			{
+				return false;
+			}
 
-            return true;
-        }
+			return true;
+		}
 
-        private async Task<List<Reminder>> GetOverdueRemindersAsync()
-        {
-            return (await _reminderRepository.GetAllAsync()).Where(r => r.RemindTime < DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToList();
-        }
-    }
+		private async Task<List<Reminder>> GetOverdueRemindersAsync()
+		{
+			return (await _reminderRepository.GetAllAsync()).Where(r => r.RemindTime < DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToList();
+		}
+	}
 }

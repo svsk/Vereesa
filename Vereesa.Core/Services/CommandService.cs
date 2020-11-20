@@ -8,139 +8,137 @@ using Discord.WebSocket;
 using Vereesa.Core.Extensions;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Commands;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
 	public class CommandService : BotServiceBase
-    {
-        private DiscordSocketClient _discord;
-        private IRepository<Command> _commandRepo;
+	{
+		private DiscordSocketClient _discord;
+		private IRepository<Command> _commandRepo;
 
-        public CommandService(DiscordSocketClient discord, IRepository<Command> commandRepo)
-			:base(discord)
-        {
-            _discord = discord;
-            _commandRepo = commandRepo;
+		public CommandService(DiscordSocketClient discord, IRepository<Command> commandRepo)
+			: base(discord)
+		{
+			_discord = discord;
+			_commandRepo = commandRepo;
+		}
 
-            _discord.MessageReceived += CheckMessage;
-        }
+		[OnCommand("!addcmd")]
+		[Authorize("Guild Master")]
+		[AsyncHandler]
+		public async Task CheckMessage(IMessage srcMessage)
+		{
+			await TryAddCommandAsync(srcMessage);
+		}
 
-        private async Task CheckMessage(SocketMessage srcMessage)
-        {            
-            var command = srcMessage.GetCommand();
+		[OnMessage]
+		public async Task HandleCustomCommand(IMessage srcMessage)
+		{
+			var command = srcMessage.GetCommand();
 
-            if (command == null) 
-            {
-                return;
-            }
+			if (command.StartsWith("!"))
+			{
+				await TryTriggerCommandAsync(command, srcMessage.Channel);
+			}
+		}
 
-            if (command == "!addcmd" && srcMessage.Author.Username == "Veinlash")
-            {
-                await TryAddCommandAsync(srcMessage);
-            }
+		private async Task TryAddCommandAsync(IMessage srcMessage)
+		{
+			var parameters = srcMessage.GetCommandArgs();
 
-            if (command.StartsWith("!"))
-            {
-                await TryTriggerCommandAsync(command, srcMessage.Channel);
-            }
-        }
+			var trigger = parameters[0];
+			var type = parameters[1];
+			var returnMessage = string.Join(" ", parameters.Skip(2));
 
-        private async Task TryAddCommandAsync(SocketMessage srcMessage)
-        {
-            var parameters = srcMessage.GetCommandArgs();
+			trigger = trigger.StartsWith("!") ? trigger : "!" + trigger;
 
-            var trigger = parameters[0];
-            var type = parameters[1];
-            var returnMessage = string.Join(" ", parameters.Skip(2));
+			await _commandRepo.AddAsync(new Command
+			{
+				Id = Guid.NewGuid().ToString(),
+				TriggerCommands = new List<string> { trigger },
+				CommandType = CommandTypeEnum.Countdown,
+				ReturnMessage = returnMessage
+			});
 
-            trigger = trigger.StartsWith("!") ? trigger : "!" + trigger;
+			await _commandRepo.SaveAsync();
+		}
 
-            await _commandRepo.AddAsync(new Command
-            {
-                Id = Guid.NewGuid().ToString(),
-                TriggerCommands = new List<string> { trigger },
-                CommandType = CommandTypeEnum.Countdown,
-                ReturnMessage = returnMessage
-            });
-
-            await _commandRepo.SaveAsync();
-        }
-
-        private async Task TryTriggerCommandAsync(string command, IMessageChannel responseChannel)
-        {
-            var triggeredCommands = (await _commandRepo.GetAllAsync()).Where(cmd => cmd.TriggerCommands.Contains(command));
+		private async Task TryTriggerCommandAsync(string command, IMessageChannel responseChannel)
+		{
+			var triggeredCommands = (await _commandRepo.GetAllAsync()).Where(cmd => cmd.TriggerCommands.Contains(command));
 
 
-            if (triggeredCommands.Any())
-            {
-                var triggeredCommand = triggeredCommands.First();
-                var returnMessage = triggeredCommand.ReturnMessage;
+			if (triggeredCommands.Any())
+			{
+				var triggeredCommand = triggeredCommands.First();
+				var returnMessage = triggeredCommand.ReturnMessage;
 
-                switch (triggeredCommand.CommandType)
-                {
-                    case CommandTypeEnum.Countdown:
-                        var tags = GetTagsByType<TimeUntilTag>(returnMessage);
-                        
-                        foreach (var tag in tags) 
-                        {
-                            var ts = tag.GetTimeUntilDate();
-                            if (ts == null)
-                                continue;
+				switch (triggeredCommand.CommandType)
+				{
+					case CommandTypeEnum.Countdown:
+						var tags = GetTagsByType<TimeUntilTag>(returnMessage);
 
-                            if (ts.Value.TotalSeconds < 0)
-                                ts = new TimeSpan();
-                                
-                            returnMessage = returnMessage.Replace(tag.ReplacePattern, $"{ts.Value.Days} days, {ts.Value.Hours} hours, {ts.Value.Minutes} minutes, and {ts.Value.Seconds} seconds until");
-                        }
+						foreach (var tag in tags)
+						{
+							var ts = tag.GetTimeUntilDate();
+							if (ts == null)
+								continue;
 
-                        break;
-                }
+							if (ts.Value.TotalSeconds < 0)
+								ts = new TimeSpan();
 
-                await responseChannel.SendMessageAsync(returnMessage);
-            }
-        }
+							returnMessage = returnMessage.Replace(tag.ReplacePattern, $"{ts.Value.Days} days, {ts.Value.Hours} hours, {ts.Value.Minutes} minutes, and {ts.Value.Seconds} seconds until");
+						}
 
-        public static IEnumerable<T> GetTagsByType<T>(string sourceString) where T : TagBase, new()
-        {
-            var identifier = new T().TagIdentifier;
-            var regex = new Regex("{" + identifier + ":(.*?)}");
-            var matchResult = regex.Matches(sourceString);
+						break;
+				}
 
-            var tags = new List<T>();
+				await responseChannel.SendMessageAsync(returnMessage);
+			}
+		}
 
-            foreach (var match in matchResult)
-            {
-                var tag = new T();
-                tag.ReplacePattern = ((Match)match).Groups[0].ToString();
-                tag.TagValue = ((Match)match).Groups[1].ToString();
-                tags.Add(tag);
-            }
+		public static IEnumerable<T> GetTagsByType<T>(string sourceString) where T : TagBase, new()
+		{
+			var identifier = new T().TagIdentifier;
+			var regex = new Regex("{" + identifier + ":(.*?)}");
+			var matchResult = regex.Matches(sourceString);
 
-            return tags;
-        }
-    }
+			var tags = new List<T>();
 
-    public class TimeUntilTag : TagBase
-    {
-        public override string TagIdentifier => "timeUntil";
+			foreach (var match in matchResult)
+			{
+				var tag = new T();
+				tag.ReplacePattern = ((Match)match).Groups[0].ToString();
+				tag.TagValue = ((Match)match).Groups[1].ToString();
+				tags.Add(tag);
+			}
 
-        public TimeSpan? GetTimeUntilDate() 
-        {
-            TimeSpan? result = null;
+			return tags;
+		}
+	}
 
-            if (DateTime.TryParse(this.TagValue, out var parsedResult)) 
-            {
-                result = parsedResult - DateTimeExtensions.NowInCentralEuropeanTime();
-            }
+	public class TimeUntilTag : TagBase
+	{
+		public override string TagIdentifier => "timeUntil";
 
-            return result;
-        }
-    }
+		public TimeSpan? GetTimeUntilDate()
+		{
+			TimeSpan? result = null;
 
-    public class TagBase
-    {
-        public virtual string TagIdentifier => "tag";
-        public string ReplacePattern { get; set; }
-        public string TagValue { get; set; }
-    }
+			if (DateTime.TryParse(this.TagValue, out var parsedResult))
+			{
+				result = parsedResult - DateTimeExtensions.NowInCentralEuropeanTime();
+			}
+
+			return result;
+		}
+	}
+
+	public class TagBase
+	{
+		public virtual string TagIdentifier => "tag";
+		public string ReplacePattern { get; set; }
+		public string TagValue { get; set; }
+	}
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -24,13 +25,15 @@ namespace Vereesa.Core.Tests.ServicesTests
                 .AddJsonFile("config.Test.json", optional: false, reloadOnChange: true)
                 .AddJsonFile("config.Test.Local.json", optional: true, reloadOnChange: true);
 
+			var mockDiscord = new Mock<DiscordSocketClient>();
+
             var config = builder.Build();
             _battleNetApiSettings = new BattleNetApiSettings();
             config.GetSection(nameof(BattleNetApiSettings)).Bind(_battleNetApiSettings);
 
 			var logger = new Mock<ILogger<BattleNetApiService>>();
 
-            _battleNetApiService = new BattleNetApiService(_battleNetApiSettings, logger.Object);
+            _battleNetApiService = new BattleNetApiService(mockDiscord.Object, _battleNetApiSettings, logger.Object);
         }
 
         [TestMethod]

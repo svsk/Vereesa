@@ -8,7 +8,7 @@ using System.Timers;
 using Discord;
 using Discord.WebSocket;
 using Vereesa.Core.Configuration;
-using Vereesa.Core.Helpers;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
@@ -17,21 +17,31 @@ namespace Vereesa.Core.Services
 		private DiscordSocketClient _discord;
 		private List<ChannelRuleset> _rulesets;
 		private Timer _triggerInterval;
+		private IJobScheduler _jobScheduler;
+		private bool _initialized;
 
-		public ChannelRuleService(DiscordSocketClient discord, ChannelRuleSettings config)
+		public ChannelRuleService(DiscordSocketClient discord, IJobScheduler scheduler,
+			ChannelRuleSettings config)
 			: base(discord)
 		{
 			_discord = discord;
-			_discord.MessageReceived += MessageReceivedHandler;
-
+			_jobScheduler = scheduler;
 			_discord.Ready -= InitializeServiceAsync;
 			_discord.Ready += InitializeServiceAsync;
 		}
 
 		private async Task InitializeServiceAsync()
 		{
+			if (_initialized)
+			{
+				return;
+			}
+
+			_initialized = true;
+
 			_rulesets = new List<ChannelRuleset>();
-			_triggerInterval = await TimerHelpers.SetTimeoutAsync(TriggerScheduledRulesetsAsync, 30000, true, false);
+			_jobScheduler.EveryHalfMinute -= TriggerPeriodicRulesetsAsync;
+			_jobScheduler.EveryHalfMinute += TriggerPeriodicRulesetsAsync;
 
 			//Define in config later
 			//ulong mediaChannelId = 124446036637908995; //botplayground channel id
@@ -45,21 +55,16 @@ namespace Vereesa.Core.Services
 			ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainYoutubeLink));
 			ruleset.AddRule(new ChannelRule(ChannelRuleEvaluators.MessageMustContainTwitchLink));
 			ruleset.AddRulesBrokenReaction(new RuleReaction(ChannelRuleReactions.DeleteMessageAsync));
-			ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRulesAsync, "Sorry! :sparkles: Only images :frame_photo:, direct links to images :link:, and links to YouTube or Twitch videos :tv: can be posted in this channel! :pray:"));
-
-			//Test rules and reactions
-			// ruleset.AddRule(new ChannelRule<string>(ChannelRuleEvaluators.MessageTextMustContain, "Yas"));
-			// ruleset.AddRulesUpheldReaction(new RuleReaction<string>(ChannelRuleReactions.ReactToMessage, ":pogchamp:"));
-			// ruleset.AddRulesUpheldReaction(new RuleReaction<string>(ChannelRuleReactions.RespondToMessage, "nice"));
-			// ruleset.AddRulesUpheldReaction(new RuleReaction(ChannelRuleReactions.PinMessage));
-			//ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.RespondToMessage, "Only image posts and direct links to images can be posted in this channel."));
+			ruleset.AddRulesBrokenReaction(new RuleReaction<string>(ChannelRuleReactions.AnnounceChannelRulesAsync,
+				"Sorry! :sparkles: Only images :frame_photo:, direct links to images :link:, and links to YouTube or Twitch videos :tv: can be posted in this channel! :pray:"));
 
 			_rulesets.Add(ruleset);
 		}
 
-		private async Task TriggerScheduledRulesetsAsync()
+		private async Task TriggerPeriodicRulesetsAsync()
 		{
-			var channelRulesets = _rulesets.Where(rs => rs.Triggers.Contains(RulesetTriggers.Periodic)).GroupBy(rs => rs.ChannelId);
+			var channelRulesets = _rulesets.Where(rs => rs.Triggers.Contains(RulesetTriggers.Periodic))
+				.GroupBy(rs => rs.ChannelId);
 
 			foreach (var channelRuleset in channelRulesets)
 			{
@@ -80,9 +85,14 @@ namespace Vereesa.Core.Services
 			}
 		}
 
-		private async Task MessageReceivedHandler(IMessage receivedMessage)
+		[OnMessage]
+		public async Task MessageReceivedHandler(IMessage receivedMessage)
 		{
-			var onMessageRulesets = _rulesets.Where(rs => rs.ChannelId == receivedMessage.Channel.Id && rs.Triggers.Contains(RulesetTriggers.OnMessage)).ToList();
+			var onMessageRulesets = _rulesets
+				.Where(rs =>
+					rs.ChannelId == receivedMessage.Channel.Id &&
+					rs.Triggers.Contains(RulesetTriggers.OnMessage)
+				).ToList();
 
 			await EvaluateMessageAsync(receivedMessage, onMessageRulesets);
 		}

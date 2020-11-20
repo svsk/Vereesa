@@ -1,22 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Authenticators;
 using Vereesa.Core.Configuration;
+using Vereesa.Core.Infrastructure;
 using Vereesa.Data.Models.BattleNet;
 
 namespace Vereesa.Core.Services
 {
-    public class BattleNetApiService
+    public class BattleNetApiService : BotServiceBase
     {
         private ILogger<BattleNetApiService> _logger;
         private BattleNetApiSettings _settings;
         private Dictionary<string, (string token, DateTime expiryDateTime)> _regionTokens = new Dictionary<string, (string token, DateTime expiryDateTime)>();
 
-        public BattleNetApiService(BattleNetApiSettings settings, ILogger<BattleNetApiService> logger)
+        public BattleNetApiService(DiscordSocketClient discord, BattleNetApiSettings settings, 
+			ILogger<BattleNetApiService> logger) : base(discord)
         {
             _logger = logger;
             _settings = settings;

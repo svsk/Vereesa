@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
