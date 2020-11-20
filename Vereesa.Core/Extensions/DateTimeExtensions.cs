@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using NodaTime;
 
 namespace Vereesa.Core.Extensions
@@ -24,5 +25,31 @@ namespace Vereesa.Core.Extensions
 
             return zonedDateTime.ToDateTimeUtc();
         }
+
+		public static ZonedDateTime AsServerTime(this Instant instant) 
+		{
+			return new ZonedDateTime(instant, DateTimeZoneProviders.Tzdb["Europe/Paris"]);
+		}
+
+		public static string ToPrettyTime(this ZonedDateTime dateTime) 
+		{
+			return dateTime.ToString("HH:mm", CultureInfo.InvariantCulture);
+		}
+
+		public static string ToPrettyDuration(this Duration duration) 
+		{
+			if (duration > Duration.FromHours(1)) 
+			{
+				return duration.ToString("-H 'hours and' mm 'minutes'", CultureInfo.InvariantCulture);
+			}
+			else if (duration > Duration.FromMinutes(1)) 
+			{
+				return duration.ToString("m 'minutes and' ss 'seconds'", CultureInfo.InvariantCulture);
+			} 
+			else 
+			{
+				return duration.ToString("s 'seconds'", CultureInfo.InvariantCulture);
+			}
+		}
     }
 }
