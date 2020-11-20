@@ -5,16 +5,19 @@
   </ItemGroup>
 
   <PropertyGroup>
+  	<LangVersion>8.0</LangVersion>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+	<ConfigFiles Include="*.json" />
+  </ItemGroup>
+
   <Target Name="CopyToOut" BeforeTargets="BeforeBuild">
-    <Copy SourceFiles="config.json" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="config.Local.json" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="CopyToOutOnPublish" AfterTargets="Publish"> 
-    <Copy SourceFiles="config.json" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="config.Local.json" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
   </Target>
 </Project>
