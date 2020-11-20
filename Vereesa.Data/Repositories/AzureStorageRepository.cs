@@ -11,134 +11,140 @@ using Vereesa.Data.Interfaces;
 
 namespace Vereesa.Data.Repositories
 {
-    public class AzureStorageRepository<T> : IRepository<T> where T : IEntity
-    {
-        private CloudBlobClient _client;
-        private CloudBlobContainer _container;
+	public class AzureStorageRepository<T> : IRepository<T> where T : IEntity
+	{
+		private CloudBlobClient _client;
+		private CloudBlobContainer _container;
 
-        public AzureStorageRepository(AzureStorageSettings settings) 
-        {
-            CloudStorageAccount.TryParse(settings.ConnectionString, out CloudStorageAccount storageAccount);
-            _client = storageAccount.CreateCloudBlobClient();
-            _container = _client.GetContainerReference(typeof(T).Name.ToLowerInvariant());
-            _container.CreateIfNotExists();
-        }
+		public AzureStorageRepository(AzureStorageSettings settings)
+		{
+			CloudStorageAccount.TryParse(settings.ConnectionString, out CloudStorageAccount storageAccount);
+			_client = storageAccount.CreateCloudBlobClient();
+			_container = _client.GetContainerReference(typeof(T).Name.ToLowerInvariant());
+			_container.CreateIfNotExists();
+		}
 
-        public T Add(T entity)
-        {
-            if (string.IsNullOrWhiteSpace(entity.Id)) 
-            {
-                entity.Id = Guid.NewGuid().ToString();
-            }
-            
-            CloudBlockBlob blob = _container.GetBlockBlobReference(entity.Id);
-            string blobContent = JsonConvert.SerializeObject(entity);
-            blob.UploadText(blobContent, Encoding.UTF8);
+		public T Add(T entity)
+		{
+			if (string.IsNullOrWhiteSpace(entity.Id))
+			{
+				entity.Id = Guid.NewGuid().ToString();
+			}
 
-            return entity;
-        }
+			CloudBlockBlob blob = _container.GetBlockBlobReference(entity.Id);
+			string blobContent = JsonConvert.SerializeObject(entity);
+			blob.UploadText(blobContent, Encoding.UTF8);
 
-        public async Task<T> AddAsync(T entity)
-        {
-            if (string.IsNullOrWhiteSpace(entity.Id)) 
-            {
-                entity.Id = Guid.NewGuid().ToString();
-            }
-            
-            CloudBlockBlob blob = _container.GetBlockBlobReference(entity.Id);
-            string blobContent = JsonConvert.SerializeObject(entity);
-            await blob.UploadTextAsync(blobContent);
+			return entity;
+		}
 
-            return entity;
-        }
+		public async Task<T> AddAsync(T entity)
+		{
+			if (string.IsNullOrWhiteSpace(entity.Id))
+			{
+				entity.Id = Guid.NewGuid().ToString();
+			}
 
-        public void AddOrEdit(T entity)
-        {
-            Add(entity);
-        }
+			CloudBlockBlob blob = _container.GetBlockBlobReference(entity.Id);
+			string blobContent = JsonConvert.SerializeObject(entity);
+			await blob.UploadTextAsync(blobContent);
 
-        public async Task AddOrEditAsync(T entity)
-        {
-            await AddAsync(entity);
-        }
+			return entity;
+		}
 
-        public void Delete(T entity)
-        {
-            CloudBlockBlob blob = _container.GetBlockBlobReference(entity.Id);
-            blob.DeleteIfExists();
-        }
+		public void AddOrEdit(T entity)
+		{
+			Add(entity);
+		}
 
-        public async Task DeleteAsync(T entity)
-        {
-            CloudBlockBlob blob = _container.GetBlockBlobReference(entity.Id);
-            await blob.DeleteIfExistsAsync();
-        }
+		public async Task AddOrEditAsync(T entity)
+		{
+			await AddAsync(entity);
+		}
 
-        public T FindById(string id)
-        {
-            T result = default(T);
+		public void Delete(T entity)
+		{
+			CloudBlockBlob blob = _container.GetBlockBlobReference(entity.Id);
+			blob.DeleteIfExists();
+		}
 
-            try 
-            {
-                CloudBlockBlob blob = _container.GetBlockBlobReference(id);
-                string blobContent = blob.DownloadText();
-                result = JsonConvert.DeserializeObject<T>(blobContent);
-            }
-            catch {}
-            
-            return result;
-        }
+		public async Task DeleteAsync(T entity)
+		{
+			CloudBlockBlob blob = _container.GetBlockBlobReference(entity.Id);
+			await blob.DeleteIfExistsAsync();
+		}
 
-        public async Task<T> FindByIdAsync(string id)
-        {
-            T result = default(T);
+		public T FindById(string id)
+		{
+			T result = default(T);
 
-            try 
-            {
-                CloudBlockBlob blob = _container.GetBlockBlobReference(id);
-                string blobContent = await blob.DownloadTextAsync();
-                result = JsonConvert.DeserializeObject<T>(blobContent);
-            }
-            catch {}
-            
-            return result;
-        }
+			try
+			{
+				CloudBlockBlob blob = _container.GetBlockBlobReference(id);
+				string blobContent = blob.DownloadText();
+				result = JsonConvert.DeserializeObject<T>(blobContent);
+			}
+			catch { }
 
-        public IEnumerable<T> GetAll()
-        {
-            List<T> result = new List<T>();
-            List<IListBlobItem> listBlobs = _container.ListBlobs().ToList();
-            
-            foreach (var listBlob in listBlobs) 
-            {
-                string blobId = ((CloudBlockBlob)listBlob).Name;
-                result.Add(this.FindById(blobId));
-            }
+			return result;
+		}
 
-            return result;
-        }
+		public async Task<bool> ItemExistsAsync(string id)
+		{
+			CloudBlockBlob blob = _container.GetBlockBlobReference(id);
+			return await blob.ExistsAsync();
+		}
 
-        public async Task<IEnumerable<T>> GetAllAsync()
-        {
-            List<T> result = new List<T>();
-            List<IListBlobItem> listBlobs = _container.ListBlobs().ToList();
-            
-            foreach (var listBlob in listBlobs) 
-            {
-                string blobId = ((CloudBlockBlob)listBlob).Name;
-                result.Add(await FindByIdAsync(blobId));
-            }
+		public async Task<T> FindByIdAsync(string id)
+		{
+			T result = default(T);
 
-            return result;
-        }
+			try
+			{
+				CloudBlockBlob blob = _container.GetBlockBlobReference(id);
+				string blobContent = await blob.DownloadTextAsync();
+				result = JsonConvert.DeserializeObject<T>(blobContent);
+			}
+			catch { }
 
-        public void Save()
-        {
-        }
+			return result;
+		}
 
-        public Task SaveAsync()
-        {
-            return Task.CompletedTask;
-        }
-    }
+		public IEnumerable<T> GetAll()
+		{
+			List<T> result = new List<T>();
+			List<IListBlobItem> listBlobs = _container.ListBlobs().ToList();
+
+			foreach (var listBlob in listBlobs)
+			{
+				string blobId = ((CloudBlockBlob)listBlob).Name;
+				result.Add(this.FindById(blobId));
+			}
+
+			return result;
+		}
+
+		public async Task<IEnumerable<T>> GetAllAsync()
+		{
+			List<T> result = new List<T>();
+			List<IListBlobItem> listBlobs = _container.ListBlobs().ToList();
+
+			foreach (var listBlob in listBlobs)
+			{
+				string blobId = ((CloudBlockBlob)listBlob).Name;
+				result.Add(await FindByIdAsync(blobId));
+			}
+
+			return result;
+		}
+
+		public void Save()
+		{
+		}
+
+		public Task SaveAsync()
+		{
+			return Task.CompletedTask;
+		}
+	}
 }
