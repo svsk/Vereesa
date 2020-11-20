@@ -3,6 +3,8 @@
 project.lock.json
 .DS_Store
 *.pyc
+credentials.json
+googleservicekey.json
 
 # Visual Studio Code
 .vscode
