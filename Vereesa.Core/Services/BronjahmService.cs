@@ -18,7 +18,7 @@ namespace Vereesa.Core.Services
 			: base(discord)
 		{
 			_scheduler = scheduler;
-			//ScheduleNextNotifications();
+			ScheduleNextNotifications();
 		}
 
 		private const int _cycleDurationInSeconds = 200 * 60;
@@ -104,36 +104,25 @@ namespace Vereesa.Core.Services
 
 		private void ScheduleNextNotifications()
 		{
-			var now = Now();
-			var nextSpawn = GetNextBronjahmSpawnRelativeTo(now);
-			var firstWarning = nextSpawn.Minus(Duration.FromMinutes(15));
-			var secondWarning = nextSpawn.Minus(Duration.FromMinutes(5));
-			
-			if (now < firstWarning) 
+			if (Now() > Instant.FromUnixTimeMilliseconds(1606172400000)) 
 			{
-				var firstWarningMessage = $"{_bagBoiRole.MentionRole()} " +
-					"Bag boi spawns in 15 minutes!\n"+
-					"\nType `!join bagbois` to be notified." +
-					"\nType `!leave bagbois` to stop notifications.";
-
-				
-
-				_scheduler.Schedule(firstWarning, async () => {
-				 	await Channel
-					 .SendMessageAsync(firstWarningMessage);
-				});
+				return;
 			}
 
-			if (now < secondWarning) 
+			var now = Now();
+			var nextSpawn = GetNextBronjahmSpawnRelativeTo(now);
+			var warningTime = nextSpawn.Minus(Duration.FromMinutes(10));
+
+			if (now < warningTime) 
 			{
-				var secondWarningMessage = $"{_bagBoiRole.MentionRole()} " +
-					"Bag boi spawns in 5 minutes!\n"+
+				var warningMessage = $"{_bagBoiRole.MentionRole()} " +
+					"Bag boi spawns in 10 minutes!\n"+
 					"\nType `!join bagbois` to be notified." +
 					"\nType `!leave bagbois` to stop notifications.";
 
-				_scheduler.Schedule(secondWarning, async () => {
+				_scheduler.Schedule(warningTime, async () => {
 				 	await Channel
-					 .SendMessageAsync(secondWarningMessage);
+					 .SendMessageAsync(warningMessage);
 				});
 			}
 
@@ -162,7 +151,8 @@ namespace Vereesa.Core.Services
 				return $"{_bagBoiRole.MentionRole()}\n\n" +
 				(
 					remaining <= Duration.FromSeconds(0) 
-						? $":skull: Bag boi has spawned and most likely killed!" 
+						? $":skull: Bag boi activated at {activationTime.AsServerTime().ToPrettyTime()}" +
+							" and has been killed."
 						: $":clock10: Bag boi has spawned and will activate in **{remaining.ToPrettyDuration()}**!"
 				) +
 				"\n\nType `!join bagbois` to be notified about the next spawn!" +
