@@ -21,6 +21,8 @@ namespace Vereesa.Core.Services
 			ScheduleNextNotifications();
 		}
 
+		private readonly static Instant _eventEndTime = 
+			Instant.FromUnixTimeMilliseconds(1606172400000 - (60 * 60 * 1000));
 		private const int _cycleDurationInSeconds = 200 * 60;
 		private const int _spawnRateInSeconds = 10 * 60;
 		private const int _activationTimeInSeconds = (60 * 2);
@@ -51,7 +53,7 @@ namespace Vereesa.Core.Services
 		
 		private IMessageChannel Channel => ((IMessageChannel)this.Discord.GetChannel(124246560178438145));
 
-		private Instant Now() => SystemClock.Instance.GetCurrentInstant();		
+		private Instant Now() => SystemClock.Instance.GetCurrentInstant();
 		
 
 		private Instant GetNextBronjahmSpawnRelativeTo(Instant instant) 
@@ -65,6 +67,13 @@ namespace Vereesa.Core.Services
 		{
 			var now = Now();
 			var nextSpawnInstant = GetNextBronjahmSpawnRelativeTo(now);
+
+			if (nextSpawnInstant > _eventEndTime) 
+			{
+				await message.Channel.SendMessageAsync(":handbag: No more bag boi spawns to come. Enjoy Shadowlands!");
+				return;
+			}
+
 			var nextSpawn = new ZonedDateTime(nextSpawnInstant, DateTimeZoneProviders.Tzdb["Europe/Paris"]);
 			var timeUntilNextSpawn = nextSpawnInstant - now;
 			var response = $":handbag: Bag boi will spawn at **{nextSpawn.ToPrettyTime()} server time**." + 
@@ -83,35 +92,29 @@ namespace Vereesa.Core.Services
 			var nextRareIndex = (int)Math.Ceiling(pointInCycle / _spawnRateInSeconds);
 			nextRareIndex = nextRareIndex > _rares.Length - 1 ? 0 : nextRareIndex;
 			var currentCycleStart = now.Minus(Duration.FromSeconds(pointInCycle));
-			var spawnTime = currentCycleStart.Plus(Duration.FromSeconds(nextRareIndex * _spawnRateInSeconds))
-				.AsServerTime();
+			var spawnTime = currentCycleStart.Plus(Duration.FromSeconds(nextRareIndex * _spawnRateInSeconds));
+
 			
-			var responseText = "The next rare to spawn in :snowflake: Icecrown should be " +
-				$":crown: **{_rares[nextRareIndex]}** (activates at {spawnTime.ToPrettyTime()}).";
+			
+			
+			var responseText = spawnTime < _eventEndTime 
+				? "The next rare to spawn in :snowflake: Icecrown should be " +
+				  $":crown: **{_rares[nextRareIndex]}** (activates at {spawnTime.AsServerTime().ToPrettyTime()})."
+				: ":crown: No more Icecrown rare spawns to come. Enjoy Shadowlands!";
 
 			await request.Channel.SendMessageAsync(responseText);
 		}
 
-		// [OnReady]
-		[OnCommand("!test")]
-		[AsyncHandler]
-		public async Task Test(IMessage message) 
-		{
-			var members = Discord.GetRolesByName("bagbois").First().Members.ToList();
-			
-			
-		}
-
 		private void ScheduleNextNotifications()
 		{
-			if (Now() > Instant.FromUnixTimeMilliseconds(1606172400000)) 
-			{
-				return;
-			}
-
 			var now = Now();
 			var nextSpawn = GetNextBronjahmSpawnRelativeTo(now);
 			var warningTime = nextSpawn.Minus(Duration.FromMinutes(10));
+
+			if (nextSpawn > _eventEndTime)
+			{
+				return;
+			}
 
 			if (now < warningTime) 
 			{
@@ -136,6 +139,7 @@ namespace Vereesa.Core.Services
 		{
 			var nextSpawnInstant = GetNextBronjahmSpawnRelativeTo(Now());
 			var nextSpawn = nextSpawnInstant.AsServerTime();
+			var lastSpawn = nextSpawnInstant > _eventEndTime;
 
 			var activationTime = Now() + Duration.FromSeconds(_activationTimeInSeconds);
 			
@@ -155,8 +159,12 @@ namespace Vereesa.Core.Services
 							" and has been killed."
 						: $":clock10: Bag boi has spawned and will activate in **{remaining.ToPrettyDuration()}**!"
 				) +
-				"\n\nType `!join bagbois` to be notified about the next spawn!" +
-				$"\nNext bag boi spawn is at **{nextSpawn.ToPrettyTime()} server time.**";
+				(
+					lastSpawn
+						? "\n\nThis was the last spawn! Enjoy Shadowlands!"
+						: "\n\nType `!join bagbois` to be notified about the next spawn!" +
+						  $"\nNext bag boi spawn is at **{nextSpawn.ToPrettyTime()} server time.**"
+				);
 			});
 
 			_scheduler.EveryTenSeconds += updateMessage;
