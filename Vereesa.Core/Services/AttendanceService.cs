@@ -20,14 +20,14 @@ namespace Vereesa.Core.Services
 		private IRepository<RaidAttendanceSummary> _attendanceSummaryRepo;
 		private ILogger<AttendanceService> _logger;
 
-		private ulong _officerChatId = 247439963329789953;
+		private ulong _officerChatId = 247439963329789953;//124446036637908995;
 		private ulong _officerRoleId = 124251615489294337;
 
 		private string _guildId = "1179"; // Neon's WarcraftLogs guild ID.
 		private Dictionary<string, string> _raidIds = new Dictionary<string, string>
 		{
-			{ "ny'alotha, the waking city", "24" },
-			//{ "castle nathria", "25" },
+			//{ "ny'alotha, the waking city", "24" },
+			{ "castle nathria", "26" },
 		};
 
 		public AttendanceService(DiscordSocketClient discord, IJobScheduler jobScheduler,
@@ -40,6 +40,13 @@ namespace Vereesa.Core.Services
 			_attendanceSummaryRepo = attendanceSummaryRepo;
 			_logger = logger;
 			jobScheduler.EveryDayAtUtcNoon += UpdateAttendanceAsync;
+		}
+
+		[OnCommand("!updateattendance")]
+		[Authorize("Guild Master")]
+		public async Task ForceAttendanceUpdate(IMessage message) 
+		{
+			await UpdateAttendanceAsync();
 		}
 
 		private async Task UpdateAttendanceAsync()
