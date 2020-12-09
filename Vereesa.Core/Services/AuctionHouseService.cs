@@ -6,6 +6,7 @@ using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NodaTime;
 using RestSharp;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Infrastructure;
@@ -26,7 +27,7 @@ namespace Vereesa.Core.Services
 
 		[OnCommand("!ah")]
 		[AsyncHandler]
-		private async Task HandleMessageReceivedAsync(IMessage message)
+		public async Task HandleMessageReceivedAsync(IMessage message)
 		{
 			Embed embed = null;
 			var itemStats = GetPriceInformation(message.GetCommandArgs());
@@ -63,9 +64,15 @@ namespace Vereesa.Core.Services
 
 				builder.Footer = new EmbedFooterBuilder();
 
+				var lastRefreshTime = Instant.FromDateTimeUtc(item.LastSeen)
+					.AsServerTime()
+					.ToPrettyTime();
+
+				var requestTime = DateTimeExtensions.NowInCentralEuropeanTime().ToString("HH:mm");
+
 				var footerText = new string[] {
-					$"Requested by {message.Author.Username} today at {DateTimeExtensions.NowInCentralEuropeanTime().ToString("HH:mm")}",
-					$"Auction data last refreshed at {item.LastSeen.ToString("HH:mm")}"
+					$"Requested by {message.Author.Username} today at {requestTime}",
+					$"Auction data last refreshed at {lastRefreshTime}"
 				};
 
 				builder.Footer.Text = string.Join(" | ", footerText);
@@ -107,7 +114,9 @@ namespace Vereesa.Core.Services
 			request.AddQueryParameter("item", itemId.ToString());
 
 			var response = _restClient.Execute(request);
-			var result = JsonConvert.DeserializeObject<UndermineResult>(response.Content);
+			var result = JsonConvert.DeserializeObject<UndermineResult>(response.Content, new JsonSerializerSettings {
+				DateTimeZoneHandling = DateTimeZoneHandling.Utc
+			});
 
 			if (response.IsSuccessful && result.Stats?.Count > 0)
 			{
@@ -153,7 +162,7 @@ namespace Vereesa.Core.Services
 			public decimal Price { get; set; }
 
 			[JsonProperty("lastseen")]
-			public DateTimeOffset LastSeen { get; set; }
+			public DateTime LastSeen { get; set; }
 
 			[JsonProperty("icon")]
 			public string Icon { get; set; }

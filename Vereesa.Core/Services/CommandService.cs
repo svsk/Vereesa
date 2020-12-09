@@ -37,7 +37,7 @@ namespace Vereesa.Core.Services
 		{
 			var command = srcMessage.GetCommand();
 
-			if (command.StartsWith("!"))
+			if (command != null && command.StartsWith("!"))
 			{
 				await TryTriggerCommandAsync(command, srcMessage.Channel);
 			}
