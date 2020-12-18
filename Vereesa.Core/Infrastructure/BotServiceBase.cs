@@ -61,8 +61,10 @@ namespace Vereesa.Core.Infrastructure
 			{
 				Discord.MessageReceived += async (messageForEvaluation) =>
 				{
-					var matchingHandlers = GetMatchingMessageHandlers(messageForEvaluation, commandHandlers);
-					await ExecuteMessageHandlersAsync(messageForEvaluation, matchingHandlers);
+					if (GetBestMatchingCommandHandler(messageForEvaluation, commandHandlers) is {} commandHandler)
+					{
+						await ExecuteMessageHandlerAsync(messageForEvaluation, commandHandler);
+					}
 				};
 			}
 
@@ -119,22 +121,15 @@ namespace Vereesa.Core.Infrastructure
 			}
 		}
 
-		private async Task ExecuteMessageHandlersAsync(SocketMessage messageToHandle,
-			List<(string command, MethodInfo method)> matchingHandlers)
+		private async Task ExecuteMessageHandlerAsync(SocketMessage messageToHandle,
+			(string command, MethodInfo method) commandHandler)
 		{
 			async Task ExecuteCommand(string command, MethodInfo handler)
 			{
 				try
 				{
-					var handlerParams = new List<object>();
-					handlerParams.Add(messageToHandle);
-
-					// var commandPrarams = messageForEvaluation.GetCommandArgs();
-					// var matcher = new Regex("(\"(.*?)\"|(.*?))\\s|$");
-
-					// matcher.Match()
-
-					await (Task)handler.Invoke(this, handlerParams.ToArray());
+					var handlerParams = BuildHandlerParamList(command, handler, messageToHandle);
+					await (Task)handler.Invoke(this, handlerParams.Take(handler.GetParameters().Length).ToArray());
 				}
 				catch (Exception)
 				{
@@ -143,35 +138,93 @@ namespace Vereesa.Core.Infrastructure
 					{
 						await messageToHandle.Channel.SendMessageAsync($"`{command}` usage: {usageAttribute.UsageDescription}");
 					}
+					else 
+					{
+						await messageToHandle.Channel.SendMessageAsync($"I wasn't able to do that. You sure you did that right? Tell Vein to write a usage description for `{command}` to help.");
+					}
 				}
 			};
 
-			foreach (var commandHandler in matchingHandlers)
+			if (!UserCanExecute(messageToHandle.Author, commandHandler.method))
 			{
-				if (!UserCanExecute(messageToHandle.Author, commandHandler.method))
-				{
-					continue;
-				}
+				return;
+			}
 
-				// If the command is marked Async, we just fire and forget, because it may be really long 
-				// running.
-				if (commandHandler.method.GetCustomAttribute<AsyncHandlerAttribute>() != null)
-				{
-					ExecuteCommand(commandHandler.command, commandHandler.method);
-				}
-				else
-				{
-					await ExecuteCommand(commandHandler.command, commandHandler.method);
-				}
+			// If the command is marked Async, we just fire and forget, because it may be really long 
+			// running.
+			if (commandHandler.method.GetCustomAttribute<AsyncHandlerAttribute>() != null)
+			{
+				ExecuteCommand(commandHandler.command, commandHandler.method);
+			}
+			else
+			{
+				await ExecuteCommand(commandHandler.command, commandHandler.method);
 			}
 		}
 
-		private List<(string command, MethodInfo method)> GetMatchingMessageHandlers(
+		private List<object> BuildHandlerParamList(string command, MethodInfo handler, SocketMessage sourceMessage)
+		{
+			var commandArgString = sourceMessage.Content.Substring(command.Length)
+				.Trim()
+				.ToArray();
+
+			var args = new List<string>();
+			if (commandArgString.Length > 0) 
+			{
+				args.Add("");
+				var isInQuotes = false;
+				for (var i = 0; i < commandArgString.Length; i++) 
+				{
+					if (commandArgString[i] == '"')
+					{
+						isInQuotes = !isInQuotes;
+					} 
+					else if (commandArgString[i] == ' ' && !isInQuotes) 
+					{
+						// new argument
+						args.Add("");
+					}
+					else 
+					{
+						args[args.Count - 1] += commandArgString[i];
+					}
+				}
+			}
+
+			var argAttributes = handler.GetCustomAttributes<WithArgumentAttribute>()
+				.OrderByDescending(attr => attr.ArgumentIndex)
+				.ToList();
+
+			var handlerParams = new List<object>();
+			if (!argAttributes.Any()) 
+			{
+				handlerParams.AddRange(args);
+			}
+			else 
+			{
+				foreach (var attr in argAttributes) 
+				{
+					handlerParams.Add(string.Join(' ', args.Skip(attr.ArgumentIndex)));
+					args = args.Take(attr.ArgumentIndex).ToList();
+				}
+
+				handlerParams.Reverse();
+			}
+
+			handlerParams.Insert(0, sourceMessage);
+
+			return handlerParams;
+		}
+
+		private (string command, MethodInfo method)? GetBestMatchingCommandHandler(
 			IMessage messageForEvaluation,
 			List<IGrouping<string, (string command, MethodInfo method)>> commandHandlers)
 		{
-			var command = messageForEvaluation.GetCommand();
-			return commandHandlers.Where(ch => ch.Key == command).SelectMany(cd => cd).ToList();
+			var messageContent = messageForEvaluation.Content;
+			return commandHandlers
+				.OrderByDescending(cd => cd.Key.Length)
+				.FirstOrDefault(ch => messageContent.StartsWith(ch.Key, StringComparison.CurrentCultureIgnoreCase))
+				?.FirstOrDefault();
 		}
 
 		private bool UserCanExecute(SocketUser caller, MethodInfo method)
