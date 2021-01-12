@@ -12,6 +12,7 @@ using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Statistics;
 using Vereesa.Core.Infrastructure;
 using Discord;
+using System.ComponentModel;
 
 namespace Vereesa.Core.Services
 {
@@ -37,6 +38,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!corona")]
+		[Description("Prints statistics about selected countries and their COVID-19 situation.")]
 		[AsyncHandler]
 		public async Task HandleCoronaCheckAsync(IMessage message)
 		{
@@ -49,26 +51,32 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!setneoninfected")]
+		[Description("Sets number of infected people in Neon.")]
 		[Authorize("Guild Master")]
 		public async Task HandleSetGuildInfected(IMessage message) =>
 			await message.Channel.SendMessageAsync(SetGuildInfected(message.GetCommandArgs()));
 
 		[OnCommand("!setneonrecovered")]
+		[Description("Sets number of recovered people in Neon.")]
 		[Authorize("Guild Master")]
 		public async Task HandleSetGuildRecovered(IMessage message) =>
 			await message.Channel.SendMessageAsync(SetGuildRecovered(message.GetCommandArgs()));
 
 		[OnCommand("!addcoronacountry")]
+		[Description("Adds a country to the list shown when typing `!corona`.")]
 		[Authorize("Guild Master")]
 		public async Task HandleAddCoronaCountry(IMessage message) =>
 			await message.Channel.SendMessageAsync(AddRelevantCountry(message.GetCommandArgs()));
 
 		[OnCommand("!removecoronacountry")]
+		[Description("Removes a country from the list shown when typing `!corona`.")]
 		[Authorize("Guild Master")]
 		public async Task HandleRemoveCoronaCountry(IMessage message) =>
 			await message.Channel.SendMessageAsync(RemoveRelevantCountry(message.GetCommandArgs()));
 
 		[OnCommand("!checkcoronacountry")]
+		[Description("Prints statistics about a country and their COVID-19 situation.")]
+		[CommandUsage("`!checkcoronacountry <country>`")]
 		public async Task HandleCheckCoronaCountry(IMessage message) =>
 			await message.Channel.SendMessageAsync(CheckCoronaCountry(message.GetCommandArgs()));
 

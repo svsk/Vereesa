@@ -19,6 +19,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!convert")]
+		[Obsolete]
 		public async Task CheckMessage(SocketMessage message)
 		{
 			string[] args = message.GetCommandArgs();

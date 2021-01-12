@@ -9,6 +9,7 @@ using Vereesa.Core.Extensions;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Commands;
 using Vereesa.Core.Infrastructure;
+using System.ComponentModel;
 
 namespace Vereesa.Core.Services
 {
@@ -25,6 +26,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!addcmd")]
+		[Description("Adds a command to Vereesa. Only available to Guild Master role.")]
 		[Authorize("Guild Master")]
 		[AsyncHandler]
 		public async Task CheckMessage(IMessage srcMessage)

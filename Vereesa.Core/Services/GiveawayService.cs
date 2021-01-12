@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -45,6 +46,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!gcreate")]
+		[Description("Starts a wized to create a giveaway.")]
 		[AsyncHandler]
 		public async Task StartGiveawayConfiguration(IMessage cmdMessage)
 		{
@@ -187,6 +189,8 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!gstart")]
+		[Description("Instantly starts a giveaway.")]
+		[CommandUsage("`!gstart <duration> <prize>`")]
 		public async Task StartGiveaway(IMessage message)
 		{
 			var commandParams = message.Content.Split(' ').Skip(1).ToList();
@@ -204,6 +208,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!gcancel")]
+		[Description("Cancels the last giveaway you created in the channel where the command is sent.")]
 		public async Task CancelGiveaway(IMessage message)
 		{
 			var giveaway = (await _giveawayRepo.GetAllAsync())
@@ -223,6 +228,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!greroll")]
+		[Description("Rerolls the last giveaway you created in the channel where the command is sent.")]
 		public async Task RerollGiveaway(IMessage message)
 		{
 			var giveaway = (await _giveawayRepo.GetAllAsync())

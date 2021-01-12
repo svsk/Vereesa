@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -26,16 +27,17 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!ah")]
+		[WithArgument("itemName", 0)]
+		[Description("Checks price of an item on the Auction House. Uses the Undermine Journal as backing data.")]
 		[AsyncHandler]
-		public async Task HandleMessageReceivedAsync(IMessage message)
+		public async Task HandleMessageReceivedAsync(IMessage message, string itemName)
 		{
 			Embed embed = null;
-			var itemStats = GetPriceInformation(message.GetCommandArgs());
+			var itemStats = GetPriceInformation(itemName);
 
 			if (itemStats.item != null)
 			{
 				var item = itemStats.item.Stats.First();
-
 
 				// Build the embed
 				var builder = new EmbedBuilder();
@@ -83,11 +85,11 @@ namespace Vereesa.Core.Services
 			await message.Channel.SendMessageAsync(itemStats.message, embed: embed);
 		}
 
-		private (string message, UndermineResult item) GetPriceInformation(string[] itemName)
+		private (string message, UndermineResult item) GetPriceInformation(string itemName)
 		{
 			try
 			{
-				var searchResult = GetUndermineItem(string.Join(' ', itemName));
+				var searchResult = GetUndermineItem(itemName);
 				UndermineResult itemDetails = GetUndermineItemDetails(searchResult.Id);
 
 				return (string.Empty, itemDetails);

@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -63,6 +63,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!bagboi")]
+		[Description("Checks for the next spawn of Bronjahm in Icecrown.")]
 		public async Task ShowNextSpawn(IMessage message) 
 		{
 			var now = Now();
@@ -84,6 +85,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!nextrare")]
+		[Description("Checks for the next rare spawn in Icecrown.")]
 		public async Task ShowNextRare(IMessage request) 
 		{
 			var now = Now();

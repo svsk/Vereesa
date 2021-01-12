@@ -6,6 +6,7 @@ using Vereesa.Core.Extensions;
 using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Statistics;
 using Vereesa.Core.Infrastructure;
+using System.ComponentModel;
 
 namespace Vereesa.Core.Services
 {
@@ -25,6 +26,9 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!setflag")]
+		[Authorize("Guild Master")]
+		[Description("Sets a flag for the specified country.")]
+		[CommandUsage("`!setflag <country name> <flag emoji>`")]
 		private async Task EvaluateMessageAsync(SocketMessage message) =>
 			await message.Channel.SendMessageAsync(SetFlag(message.GetCommandArgs()));
 

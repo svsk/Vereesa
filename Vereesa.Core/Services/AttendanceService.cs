@@ -50,6 +50,7 @@ namespace Vereesa.Core.Services
 		private async Task TriggerPeriodicAttendanceUpdateAsync() => await UpdateAttendanceAsync(false);
 
 		[OnCommand("!attendance update")]
+		[Description("Updates attendance. Only available to Guild Master role.")]
 		[Authorize("Guild Master")]
 		[AsyncHandler]
 		public async Task ForceAttendanceUpdate(IMessage message) 
@@ -108,7 +109,7 @@ namespace Vereesa.Core.Services
 						{	
 							recordToExclude.Excluded = true;
 							_attendanceRepo.AddOrEdit(recordToExclude);
-		}
+						}
 					}
 				}
 			}
@@ -248,6 +249,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!attendance")]
+		[Description("Lists current attendance standing.")]
 		public async Task HandleMessageReceived(IMessage message)
 		{
 			var zoneId = GetRaidIdOrDefault(message.Content.Split(" ").Skip(1).Join(" "));

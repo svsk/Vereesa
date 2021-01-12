@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -22,8 +24,9 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!host")]
+		[Obsolete]
 		[AsyncHandler]
-		[CommandUsage("Please only answer with a number when prompted for max attendees.")]
+		[Description("Please only answer with a number when prompted for max attendees.")]
 		public async Task CreateEventAsync(IMessage triggerMessage)
 		{
 			var eventName = (await Prompt(triggerMessage.Author, "What's the name of the event you're hosting?", triggerMessage.Channel)).Content;

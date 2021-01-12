@@ -2,6 +2,7 @@ using Vereesa.Core.Infrastructure;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Discord;
+using System.ComponentModel;
 
 namespace Vereesa.Core.Services
 {
@@ -13,6 +14,7 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!ping")]
+		[Description("Ping Vereesa to check if she is still alive and accepting commands.")]
 		public async Task HandleMessageAsync(IMessage message)
 		{
 			var responseMessage = await message.Channel.SendMessageAsync($"Pong!");

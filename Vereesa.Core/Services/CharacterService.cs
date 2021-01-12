@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -28,9 +29,11 @@ namespace Vereesa.Core.Services
 			_userCharactersRepository = userCharactersRepository;
 		}
 
-		[OnCommand("!assign")]
+		[AsyncHandler]
+		[OnCommand("!character assign")]
 		[Authorize("Officer")]
-		[CommandUsage("`!assign <mention Discord user> <WoW Character Name>-<WoW Character Realm Name>`")]
+		[Description("Assigns a WoW character to a Discord user.")]
+		[CommandUsage("`!character assign <mention Discord user> <WoW Character Name>-<WoW Character Realm Name>`")]
 		public async Task HandleAssignCommandAsync(IMessage message)
 		{
 			var characterToClaim = message.GetCommandArgs().Skip(1).Join(" ").Trim();
@@ -40,7 +43,10 @@ namespace Vereesa.Core.Services
 			await message.Channel.SendMessageAsync(result);
 		}
 
-		[OnCommand("!claim")]
+		[OnCommand("!character claim")]
+		[Description("Claims a WoW character.")]
+		[CommandUsage("`!character claim <WoW Character Name>-<WoW Character Realm Name>`")]
+		[AsyncHandler]
 		public async Task HandleClaimCommandAsync(IMessage message)
 		{
 			var characterToClaim = message.GetCommandArgs().Join(" ").Trim();

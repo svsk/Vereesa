@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -30,6 +31,8 @@ namespace Vereesa.Core.Services
 		{ }
 
 		[OnCommand("!leave")]
+		[Description("Leave a role.")]
+		[CommandUsage("`!leave <role name>`")]
 		public async Task LeaveRoleAsync(IMessage message)
 		{
 			var roleName = message.GetCommandArgs().Join(" ");
@@ -45,8 +48,8 @@ namespace Vereesa.Core.Services
 		}
 
 		[OnCommand("!join")]
-		[CommandUsage("Type `!join <role name>` in order to join a role. Role name is case insensivite. " +
-			"Not all roles are joinable.")]
+		[Description("Join a role. Role name is case insensivite. Not all roles are joinable.")]
+		[CommandUsage("`!join <role name>`")]
 		public async Task JoinRoleAsync(IMessage message)
 		{
 			var role = GetRequestedRole(message.GetCommandArgs().Join(" "));
