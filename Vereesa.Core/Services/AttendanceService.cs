@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,6 +8,7 @@ using Discord;
 using Discord.WebSocket;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
+using NodaTime;
 using RestSharp;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Infrastructure;
@@ -18,6 +21,7 @@ namespace Vereesa.Core.Services
 		private RestClient _restClient;
 		private IRepository<RaidAttendance> _attendanceRepo;
 		private IRepository<RaidAttendanceSummary> _attendanceSummaryRepo;
+		private IRepository<UsersCharacters> _userCharacters;
 		private ILogger<AttendanceService> _logger;
 
 		private ulong _officerChatId = 247439963329789953;//124446036637908995;
