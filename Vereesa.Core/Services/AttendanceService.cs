@@ -32,24 +32,87 @@ namespace Vereesa.Core.Services
 
 		public AttendanceService(DiscordSocketClient discord, IJobScheduler jobScheduler,
 			IRepository<RaidAttendance> attendanceRepo, IRepository<RaidAttendanceSummary> attendanceSummaryRepo,
-			ILogger<AttendanceService> logger)
+			IRepository<UsersCharacters> userCharacters, ILogger<AttendanceService> logger)
 			: base(discord)
 		{
 			_restClient = new RestClient();
 			_attendanceRepo = attendanceRepo;
 			_attendanceSummaryRepo = attendanceSummaryRepo;
+			_userCharacters = userCharacters;
 			_logger = logger;
-			jobScheduler.EveryDayAtUtcNoon += UpdateAttendanceAsync;
+			jobScheduler.EveryDayAtUtcNoon += TriggerPeriodicAttendanceUpdateAsync;
 		}
 
-		[OnCommand("!updateattendance")]
+		private async Task TriggerPeriodicAttendanceUpdateAsync() => await UpdateAttendanceAsync(false);
+
+		[OnCommand("!attendance update")]
 		[Authorize("Guild Master")]
+		[AsyncHandler]
 		public async Task ForceAttendanceUpdate(IMessage message) 
 		{
-			await UpdateAttendanceAsync();
+			await UpdateAttendanceAsync(false);
+			await message.Channel.SendMessageAsync("✅ Attendance updated.");
 		}
 
-		private async Task UpdateAttendanceAsync()
+		[OnCommand("!attendance prune")]
+		[Description("Prunes duplicate attendance. Only available to Guild Master role.")]
+		[Authorize("Guild Master")]
+		[AsyncHandler]
+		public async Task PruneAttendance(IMessage message)
+		{
+			var zoneId = (await Prompt(message.Author, $"What zone ID? (Hint: {_raidIds.Last().Value})", 
+				message.Channel))?.Content;
+
+			var attendanceReports = (await _attendanceRepo.GetAllAsync()).Where(att => att.ZoneId == zoneId && !att.Excluded);
+
+			var raidGroupings = attendanceReports.GroupBy(r => 
+				Instant.FromUnixTimeMilliseconds(r.Timestamp).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+				.ToList();
+
+			foreach (var raids in raidGroupings) 
+			{
+				if (raids.Count() > 1) 
+				{
+					var raidsToMerge = string.Join("\n", raids.Select((r, idx) =>  $"[{idx + 1}] {raids.Key} - {r.LogUrl} - {r.Attendees.Count} attendees"));
+
+					var response = await Prompt(message.Author, 
+						$"Detected possible duplicate reports.\n\n{raidsToMerge}\n" +
+						"Pick an action: \n`merge`\n`pick <id>`\n`ignore`", 
+						message.Channel, 60000);
+
+					if (response?.Content == "merge")
+					{
+						var recordToKeep = raids.First();
+						foreach (var recordToExclude in raids.Skip(1)) 
+						{
+							recordToKeep.Attendees = recordToKeep.Attendees.Concat(recordToExclude.Attendees)
+								.Distinct()
+								.ToList();
+							
+							recordToExclude.Excluded = true;
+							_attendanceRepo.AddOrEdit(recordToExclude);
+						}
+
+						_attendanceRepo.AddOrEdit(recordToKeep);
+					} 
+					else if (response?.Content.StartsWith("pick ") == true)
+					{
+						var idx = int.Parse(response.Content.Replace("pick ", "").Trim()) - 1;
+						var recordToKeep = raids.ElementAt(idx);
+						
+						foreach (var recordToExclude in raids.Where(r => r.Id != recordToKeep.Id))
+						{	
+							recordToExclude.Excluded = true;
+							_attendanceRepo.AddOrEdit(recordToExclude);
+		}
+					}
+				}
+			}
+
+			await message.Channel.SendMessageAsync("✅ Attendance pruned.");
+		}
+
+		private async Task UpdateAttendanceAsync(bool forceUpdate)
 		{
 			var zoneId = GetRaidIdOrDefault();
 
@@ -57,13 +120,14 @@ namespace Vereesa.Core.Services
 
 			foreach (var raid in attendance)
 			{
-				if (!(await _attendanceRepo.ItemExistsAsync(raid.Id)))
+				if (!(await _attendanceRepo.ItemExistsAsync(raid.Id)) || forceUpdate)
 				{
-					await _attendanceRepo.AddAsync(raid);
+					await _attendanceRepo.AddOrEditAsync(raid);
 				}
 			}
 
-			var storedAttendance = (await _attendanceRepo.GetAllAsync()).Where(att => att.ZoneId == zoneId).ToList();
+			var storedAttendance = (await _attendanceRepo.GetAllAsync()).Where(att => att.ZoneId == zoneId && !att.Excluded)
+				.ToList();
 
 			var attendanceSummary = GenerateAttendanceSummary(zoneId, storedAttendance);
 			await _attendanceSummaryRepo.AddOrEditAsync(attendanceSummary);
@@ -137,7 +201,11 @@ namespace Vereesa.Core.Services
 
 			foreach (var raid in raids)
 			{
-				foreach (var character in raid.Attendees)
+				var mappedAttendees = raid.Attendees.Select((character) => CharacterToPerson(character))
+					.Distinct()
+					.ToList();
+
+				foreach (var character in mappedAttendees)
 				{
 					if (!dict.ContainsKey(character))
 					{
@@ -163,6 +231,16 @@ namespace Vereesa.Core.Services
 				.ToList();
 
 			return summary;
+		}
+
+		private string CharacterToPerson(string character)
+		{
+			var users = _userCharacters.FindById(CharacterService.BlobContainer);
+			var characterOwner = users.CharacterMap
+				.FirstOrDefault(cm => cm.Value.Any(c => c.StartsWith($"{character}-", 
+					StringComparison.CurrentCultureIgnoreCase)));
+
+			return characterOwner.Key != 0 ? characterOwner.Key.MentionPerson() : character;
 		}
 
 		[OnCommand("!attendance")]
@@ -227,8 +305,10 @@ namespace Vereesa.Core.Services
 
 				var timestamp = long.Parse(reportDate);
 				var raidName = GetRaidName(zoneId);
+				var relativeLogUrl = node.ChildNodes[0].Attributes.First(att => att.Name == "href").Value;
+				var logUrl = $"https://www.warcraftlogs.com{relativeLogUrl}";
 
-				return new RaidAttendance($"{_guildId}-{zoneId}-{reportDate}", timestamp, raidName, zoneId);
+				return new RaidAttendance($"{_guildId}-{zoneId}-{reportDate}", timestamp, raidName, zoneId, logUrl);
 			}).ToList();
 
 			foreach (var characterRow in characterRows)
@@ -288,20 +368,23 @@ namespace Vereesa.Core.Services
 
 	public class RaidAttendance : IEntity
 	{
-		public RaidAttendance(string id, long timestamp, string zoneName, string zoneId)
+		public RaidAttendance(string id, long timestamp, string zoneName, string zoneId, string logUrl)
 		{
 			Id = id;
 			Timestamp = timestamp;
 			ZoneId = zoneId;
 			ZoneName = zoneName;
+			LogUrl = logUrl;
 			Attendees = new List<string>();
 		}
 
 		public string Id { get; set; }
+		public bool Excluded { get; set; }
 		public long Timestamp { get; set; }
 		public string ZoneName { get; set; }
 		public string ZoneId { get; set; }
 		public List<string> Attendees { get; set; }
+		public string LogUrl { get; set; }
 	}
 
 

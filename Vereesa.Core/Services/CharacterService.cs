@@ -19,7 +19,7 @@ namespace Vereesa.Core.Services
 		private SocketRole _gmRole => Discord.GetRole(124251327650988036);
 		private SocketRole _officerRole => Discord.GetRole(124251615489294337);
 		private SocketRole _responsibleRole => _officerRole;
-		private string _repoKey = "users-characters.json";
+		public const string BlobContainer = "users-characters.json";
 
 		public CharacterService(DiscordSocketClient discord,
 			IRepository<UsersCharacters> userCharactersRepository)
@@ -76,12 +76,12 @@ namespace Vereesa.Core.Services
 					+ $"{errors.Join(", ")}.";
 			}
 
-			var usersCharacters = _userCharactersRepository.FindById(_repoKey) ??
-				new UsersCharacters(_repoKey);
+			var usersCharacters = _userCharactersRepository.FindById(BlobContainer) ??
+				new UsersCharacters(BlobContainer);
 
 			try
 			{
-				usersCharacters.AddChar(discordUserId.Value, characterToClaim.ToLowerInvariant());
+				usersCharacters.AddChar(discordUserId.Value, characterToClaim.Trim().ToLowerInvariant());
 			}
 			catch (InvalidOperationException ex)
 			{
