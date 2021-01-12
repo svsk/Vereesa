@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,15 +7,15 @@ using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Extensions
 {
-    public static class ServiceCollectionExtensions
+    public static class BotServices
     {
+		public static IList<Type> GetBotServices() => Assembly.GetAssembly(typeof(VereesaClient)).GetTypes()
+			.Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(BotServiceBase)))
+			.ToList();
+
         public static IServiceCollection AddBotServices(this IServiceCollection services) 
 		{
-			var botServiceTypes = Assembly.GetAssembly(typeof(VereesaClient)).GetTypes()
-            	.Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(BotServiceBase)))
-				.ToList();
-
-			foreach (var serviceType in botServiceTypes) 
+			foreach (var serviceType in GetBotServices()) 
 			{
 				services.AddSingleton(serviceType);
 			}
