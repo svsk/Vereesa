@@ -319,7 +319,7 @@ namespace Vereesa.Core.Services
 
 				for (var i = 0; i < attendanceRecord.Count; i++)
 				{
-					if (attendanceRecord[i].InnerText.Contains("1"))
+					if (attendanceRecord[i].InnerText.Contains("1") || attendanceRecord[i].InnerText.Contains("2"))
 					{
 						raids[i].Attendees.Add(characterName);
 					}
