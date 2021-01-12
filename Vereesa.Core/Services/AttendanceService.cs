@@ -170,8 +170,8 @@ namespace Vereesa.Core.Services
 				foreach (var currentRanking in tenRaidSnapshotSummary.Rankings)
 				{
 					var previousRanking = prvSnapshot.Rankings.FirstOrDefault(c => c.CharacterName == currentRanking.CharacterName);
-					var currentPct = decimal.Parse(currentRanking.AttendancePercentage);
-					var previousPct = decimal.Parse(previousRanking?.AttendancePercentage ?? "0");
+					var currentPct = decimal.Parse(currentRanking.AttendancePercentage, NumberStyles.Any, CultureInfo.InvariantCulture);
+					var previousPct = decimal.Parse(previousRanking?.AttendancePercentage ?? "0", NumberStyles.Any, CultureInfo.InvariantCulture);
 
 					foreach (var threshold in thresholds)
 					{
