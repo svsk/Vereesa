@@ -30,41 +30,41 @@ namespace Vereesa.Core.Services
 		}
 
 		[AsyncHandler]
-		[OnCommand("!character assign")]
 		[Authorize("Officer")]
+		[OnCommand("!character assign")]
+		[WithArgument("discordUser", 0)]
+		[WithArgument("characterName", 1)]
 		[Description("Assigns a WoW character to a Discord user.")]
 		[CommandUsage("`!character assign <mention Discord user> <WoW Character Name>-<WoW Character Realm Name>`")]
-		public async Task HandleAssignCommandAsync(IMessage message)
+		public async Task HandleAssignCommandAsync(IMessage message, string discordUser, string characterName)
 		{
-			var characterToClaim = message.GetCommandArgs().Skip(1).Join(" ").Trim();
-			var userId = message.MentionedUserIds.FirstOrDefault();
-
-			var result = AssignCharacter(userId, characterToClaim);
+			var userId = MentionUtils.ParseUser(discordUser);
+			var result = AssignCharacter(userId, characterName);
 			await message.Channel.SendMessageAsync(result);
 		}
 
 		[OnCommand("!character claim")]
 		[Description("Claims a WoW character.")]
+		[WithArgument("characterName", 0)]
 		[CommandUsage("`!character claim <WoW Character Name>-<WoW Character Realm Name>`")]
 		[AsyncHandler]
-		public async Task HandleClaimCommandAsync(IMessage message)
+		public async Task HandleClaimCommandAsync(IMessage message, string characterName)
 		{
-			var characterToClaim = message.GetCommandArgs().Join(" ").Trim();
 			var userId = message.Author.Id;
 
 			var response = await Prompt(_responsibleRole,
-				$"Does {characterToClaim} belong to {userId.MentionPerson()} (Answer `yes` to confirm)?",
+				$"Does {characterName} belong to {userId.MentionPerson()} (Answer `yes` to confirm)?",
 					message.Channel, 1200000);
 
 			if (response?.Content.ToLowerInvariant() == "yes")
 			{
-				var result = AssignCharacter(userId, characterToClaim);
+				var result = AssignCharacter(userId, characterName);
 				await message.Channel.SendMessageAsync(result);
 			}
 			else
 			{
 				await message.Channel.SendMessageAsync(
-					$"Gave up on assigning {characterToClaim} to {message.Author.Mention}."
+					$"Gave up on assigning {characterName} to {message.Author.Mention}."
 				);
 			}
 		}
