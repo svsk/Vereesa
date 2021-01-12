@@ -33,7 +33,7 @@ namespace Vereesa.Core.Services
 		[CommandUsage("`!assign <mention Discord user> <WoW Character Name>-<WoW Character Realm Name>`")]
 		public async Task HandleAssignCommandAsync(IMessage message)
 		{
-			var characterToClaim = message.GetCommandArgs().Skip(1).Join(" ");
+			var characterToClaim = message.GetCommandArgs().Skip(1).Join(" ").Trim();
 			var userId = message.MentionedUserIds.FirstOrDefault();
 
 			var result = AssignCharacter(userId, characterToClaim);
@@ -43,7 +43,7 @@ namespace Vereesa.Core.Services
 		[OnCommand("!claim")]
 		public async Task HandleClaimCommandAsync(IMessage message)
 		{
-			var characterToClaim = message.GetCommandArgs().Join(" ");
+			var characterToClaim = message.GetCommandArgs().Join(" ").Trim();
 			var userId = message.Author.Id;
 
 			var response = await Prompt(_responsibleRole,
@@ -61,6 +61,57 @@ namespace Vereesa.Core.Services
 					$"Gave up on assigning {characterToClaim} to {message.Author.Mention}."
 				);
 			}
+		}
+
+		[OnCommand("!character unclaim")]
+		[WithArgument("characterName", 0)]
+		[CommandUsage("`!character unclaim <WoW Character Name>-<WoW Character Realm Name>`")]
+		[Description("Releases the claim you have on a WoW character.")]
+		[AsyncHandler]
+		public async Task HandleUnclaimCommandAsync(IMessage message, string characterName)
+		{
+			var userId = message.Author.Id;
+
+			var result = UnassignCharacter(userId, characterName);
+			await message.Channel.SendMessageAsync(result);
+		}
+
+		private string UnassignCharacter(ulong userId, string characterName)
+		{
+			var usersCharacters = _userCharactersRepository.FindById(BlobContainer) ??
+				new UsersCharacters(BlobContainer);
+
+			try 
+			{
+				usersCharacters.RemoveChar(userId, characterName.ToLowerInvariant());
+			}
+			catch (InvalidOperationException ex) 
+			{
+				return ex.Message;
+			}
+
+			_userCharactersRepository.AddOrEdit(usersCharacters);
+			
+			return "Removed";
+		}
+
+		[OnCommand("!characters")]
+		[Description("Lists the WoW characters you have claimed.")]
+		[AsyncHandler]
+		public async Task ListCharacters(IMessage message)
+		{
+			var characters = string.Join("\n", GetUserCharacters(message.Author).Select(c => c.ToTitleCase()));
+			var howToClaim = $"If you want to claim characters to have stuff like attendance tied to your Discord " +
+				"user instead of your WoW characters type `!claim <character name>-<realm name>`.";
+
+			await message.Channel.SendMessageAsync($"**Your claimed characters:**\n{characters}\n\n{howToClaim}");
+		}
+
+		private List<string> GetUserCharacters(IUser author)
+		{
+			return _userCharactersRepository.FindById(BlobContainer).CharacterMap.TryGetValue(author.Id, out var characters)
+				? characters
+				: new List<string>();
 		}
 
 		private string AssignCharacter(ulong? discordUserId, string characterToClaim)
@@ -165,6 +216,18 @@ namespace Vereesa.Core.Services
 			else
 			{
 				this.CharacterMap[userId].Add(characterName);
+			}
+		}
+
+		public void RemoveChar(ulong userId, string characterName) 
+		{
+			if (this.CharacterMap.ContainsKey(userId) && this.CharacterMap[userId].Contains(characterName)) 
+			{
+				this.CharacterMap[userId].Remove(characterName);
+			}
+			else 
+			{
+				throw new InvalidOperationException("Character not claimed by user.");
 			}
 		}
 	}
