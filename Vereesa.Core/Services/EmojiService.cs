@@ -54,8 +54,8 @@ namespace Vereesa.Core.Services
 					var emoteUrl = message.Attachments.First().Url;
 					var request = WebRequest.Create(emoteUrl);
 					var emoteImage = new Image(request.GetResponse().GetResponseStream());
-					await Discord.GetGuild(124246560178438145).CreateEmoteAsync(emojiName, emoteImage);
-					responseMessage = $"OK, I made :{emojiName}:!";
+					var emote = await Discord.GetGuild(124246560178438145).CreateEmoteAsync(emojiName, emoteImage);
+					responseMessage = $"OK, I made <:{emote.Name}:{emote.Id}>!";
 				}
 				catch (Exception ex)
 				{
