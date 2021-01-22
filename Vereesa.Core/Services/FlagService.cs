@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
@@ -7,6 +6,7 @@ using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Statistics;
 using Vereesa.Core.Infrastructure;
 using System.ComponentModel;
+using Discord;
 
 namespace Vereesa.Core.Services
 {
@@ -25,28 +25,27 @@ namespace Vereesa.Core.Services
 			_logger = logger;
 		}
 
-		[OnCommand("!setflag")]
+		[OnCommand("!flag set")]
+		[WithArgument("countryName", 0)]
+		[WithArgument("flagEmoji", 1)]
 		[Authorize("Guild Master")]
 		[Description("Sets a flag for the specified country.")]
-		[CommandUsage("`!setflag <country name> <flag emoji>`")]
-		private async Task EvaluateMessageAsync(SocketMessage message) =>
-			await message.Channel.SendMessageAsync(SetFlag(message.GetCommandArgs()));
+		[CommandUsage("`!flag set <flag emoji> <country name>`")]
+		public async Task EvaluateMessageAsync(IMessage message, string flagEmoji, string countryName) =>
+			await message.Channel.SendMessageAsync(SetFlag(flagEmoji, countryName));
 
-		private string SetFlag(string[] args)
+		private string SetFlag(string flagEmoji, string countryName)
 		{
-			if (args == null || args.Length < 2)
+			if (string.IsNullOrWhiteSpace(flagEmoji) || string.IsNullOrWhiteSpace(countryName))
 			{
-				return "Please specify a country name and a flag emoji.";
+				return "Please specify a flag emoji and a country name.";
 			}
 
-			var flag = args.Last();
-			var country = string.Join(" ", args.Take(args.Length - 1)).ToTitleCase();
-
 			var flags = GetFlags();
-			flags.Upsert(country, flag);
+			flags.Upsert(countryName.ToTitleCase(), flagEmoji);
 			_statRepository.AddOrEdit(flags);
 
-			return $"OK! {country} now has the flag {flag}!";
+			return $"OK! {countryName.ToTitleCase()} now has the flag {flagEmoji}!";
 		}
 	}
 }
