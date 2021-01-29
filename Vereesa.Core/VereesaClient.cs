@@ -52,6 +52,7 @@ namespace Vereesa.Core
 			var twitterServiceSettings = new TwitterServiceSettings();
 			var storageSettings = new AzureStorageSettings();
 			var announcementServiceSettings = new AnnouncementServiceSettings();
+			var warcraftLogsApiSettings = new WarcraftLogsApiSettings();
 
 			_config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
 			_config.GetSection(nameof(ChannelRuleSettings)).Bind(channelRuleSettings);
@@ -65,6 +66,7 @@ namespace Vereesa.Core
 			_config.GetSection(nameof(TwitterServiceSettings)).Bind(twitterServiceSettings);
 			_config.GetSection(nameof(AzureStorageSettings)).Bind(storageSettings);
 			_config.GetSection(nameof(AnnouncementServiceSettings)).Bind(announcementServiceSettings);
+			_config.GetSection(nameof(WarcraftLogsApiSettings)).Bind(warcraftLogsApiSettings);
 
 			//Set up discord client
 			_discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -88,9 +90,11 @@ namespace Vereesa.Core
 				.AddSingleton(twitterServiceSettings)
 				.AddSingleton(announcementServiceSettings)
 				.AddSingleton(storageSettings)
+				.AddSingleton(warcraftLogsApiSettings)
 				.AddSingleton<Random>()
 				.AddSingleton<IJobScheduler, JobScheduler>()
 				.AddBotServices()
+				.AddScoped<IWarcraftLogsApi, WarcraftLogsApi>()
 				.AddScoped<ISpreadsheetClient, GoogleSheetsClient>()
 				.AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
 				.AddScoped<IRepository<Giveaway>, AzureStorageRepository<Giveaway>>()
@@ -129,16 +133,16 @@ namespace Vereesa.Core
 
 			await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
 
-// 			_serviceProvider.GetRequiredService<ILogger<VereesaClient>>().LogWarning(@"`
-// 							Neon's own Discord Bot! 
-// ██╗   ██╗███████╗██████╗ ███████╗███████╗███████╗ █████╗ 
-// ██║   ██║██╔════╝██╔══██╗██╔════╝██╔════╝██╔════╝██╔══██╗
-// ██║   ██║█████╗  ██████╔╝█████╗  █████╗  ███████╗███████║
-// ╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══╝  ██╔══╝  ╚════██║██╔══██║
-//  ╚████╔╝ ███████╗██║  ██║███████╗███████╗███████║██║  ██║
-//   ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝
-// 	I am now accepting your requests!
-// `");
+			// 			_serviceProvider.GetRequiredService<ILogger<VereesaClient>>().LogWarning(@"`
+			// 							Neon's own Discord Bot!
+			// ██╗   ██╗███████╗██████╗ ███████╗███████╗███████╗ █████╗
+			// ██║   ██║██╔════╝██╔══██╗██╔════╝██╔════╝██╔════╝██╔══██╗
+			// ██║   ██║█████╗  ██████╔╝█████╗  █████╗  ███████╗███████║
+			// ╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══╝  ██╔══╝  ╚════██║██╔══██║
+			//  ╚████╔╝ ███████╗██║  ██║███████╗███████╗███████║██║  ██║
+			//   ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝
+			// 	I am now accepting your requests!
+			// `");
 		}
 
 		public void Shutdown()
