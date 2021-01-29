@@ -28,7 +28,7 @@ namespace Vereesa.Core.Tests.ServicesTests
 			messageMock.Setup(m => m.Content).Returns("!claim Veinlash-Karazhan");
 			messageMock.Setup(m => m.Channel).Returns(channelMock.Object);
 
-			await target.HandleClaimCommandAsync(messageMock.Object);
+			await target.HandleClaimCommandAsync(messageMock.Object, "Veinlash-Karazhan");
 
 			// Assert.IsTrue(called);
 		}

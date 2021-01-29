@@ -20,6 +20,7 @@ namespace Vereesa.Core.Tests
 			var jobScheduleMock = new Mock<IJobScheduler>();
 			var attRepo = new Mock<IRepository<RaidAttendance>>();
 			var summRepo = new Mock<IRepository<RaidAttendanceSummary>>();
+			var usersChars = new Mock<IRepository<UsersCharacters>>();
 			var logger = new Mock<ILogger<AttendanceService>>();
 			var addedRaids = 0;
 
@@ -27,7 +28,13 @@ namespace Vereesa.Core.Tests
 				.Callback(() => { addedRaids++; })
 				.Returns(Task.CompletedTask);
 
-			var target = new AttendanceService(discord.Object, jobScheduleMock.Object, attRepo.Object, summRepo.Object, logger.Object);
+			var target = new AttendanceService(discord.Object,
+				jobScheduleMock.Object,
+				attRepo.Object,
+				summRepo.Object,
+				usersChars.Object,
+				logger.Object
+			);
 
 			// Act
 			jobScheduleMock.Raise(c => c.EveryDayAtUtcNoon += null);
