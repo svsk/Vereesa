@@ -42,7 +42,7 @@ namespace Vereesa.Core.Services
 				// Build the embed
 				var builder = new EmbedBuilder();
 				builder.WithTitle(item.Name);
-				builder.WithThumbnailUrl($"https://theunderminejournal.com/icon/large/{item.Icon}.jpg");
+				builder.WithThumbnailUrl($"https://theunderminejournal.com/icon/large/{item.Icon.Replace(" ", "")}.jpg");
 				builder.Color = item.QualityColor;
 
 				builder.AddField("__Current Price__", $"{item.GoldPrice}g", true);
@@ -116,7 +116,8 @@ namespace Vereesa.Core.Services
 			request.AddQueryParameter("item", itemId.ToString());
 
 			var response = _restClient.Execute(request);
-			var result = JsonConvert.DeserializeObject<UndermineResult>(response.Content, new JsonSerializerSettings {
+			var result = JsonConvert.DeserializeObject<UndermineResult>(response.Content, new JsonSerializerSettings
+			{
 				DateTimeZoneHandling = DateTimeZoneHandling.Utc
 			});
 
