@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
@@ -51,6 +52,7 @@ namespace Vereesa.Core.Infrastructure
 			}
 
 			var message = $"`{_category} ({logLevel})`: {state.ToString()} {exception}";
+			message = message.Length > 2000 ? message.Substring(0, 1999) + "…" : message;
 
 			if (_channel == null)
 			{
