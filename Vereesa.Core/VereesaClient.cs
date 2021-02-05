@@ -72,7 +72,8 @@ namespace Vereesa.Core
 			_discord = new DiscordSocketClient(new DiscordSocketConfig
 			{
 				LogLevel = LogSeverity.Verbose,
-				MessageCacheSize = 1000
+				MessageCacheSize = 1000,
+				AlwaysDownloadUsers = true
 			});
 
 			//Set up a service provider with all relevant resources for DI
