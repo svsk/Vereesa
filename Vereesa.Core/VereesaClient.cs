@@ -106,6 +106,7 @@ namespace Vereesa.Core
 				.AddScoped<IRepository<RaidAttendance>, AzureStorageRepository<RaidAttendance>>()
 				.AddScoped<IRepository<RaidAttendanceSummary>, AzureStorageRepository<RaidAttendanceSummary>>()
 				.AddScoped<IRepository<UsersCharacters>, AzureStorageRepository<UsersCharacters>>()
+				.AddScoped<IRepository<Personality>, AzureStorageRepository<Personality>>()
 				.AddScoped<IWowheadClient, WowheadClient>()
 				.AddTransient<TwitterClient>()
 				.AddLogging(config =>
