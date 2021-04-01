@@ -19,7 +19,7 @@ namespace Vereesa.Core.Tests.ServicesTests
 
 			var messageMock = new Mock<IMessage>();
 			var channelMock = new Mock<IMessageChannel>();
-			channelMock.Setup(c => c.SendMessageAsync(It.IsAny<string>(), false, null, null))
+			channelMock.Setup(c => c.SendMessageAsync(It.IsAny<string>(), false, null, null, null, null))
 				.Callback<string, bool, Embed, RequestOptions>((msg, isTts, embed, opt) =>
 				{
 					Console.WriteLine(msg);

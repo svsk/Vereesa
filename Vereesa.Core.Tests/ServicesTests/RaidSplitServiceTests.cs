@@ -18,7 +18,7 @@ namespace Vereesa.Core.Tests.ServicesTests
 			var discordMock = new Mock<DiscordSocketClient>();
 			var messageMock = new Mock<IMessage>();
 			string returnedMessage = null;
-			messageMock.Setup(m => m.Channel.SendMessageAsync(It.IsAny<string>(), false, null, null))
+			messageMock.Setup(m => m.Channel.SendMessageAsync(It.IsAny<string>(), false, null, null, null, null))
 				.Callback<string, bool, Embed, RequestOptions>((message, isTts, embed, options) =>
 				{
 					returnedMessage = message;
