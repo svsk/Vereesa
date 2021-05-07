@@ -1,18 +1,18 @@
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Core.Services;
 using Vereesa.Data.Interfaces;
+using Xunit;
 
 namespace Vereesa.Core.Tests
 {
-	[TestClass]
+
 	public class AttendanceServiceTests
 	{
-		[TestMethod]
+		[Fact]
 		public void UpdateAttendance_ClockHitsUtcNoon_AttendanceUpdatedCorrectly()
 		{
 			// Arrange
@@ -40,7 +40,7 @@ namespace Vereesa.Core.Tests
 			jobScheduleMock.Raise(c => c.EveryDayAtUtcNoon += null);
 
 			// Assert
-			Assert.IsTrue(addedRaids > 0);
+			Assert.True(addedRaids > 0);
 		}
 	}
 }

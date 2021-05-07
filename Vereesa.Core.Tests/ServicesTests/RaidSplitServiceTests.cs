@@ -1,17 +1,17 @@
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Moq;
 using Vereesa.Core.Integrations;
 using Vereesa.Core.Services;
 
 namespace Vereesa.Core.Tests.ServicesTests
 {
-	[TestClass]
+
 	public class RaidSplitServiceTests
 	{
-		[TestMethod]
+		[Fact]
 		public async Task TestAsync()
 		{
 			var warcraftLogsApi = new Mock<IWarcraftLogsApi>();
@@ -28,7 +28,7 @@ namespace Vereesa.Core.Tests.ServicesTests
 
 			await service.SplitRaidEvenlyAsync(messageMock.Object, "2");
 
-			Assert.AreEqual("Fenriz, Eyrie, Azibo, Zyx, Xevlicious", returnedMessage);
+			Assert.Equal("Fenriz, Eyrie, Azibo, Zyx, Xevlicious", returnedMessage);
 		}
 	}
 }

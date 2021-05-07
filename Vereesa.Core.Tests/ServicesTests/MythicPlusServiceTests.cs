@@ -1,5 +1,5 @@
-// using Discord.WebSocket;
-// using Microsoft.VisualStudio.TestTools.UnitTesting;
+//
+// using Xunit;
 // using Moq;
 // using Vereesa.Core.Configuration;
 // using Vereesa.Core.Integrations;
@@ -8,7 +8,7 @@
 
 // namespace Vereesa.Core.Tests.ServicesTests
 // {
-// 	[TestClass]
+//
 // 	public class MythicPlusServiceTests
 // 	{
 // 		private MythicPlusService _sut;
@@ -32,18 +32,18 @@
 // 		{
 // 			var result = _sut.ParseMessage(message);
 
-// 			Assert.AreEqual(shouldBeDungeon, result.Dungeon);
-// 			Assert.AreEqual(shouldBeLevel, result.Level);
+// 			Assert.Equal(shouldBeDungeon, result.Dungeon);
+// 			Assert.Equal(shouldBeLevel, result.Level);
 // 		}
 
-// 		[TestMethod]
+// 		[Fact]
 // 		public void GetKeys_GetsListOfKeys()
 // 		{
 // 			var result = _sut.GetKeys();
-// 			Assert.IsNotNull(result);
+// 			Assert.NotNull(result);
 // 		}
 
-// 		[TestMethod]
+// 		[Fact]
 // 		public void AddKey_AddsKeyToSpreadsheet()
 // 		{
 // 			_sut.AddKey("Veinlash", "Temple of Sethralis", 15);

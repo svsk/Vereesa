@@ -1,22 +1,23 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 using Vereesa.Core.Integrations;
+using Xunit;
 
 namespace Vereesa.Core.Tests.IntegrationTests
 {
-    [TestClass]
-    public class WowheadClientTests
-    {
-        [TestMethod]
-        public void GetTodayInWow_GettingTodayInWowFromWowhead_ReceivedCorrectly() 
-        {
-            //Arrange
-            var target  = new WowheadClient();
 
-            //Act
-            var result = target.GetTodayInWow();
+	public class WowheadClientTests
+	{
+		[Fact]
+		public void GetTodayInWow_GettingTodayInWowFromWowhead_ReceivedCorrectly()
+		{
+			//Arrange
+			var target = new WowheadClient();
 
-            //Assert
-            Assert.IsNotNull(result);
-        }
-    }
+			//Act
+			var result = target.GetTodayInWow();
+
+			//Assert
+			Assert.NotNull(result);
+		}
+	}
 }

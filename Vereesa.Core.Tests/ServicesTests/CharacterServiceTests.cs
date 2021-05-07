@@ -1,17 +1,17 @@
 using System;
 using System.Threading.Tasks;
 using Discord;
-using Discord.WebSocket;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Moq;
 using Vereesa.Core.Services;
+using Discord.WebSocket;
 
 namespace Vereesa.Core.Tests.ServicesTests
 {
-	[TestClass]
+
 	public class CharacterServiceTests
 	{
-		[TestMethod]
+		[Fact]
 		public async Task Test()
 		{
 			var mockDiscord = new Mock<DiscordSocketClient>();
@@ -30,7 +30,7 @@ namespace Vereesa.Core.Tests.ServicesTests
 
 			await target.HandleClaimCommandAsync(messageMock.Object, "Veinlash-Karazhan");
 
-			// Assert.IsTrue(called);
+			// Assert.True(called);
 		}
 	}
 }
