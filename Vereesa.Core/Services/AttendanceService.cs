@@ -47,14 +47,19 @@ namespace Vereesa.Core.Services
 			jobScheduler.EveryDayAtUtcNoon += TriggerPeriodicAttendanceUpdateAsync;
 		}
 
-		private async Task TriggerPeriodicAttendanceUpdateAsync() => await UpdateAttendanceAsync(false);
+		private async Task TriggerPeriodicAttendanceUpdateAsync()
+		{
+			await UpdateAttendanceAsync(false);
+
+		}
 
 		[OnCommand("!attendance update")]
 		[Description("Updates attendance. Only available to Guild Master role.")]
 		[Authorize("Guild Master")]
 		[AsyncHandler]
-		public async Task ForceAttendanceUpdate(IMessage message) 
+		public async Task ForceAttendanceUpdate(IMessage message)
 		{
+			await message.Channel.SendMessageAsync("Updating attendance...");
 			await UpdateAttendanceAsync(false);
 			await message.Channel.SendMessageAsync("✅ Attendance updated.");
 		}
@@ -65,48 +70,49 @@ namespace Vereesa.Core.Services
 		[AsyncHandler]
 		public async Task PruneAttendance(IMessage message)
 		{
-			var zoneId = (await Prompt(message.Author, $"What zone ID? (Hint: {_raidIds.Last().Value})", 
+			var zoneId = (await Prompt(message.Author, $"What zone ID? (Hint: {_raidIds.Last().Value})",
 				message.Channel))?.Content;
 
 			var attendanceReports = (await _attendanceRepo.GetAllAsync()).Where(att => att.ZoneId == zoneId && !att.Excluded);
 
-			var raidGroupings = attendanceReports.GroupBy(r => 
+			var raidGroupings = attendanceReports.GroupBy(r =>
 				Instant.FromUnixTimeMilliseconds(r.Timestamp).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
 				.ToList();
 
-			foreach (var raids in raidGroupings) 
+			foreach (var raids in raidGroupings)
 			{
-				if (raids.Count() > 1) 
+				if (raids.Count() > 1)
 				{
-					var raidsToMerge = string.Join("\n", raids.Select((r, idx) =>  $"[{idx + 1}] {raids.Key} - {r.LogUrl} - {r.Attendees.Count} attendees"));
+					var raidsToMerge = string.Join("\n", raids.Select((r, idx) =>
+						$"[{idx + 1}] {raids.Key} - {r.LogUrl} - {r.Attendees.Count} attendees"));
 
-					var response = await Prompt(message.Author, 
+					var response = await Prompt(message.Author,
 						$"Detected possible duplicate reports.\n\n{raidsToMerge}\n" +
-						"Pick an action: \n`merge`\n`pick <id>`\n`ignore`", 
+						"Pick an action: \n`merge`\n`pick <id>`\n`ignore`",
 						message.Channel, 60000);
 
 					if (response?.Content == "merge")
 					{
 						var recordToKeep = raids.First();
-						foreach (var recordToExclude in raids.Skip(1)) 
+						foreach (var recordToExclude in raids.Skip(1))
 						{
 							recordToKeep.Attendees = recordToKeep.Attendees.Concat(recordToExclude.Attendees)
 								.Distinct()
 								.ToList();
-							
+
 							recordToExclude.Excluded = true;
 							_attendanceRepo.AddOrEdit(recordToExclude);
 						}
 
 						_attendanceRepo.AddOrEdit(recordToKeep);
-					} 
+					}
 					else if (response?.Content.StartsWith("pick ") == true)
 					{
 						var idx = int.Parse(response.Content.Replace("pick ", "").Trim()) - 1;
 						var recordToKeep = raids.ElementAt(idx);
-						
+
 						foreach (var recordToExclude in raids.Where(r => r.Id != recordToKeep.Id))
-						{	
+						{
 							recordToExclude.Excluded = true;
 							_attendanceRepo.AddOrEdit(recordToExclude);
 						}
@@ -115,6 +121,11 @@ namespace Vereesa.Core.Services
 			}
 
 			await message.Channel.SendMessageAsync("✅ Attendance pruned.");
+		}
+
+		private RaidAttendanceSummary GetSummary(string raidId)
+		{
+			return _attendanceSummaryRepo.FindById($"tenraid-wcl-zone-{raidId}");
 		}
 
 		private async Task UpdateAttendanceAsync(bool forceUpdate)
@@ -242,13 +253,13 @@ namespace Vereesa.Core.Services
 		{
 			var users = _userCharacters.FindById(CharacterService.BlobContainer);
 			var characterOwner = users.CharacterMap
-				.FirstOrDefault(cm => cm.Value.Any(c => c.StartsWith($"{character}-", 
+				.FirstOrDefault(cm => cm.Value.Any(c => c.StartsWith($"{character}-",
 					StringComparison.CurrentCultureIgnoreCase)));
 
 			return characterOwner.Key != 0 ? characterOwner.Key.MentionPerson() : character;
 		}
 
-		[OnCommand("!attendance")]
+		[OnCommand("!attendance total")]
 		[Description("Lists current attendance standing.")]
 		public async Task HandleMessageReceived(IMessage message)
 		{
@@ -269,7 +280,35 @@ namespace Vereesa.Core.Services
 
 			var zoneName = GetRaidName(zoneId);
 
-			var attendanceReport = $"**Attendance for {zoneName}**\nUpdated daily at 12:00 UTC. Only raids logged to WarcraftLogs are included.\n\n{characterList}";
+			var attendanceReport = $"**Attendance for {zoneName}**\n" +
+				$"Updated daily at 12:00 UTC. Only raids logged to WarcraftLogs are included.\n\n{characterList}";
+
+			attendanceReport = !truncated ? attendanceReport : $"{attendanceReport}\n\nSome entries have been truncated.";
+
+			await message.Channel.SendMessageAsync(attendanceReport);
+		}
+
+		[OnCommand("!attendance")]
+		[Description("Lists attendance from last ten raids")]
+		public async Task ListLatestAttendance(IMessage message)
+		{
+			var zoneId = GetRaidIdOrDefault();
+			var zoneName = GetRaidName(zoneId);
+			var summary = GetSummary(zoneId);
+
+			var characterList = string.Join("\n", summary.Rankings
+				.Select(ranking => $"{ranking.CharacterName}: {ranking.AttendancePercentage}%")
+			);
+
+			var truncated = false;
+			if (characterList.Length > 1700)
+			{
+				characterList = characterList.Substring(0, characterList.Substring(0, 1500).LastIndexOf("\n"));
+				truncated = true;
+			}
+
+			var attendanceReport = $"**Attendance for the last 10 raids in {zoneName}**\n" +
+				$"Updated daily at 12:00 UTC. Only raids logged to WarcraftLogs are included.\n\n{characterList}";
 
 			attendanceReport = !truncated ? attendanceReport : $"{attendanceReport}\n\nSome entries have been truncated.";
 
@@ -291,18 +330,21 @@ namespace Vereesa.Core.Services
 
 		public List<RaidAttendance> GetAttendanceFromWarcraftLogs(string zoneId, int page = 1)
 		{
-			var request = new RestRequest($"https://www.warcraftlogs.com/guild/attendance-table/{_guildId}/0/{zoneId}?page={page}", Method.GET);
+			var request = new RestRequest(
+				$"https://www.warcraftlogs.com/guild/attendance-table/{_guildId}/0/{zoneId}?page={page}", Method.GET);
 
 			var result = _restClient.Execute(request);
 
 			var doc = new HtmlDocument();
 			doc.LoadHtml(result.Content);
 
-			var lastPageStr = doc.DocumentNode.SelectNodes("//*[contains(@class, \"page-item\") and position() = (last() - 1)]")?.FirstOrDefault()?.InnerText;
+			var lastPageStr = doc.DocumentNode.SelectNodes(
+				"//*[contains(@class, \"page-item\") and position() = (last() - 1)]")?.FirstOrDefault()?.InnerText;
 			var lastPage = int.Parse(lastPageStr ?? "1");
 
 			var header = doc.DocumentNode.SelectNodes("//*[@id=\"attendance-table\"]/thead/th");
-			var characterRows = doc.DocumentNode.SelectNodes("//*[@id=\"attendance-table\"]/tbody/tr")?.ToList() ?? new List<HtmlNode>();
+			var characterRows = doc.DocumentNode.SelectNodes("//*[@id=\"attendance-table\"]/tbody/tr")?.ToList() ??
+				new List<HtmlNode>();
 
 			var raids = header.Skip(2).Select(node =>
 			{
