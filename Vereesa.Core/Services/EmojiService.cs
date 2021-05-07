@@ -15,7 +15,7 @@ namespace Vereesa.Core.Services
 	{
 		private readonly ILogger<EmojiService> _logger;
 
-		private SocketRole _officerRole => Discord.GetRole(124251615489294337);
+		private IRole _officerRole => Discord.GetRole(124251615489294337);
 
 		public EmojiService(DiscordSocketClient discord, ILogger<EmojiService> logger)
 			: base(discord)

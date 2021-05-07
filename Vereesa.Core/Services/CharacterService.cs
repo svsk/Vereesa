@@ -17,9 +17,8 @@ namespace Vereesa.Core.Services
 	{
 		private IRepository<UsersCharacters> _userCharactersRepository;
 
-		private SocketRole _gmRole => Discord.GetRole(124251327650988036);
-		private SocketRole _officerRole => Discord.GetRole(124251615489294337);
-		private SocketRole _responsibleRole => _officerRole;
+		private IRole _officerRole => Discord.GetRole(124251615489294337);
+		private IRole _responsibleRole => _officerRole;
 		public const string BlobContainer = "users-characters.json";
 
 		public CharacterService(DiscordSocketClient discord,
@@ -87,17 +86,17 @@ namespace Vereesa.Core.Services
 			var usersCharacters = _userCharactersRepository.FindById(BlobContainer) ??
 				new UsersCharacters(BlobContainer);
 
-			try 
+			try
 			{
 				usersCharacters.RemoveChar(userId, characterName.ToLowerInvariant());
 			}
-			catch (InvalidOperationException ex) 
+			catch (InvalidOperationException ex)
 			{
 				return ex.Message;
 			}
 
 			_userCharactersRepository.AddOrEdit(usersCharacters);
-			
+
 			return "Removed";
 		}
 
@@ -225,13 +224,13 @@ namespace Vereesa.Core.Services
 			}
 		}
 
-		public void RemoveChar(ulong userId, string characterName) 
+		public void RemoveChar(ulong userId, string characterName)
 		{
-			if (this.CharacterMap.ContainsKey(userId) && this.CharacterMap[userId].Contains(characterName)) 
+			if (this.CharacterMap.ContainsKey(userId) && this.CharacterMap[userId].Contains(characterName))
 			{
 				this.CharacterMap[userId].Remove(characterName);
 			}
-			else 
+			else
 			{
 				throw new InvalidOperationException("Character not claimed by user.");
 			}

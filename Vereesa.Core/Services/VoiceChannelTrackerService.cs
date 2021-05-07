@@ -17,7 +17,7 @@ namespace Vereesa.Core.Services
 		private ILogger<VoiceChannelTrackerService> _logger;
 		private DiscordSocketClient _discord;
 		private VoiceChannelTrackerSettings _settings;
-		private ISocketMessageChannel _announcementChannel;
+		private IMessageChannel _announcementChannel;
 		private Timer _clearOldMessagesInterval;
 
 		public VoiceChannelTrackerService(DiscordSocketClient discord, VoiceChannelTrackerSettings settings, ILogger<VoiceChannelTrackerService> logger)

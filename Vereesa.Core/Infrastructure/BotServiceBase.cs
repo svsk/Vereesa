@@ -20,7 +20,6 @@ namespace Vereesa.Core.Infrastructure
 		public BotServiceBase(DiscordSocketClient discord)
 		{
 			Discord = discord;
-
 			BindCommands();
 		}
 
@@ -61,7 +60,7 @@ namespace Vereesa.Core.Infrastructure
 			{
 				Discord.MessageReceived += async (messageForEvaluation) =>
 				{
-					if (GetBestMatchingCommandHandler(messageForEvaluation, commandHandlers) is {} commandHandler)
+					if (GetBestMatchingCommandHandler(messageForEvaluation, commandHandlers) is { } commandHandler)
 					{
 						await ExecuteMessageHandlerAsync(messageForEvaluation, commandHandler);
 					}
@@ -121,7 +120,7 @@ namespace Vereesa.Core.Infrastructure
 			}
 		}
 
-		private async Task ExecuteMessageHandlerAsync(SocketMessage messageToHandle,
+		private async Task ExecuteMessageHandlerAsync(IMessage messageToHandle,
 			(string command, MethodInfo method) commandHandler)
 		{
 			async Task ExecuteCommand(string command, MethodInfo handler)
@@ -138,7 +137,7 @@ namespace Vereesa.Core.Infrastructure
 					{
 						await messageToHandle.Channel.SendMessageAsync($"`{command}` usage: {usageAttribute.UsageDescription}");
 					}
-					else 
+					else
 					{
 						await messageToHandle.Channel.SendMessageAsync($"I wasn't able to do that. You sure you did that right? Tell Vein to write a usage description for `{command}` to help.");
 					}
@@ -150,7 +149,7 @@ namespace Vereesa.Core.Infrastructure
 				return;
 			}
 
-			// If the command is marked Async, we just fire and forget, because it may be really long 
+			// If the command is marked Async, we just fire and forget, because it may be really long
 			// running.
 			if (commandHandler.method.GetCustomAttribute<AsyncHandlerAttribute>() != null)
 			{
@@ -162,29 +161,29 @@ namespace Vereesa.Core.Infrastructure
 			}
 		}
 
-		private List<object> BuildHandlerParamList(string command, MethodInfo handler, SocketMessage sourceMessage)
+		private List<object> BuildHandlerParamList(string command, MethodInfo handler, IMessage sourceMessage)
 		{
 			var commandArgString = sourceMessage.Content.Substring(command.Length)
 				.Trim()
 				.ToArray();
 
 			var args = new List<string>();
-			if (commandArgString.Length > 0) 
+			if (commandArgString.Length > 0)
 			{
 				args.Add("");
 				var isInQuotes = false;
-				for (var i = 0; i < commandArgString.Length; i++) 
+				for (var i = 0; i < commandArgString.Length; i++)
 				{
 					if (commandArgString[i] == '"')
 					{
 						isInQuotes = !isInQuotes;
-					} 
-					else if (commandArgString[i] == ' ' && !isInQuotes) 
+					}
+					else if (commandArgString[i] == ' ' && !isInQuotes)
 					{
 						// new argument
 						args.Add("");
 					}
-					else 
+					else
 					{
 						args[args.Count - 1] += commandArgString[i];
 					}
@@ -196,13 +195,13 @@ namespace Vereesa.Core.Infrastructure
 				.ToList();
 
 			var handlerParams = new List<object>();
-			if (!argAttributes.Any()) 
+			if (!argAttributes.Any())
 			{
 				handlerParams.AddRange(args);
 			}
-			else 
+			else
 			{
-				foreach (var attr in argAttributes) 
+				foreach (var attr in argAttributes)
 				{
 					handlerParams.Add(string.Join(' ', args.Skip(attr.ArgumentIndex)));
 					args = args.Take(attr.ArgumentIndex).ToList();
@@ -227,7 +226,7 @@ namespace Vereesa.Core.Infrastructure
 				?.FirstOrDefault();
 		}
 
-		private bool UserCanExecute(SocketUser caller, MethodInfo method)
+		private bool UserCanExecute(IUser caller, MethodInfo method)
 		{
 			var isAuthorized = true;
 			var authorizeAttributes = method.GetCustomAttributes(true).OfType<AuthorizeAttribute>();
@@ -253,9 +252,9 @@ namespace Vereesa.Core.Infrastructure
 		/// <param name="promptMessage">The message sent to the prompted role.</param>
 		/// <param name="channel">The channel in which to prompt the role.</param>
 		/// <param name="timeoutMs">Duration in milliseconds to wait for a response.</param>
-		/// <returns>The first message sent by a person with the prompted role in the selected channel. 
+		/// <returns>The first message sent by a person with the prompted role in the selected channel.
 		/// Null if no one in the responsible role responds before the timeout.</returns>
-		protected Task<IMessage> Prompt(SocketRole role, string promptMessage, IMessageChannel channel,
+		protected Task<IMessage> Prompt(IRole role, string promptMessage, IMessageChannel channel,
 			int timeoutMs = 15000) => Prompt(role, promptMessage, channel,
 				(u) => ((IGuildUser)u).RoleIds.Contains(role.Id), timeoutMs);
 
