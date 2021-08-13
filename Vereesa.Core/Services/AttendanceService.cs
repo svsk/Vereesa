@@ -31,7 +31,8 @@ namespace Vereesa.Core.Services
 		private Dictionary<string, string> _raidIds = new Dictionary<string, string>
 		{
 			//{ "ny'alotha, the waking city", "24" },
-			{ "castle nathria", "26" },
+			// { "castle nathria", "26" },
+			{ "sanctum of domination", "28" }
 		};
 
 		public AttendanceService(DiscordSocketClient discord, IJobScheduler jobScheduler,
