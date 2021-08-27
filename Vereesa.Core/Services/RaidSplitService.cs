@@ -5,11 +5,22 @@ using Discord.WebSocket;
 using Vereesa.Core.Infrastructure;
 using System.Linq;
 using Vereesa.Core.Integrations;
+using System.Web;
+using Vereesa.Core.Extensions;
 
 namespace Vereesa.Core.Services
 {
 	public class RaidSplitService : BotServiceBase
 	{
+		private enum RaidRole
+		{
+			Tank,
+			Healer,
+			RangedDps,
+			MeleeDps,
+			Unknown
+		}
+
 		private IWarcraftLogsApi _warcraftLogs;
 
 		public RaidSplitService(DiscordSocketClient discord, IWarcraftLogsApi warcraftLogs)
@@ -21,8 +32,18 @@ namespace Vereesa.Core.Services
 		[OnCommand("!raid split")]
 		[AsyncHandler]
 		[WithArgument("requestedNumberOfGroups", 0)]
-		public async Task SplitRaidEvenlyAsync(IMessage message, string requestedNumberOfGroups)
+		[WithArgument("roles", 1)]
+		public async Task SplitRaidEvenlyAsync(IMessage message, string requestedNumberOfGroups, string rolesInput)
 		{
+			int requestedGroupSize = 40;
+
+			if (requestedNumberOfGroups.Contains("x"))
+			{
+				var groupSizeSplit = requestedNumberOfGroups.Split("x");
+				requestedNumberOfGroups = groupSizeSplit[0].Trim();
+				int.TryParse(groupSizeSplit[1], out requestedGroupSize);
+			}
+
 			if (!int.TryParse(requestedNumberOfGroups, out var numberOfGroups))
 			{
 				await message.Channel
@@ -40,18 +61,27 @@ namespace Vereesa.Core.Services
 			var roleGroups = members.OrderBy(m => m.Guid).GroupBy(m => MapSpec(m.Type, m.Specs.First()));
 
 			var groups = new int[numberOfGroups].Select(c => new List<ReportCharacter>()).ToArray();
+			var includedRoles = GetIncludedRoles(rolesInput);
 
-			var rangedDps = roleGroups.FirstOrDefault(rg => rg.Key == "ranged-dps")?.ToList()
-				?? new List<ReportCharacter>();
+			var rangedDps = roleGroups.FirstOrDefault(rg =>
+				rg.Key == RaidRole.RangedDps &&
+				includedRoles.Contains(RaidRole.RangedDps)
+			)?.ToList() ?? new List<ReportCharacter>();
 
-			var meleeDps = roleGroups.FirstOrDefault(rg => rg.Key == "melee-dps")?.ToList()
-				?? new List<ReportCharacter>();
+			var meleeDps = roleGroups.FirstOrDefault(rg =>
+				rg.Key == RaidRole.MeleeDps &&
+				includedRoles.Contains(RaidRole.MeleeDps)
+			)?.ToList() ?? new List<ReportCharacter>();
 
-			var tanks = roleGroups.FirstOrDefault(rg => rg.Key == "tank")?.ToList()
-				?? new List<ReportCharacter>();
+			var tanks = roleGroups.FirstOrDefault(rg =>
+				rg.Key == RaidRole.Tank &&
+				includedRoles.Contains(RaidRole.Tank)
+			)?.ToList() ?? new List<ReportCharacter>();
 
-			var healers = roleGroups.FirstOrDefault(rg => rg.Key == "healer")?.ToList()
-				?? new List<ReportCharacter>();
+			var healers = roleGroups.FirstOrDefault(rg =>
+				rg.Key == RaidRole.Healer &&
+				includedRoles.Contains(RaidRole.Healer)
+			)?.ToList() ?? new List<ReportCharacter>();
 
 			for (var i = 0; i < rangedDps.Count; i++)
 			{
@@ -79,41 +109,107 @@ namespace Vereesa.Core.Services
 				groups[i % numberOfGroups].Add(healers.ElementAt(i));
 			}
 
-			var returnMessage = "";
+			var embed = new EmbedBuilder();
+			var export = "";
 			var grpNum = 1;
+
+			embed.Color = new Color(155, 89, 182);
+			embed.Title = "Raid Split Result";
+
 			foreach (var group in groups)
 			{
-				returnMessage += $"**Group {grpNum}**\n";
-				returnMessage += string.Join("\n", group.Select(p => $"{GroupIcon(p.Type, p.Specs.First())} {p.Name}"));
-				returnMessage += "\n\n";
+				var groupMembers = string.Join("\n",
+					group.Take(requestedGroupSize).Select(p => $"{GroupIcon(p.Type, p.Specs.First())} {p.Name}")
+				);
+
+				embed.AddField($"**Group {grpNum}**", groupMembers, true);
+
+				if (grpNum > 1)
+				{
+					export += "\n\n";
+				}
+
+				export += $"**Group {grpNum}**\n";
+				export += groupMembers;
+
 				grpNum++;
 			}
 
-			await message.Channel.SendMessageAsync(returnMessage);
+			var exportLink = "https://www.skyloft.no/apps/vereesa/ert/?note=" +
+				HttpUtility.UrlEncode(Compressor.Zip(ErtFormat(export)));
+
+			embed.AddField("Summary",
+				$"I have split the raid into `{numberOfGroups}` groups of max `{requestedGroupSize}` members.\n" +
+				"You can also do `!raid split 2x2 melee-dps`, `!raid split 2 healer`, or `!raid split 3x3 ranged`. " +
+				"Try it out!\n\n"
+			);
+
+			embed.AddField("Export", $"Click [here]({exportLink}) to find a nice export to ERT.");
+
+			embed.Footer = new EmbedFooterBuilder();
+			embed.Footer.Text = $"Requested by {message.Author.Username} - Today at {DateTimeExtensions.NowInCentralEuropeanTime().ToString("HH:mm")}";
+
+			await message.Channel.SendMessageAsync(embed: embed.Build());
+		}
+
+		private string ErtFormat(string input)
+		{
+			return input.Replace("💖", "{spell:6940}")
+				.Replace("🛡", "{spell:193991}")
+				.Replace("🏹", "{spell:259006}")
+				.Replace("⚔", "{spell:138422}");
+		}
+
+		private HashSet<RaidRole> GetIncludedRoles(string rolesInput)
+		{
+			switch (rolesInput.ToLowerInvariant())
+			{
+				case "dps":
+					return new HashSet<RaidRole> { RaidRole.MeleeDps, RaidRole.RangedDps };
+				case "melee":
+					return new HashSet<RaidRole> { RaidRole.MeleeDps, RaidRole.Tank };
+				case "melee-dps":
+					return new HashSet<RaidRole> { RaidRole.MeleeDps };
+				case "ranged":
+					return new HashSet<RaidRole> { RaidRole.Healer, RaidRole.RangedDps };
+				case "ranged-dps":
+					return new HashSet<RaidRole> { RaidRole.RangedDps };
+				case "healer":
+					return new HashSet<RaidRole> { RaidRole.Healer };
+				case "tank":
+					return new HashSet<RaidRole> { RaidRole.Tank };
+				default:
+					return new HashSet<RaidRole> { RaidRole.Healer, RaidRole.Tank, RaidRole.RangedDps, RaidRole.MeleeDps };
+			}
 		}
 
 		private string GroupIcon(string className, Specialization specialization)
 		{
 			switch (MapSpec(className, specialization))
 			{
-				case "ranged-dps":
+				case RaidRole.RangedDps:
 					return "🏹";
-				case "melee-dps":
+				case RaidRole.MeleeDps:
 					return "⚔";
-				case "healer":
+				case RaidRole.Healer:
 					return "💖";
-				case "tank":
+				case RaidRole.Tank:
 					return "🛡";
 				default:
 					return "❔";
 			}
 		}
 
-		private string MapSpec(string className, Specialization specialization)
+		private RaidRole MapSpec(string className, Specialization specialization)
 		{
-			if (specialization.Role != "dps")
+			if (specialization.Role == "tank")
 			{
-				return specialization.Role;
+				return RaidRole.Tank;
+			}
+
+			if (specialization.Role == "healer")
+			{
+				return RaidRole.Healer;
 			}
 
 			switch (specialization.Spec)
@@ -130,11 +226,11 @@ namespace Vereesa.Core.Services
 				case "Feral":
 				case "Havoc":
 				case "Unholy":
-					return "melee-dps";
+					return RaidRole.MeleeDps;
 				case "Frost":
-					return className == "Mage" ? "ranged-dps" : "melee-dps";
+					return className == "Mage" ? RaidRole.RangedDps : RaidRole.MeleeDps;
 				default:
-					return "ranged-dps";
+					return RaidRole.RangedDps;
 			}
 		}
 	}
