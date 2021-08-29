@@ -35,7 +35,7 @@ namespace Vereesa.Core.Services
 		[WithArgument("roles", 1)]
 		public async Task SplitRaidEvenlyAsync(IMessage message, string requestedNumberOfGroups, string rolesInput)
 		{
-			int requestedGroupSize = 40;
+			var requestedGroupSize = 40;
 
 			if (requestedNumberOfGroups.Contains("x"))
 			{
@@ -52,70 +52,52 @@ namespace Vereesa.Core.Services
 				return;
 			}
 
-			var lastRaid = (await _warcraftLogs.GetRaidReports()).First();
-
-			var totalRaidDuration = lastRaid.End - lastRaid.Start;
-			var windowStart = totalRaidDuration - (totalRaidDuration * 0.5);
-			var windowEnd = totalRaidDuration;
-			var members = await _warcraftLogs.GetRaidComposition(lastRaid.Id, (long)windowStart, windowEnd);
-			var roleGroups = members.OrderBy(m => m.Guid).GroupBy(m => MapSpec(m.Type, m.Specs.First()));
-
-			var groups = new int[numberOfGroups].Select(c => new List<ReportCharacter>()).ToArray();
 			var includedRoles = GetIncludedRoles(rolesInput);
+			var raidMembers = await GetLastRaidMembersAsync();
+			var roleGroups = raidMembers.OrderBy(m => m.Guid)
+				.GroupBy(m => MapSpec(m.Type, m.Specs.First()))
+				.Where(grp => includedRoles.Contains(grp.Key));
 
-			var rangedDps = roleGroups.FirstOrDefault(rg =>
-				rg.Key == RaidRole.RangedDps &&
-				includedRoles.Contains(RaidRole.RangedDps)
-			)?.ToList() ?? new List<ReportCharacter>();
+			var groups = new int[numberOfGroups]
+				.Select(c => new List<ReportCharacter>())
+				.ToArray();
 
-			var meleeDps = roleGroups.FirstOrDefault(rg =>
-				rg.Key == RaidRole.MeleeDps &&
-				includedRoles.Contains(RaidRole.MeleeDps)
-			)?.ToList() ?? new List<ReportCharacter>();
-
-			var tanks = roleGroups.FirstOrDefault(rg =>
-				rg.Key == RaidRole.Tank &&
-				includedRoles.Contains(RaidRole.Tank)
-			)?.ToList() ?? new List<ReportCharacter>();
-
-			var healers = roleGroups.FirstOrDefault(rg =>
-				rg.Key == RaidRole.Healer &&
-				includedRoles.Contains(RaidRole.Healer)
-			)?.ToList() ?? new List<ReportCharacter>();
-
-			for (var i = 0; i < rangedDps.Count; i++)
+			foreach (var role in roleGroups)
 			{
-				groups[i % numberOfGroups].Add(rangedDps.ElementAt(i));
+				for (var i = 0; i < role.Count(); i++)
+				{
+					groups[i % numberOfGroups].Add(role.ElementAt(i));
+				}
+
+				groups = groups.OrderBy(g => g.Count).ToArray();
 			}
 
-			groups = groups.OrderBy(g => g.Count).ToArray();
+			var embed = GenerateEmbed(groups, numberOfGroups, requestedGroupSize, message.Author);
+			await message.Channel.SendMessageAsync(embed: embed);
+		}
 
-			for (var i = 0; i < meleeDps.Count; i++)
-			{
-				groups[i % numberOfGroups].Add(meleeDps.ElementAt(i));
-			}
+		private async Task<List<ReportCharacter>> GetLastRaidMembersAsync()
+		{
+			var lastRaid = (await _warcraftLogs.GetRaidReports()).First();
+			var totalRaidDuration = lastRaid.End - lastRaid.Start;
+			var windowStart = totalRaidDuration - (totalRaidDuration * 0.5); // last half
+			var windowEnd = totalRaidDuration;
 
-			groups = groups.OrderBy(g => g.Count).ToArray();
+			return await _warcraftLogs.GetRaidComposition(lastRaid.Id, (long)windowStart, windowEnd);
+		}
 
-			for (var i = 0; i < tanks.Count; i++)
-			{
-				groups[i % numberOfGroups].Add(tanks.ElementAt(i));
-			}
+		private Embed GenerateEmbed(List<ReportCharacter>[] groups,
+			int numberOfGroups,
+			int requestedGroupSize,
+			IUser requester
+		)
+		{
+			var embed = new EmbedBuilder()
+				.WithTitle("Raid Split Result")
+				.WithColor(new Color(155, 89, 182));
 
-			groups = groups.OrderBy(g => g.Count).ToArray();
-
-			for (var i = 0; i < healers.Count; i++)
-			{
-				groups[i % numberOfGroups].Add(healers.ElementAt(i));
-			}
-
-			var embed = new EmbedBuilder();
 			var export = "";
 			var grpNum = 1;
-
-			embed.Color = new Color(155, 89, 182);
-			embed.Title = "Raid Split Result";
-
 			foreach (var group in groups)
 			{
 				var groupMembers = string.Join("\n",
@@ -141,15 +123,16 @@ namespace Vereesa.Core.Services
 			embed.AddField("Summary",
 				$"I have split the raid into `{numberOfGroups}` groups of max `{requestedGroupSize}` members.\n" +
 				"You can also do `!raid split 2x2 melee-dps`, `!raid split 2 healer`, or `!raid split 3x3 ranged`. " +
-				"Try it out!\n\n"
+				"Try it out!\n\n")
+			.AddField("Export", $"Click [here]({exportLink}) to find a nice export to ERT.")
+			.WithFooter(new EmbedFooterBuilder()
+				.WithText(
+					$"Requested by {requester.Username}" +
+					$" - Today at {DateTimeExtensions.NowInCentralEuropeanTime().ToString("HH:mm")}"
+				)
 			);
 
-			embed.AddField("Export", $"Click [here]({exportLink}) to find a nice export to ERT.");
-
-			embed.Footer = new EmbedFooterBuilder();
-			embed.Footer.Text = $"Requested by {message.Author.Username} - Today at {DateTimeExtensions.NowInCentralEuropeanTime().ToString("HH:mm")}";
-
-			await message.Channel.SendMessageAsync(embed: embed.Build());
+			return embed.Build();
 		}
 
 		private string ErtFormat(string input)
