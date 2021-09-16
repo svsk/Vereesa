@@ -117,7 +117,7 @@ namespace Vereesa.Core.Services
 				grpNum++;
 			}
 
-			var exportLink = "https://www.skyloft.no/apps/vereesa/ert/?note=" +
+			var exportLink = "https://vereesa.neon.gg/ert/?note=" +
 				HttpUtility.UrlEncode(Compressor.Zip(ErtFormat(export)));
 
 			embed.AddField("Summary",
