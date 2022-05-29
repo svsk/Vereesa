@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Vereesa.Awdeo;
 using Vereesa.Core;
 
 namespace Vereesa.ConsoleApp
@@ -10,7 +11,10 @@ namespace Vereesa.ConsoleApp
 		{
 			var keepRunning = true;
 			var client = new VereesaClient();
-			await client.StartupAsync();
+			await client.StartupAsync((services, config) =>
+			{
+				services.AddAwdeo(config);
+			});
 
 			while (keepRunning)
 			{

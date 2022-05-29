@@ -56,5 +56,12 @@
   },
   "WarcraftLogsApiSettings": {
     "ApiKey": ""
+  },
+  "SpotifyClientSettings": {
+    "Credentials": ""
+  },
+  "YouTubeClientSettings": {
+    "ApiKey": "",
+    "ApplicationName": ""
   }
 }

@@ -1,27 +1,35 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
-using Vereesa.Core.Integrations;
 using Vereesa.Core.Infrastructure;
+using Vereesa.Core.Integrations;
 
 namespace Vereesa.Core.Services
 {
 	public class TwitterService : BotServiceBase
 	{
-		private TwitterServiceSettings _settings;
-		private DiscordSocketClient _discord;
-		private TwitterClient _twitter;
+		private readonly TwitterServiceSettings _settings;
+		private readonly DiscordSocketClient _discord;
+		private readonly TwitterClient _twitter;
+		private readonly ILogger<TwitterService> _logger;
 		private Timer _checkInterval;
 		private long? _lastTweetIDSeen;
 
-		public TwitterService(TwitterServiceSettings settings, TwitterClient twitterClient, DiscordSocketClient discord)
+		public TwitterService(
+			TwitterServiceSettings settings,
+			TwitterClient twitterClient,
+			DiscordSocketClient discord,
+			ILogger<TwitterService> logger
+		)
 			: base(discord)
 		{
 			_settings = settings;
@@ -30,26 +38,39 @@ namespace Vereesa.Core.Services
 
 			_discord.Ready -= InitializeServiceAsync;
 			_discord.Ready += InitializeServiceAsync;
+			_logger = logger;
 		}
 
 		private async Task InitializeServiceAsync()
 		{
 			_checkInterval?.Stop();
 			_checkInterval?.Dispose();
-			_checkInterval = await TimerHelpers.SetTimeoutAsync(async () => { await CheckForNewTweetsAsync(); }, _settings.CheckIntervalSeconds * 1000, true, true);
+			_checkInterval = await TimerHelpers.SetTimeoutAsync(
+				async () =>
+				{
+					await CheckForNewTweetsAsync();
+				}, _settings.CheckIntervalSeconds * 1000, true, true
+			);
 		}
 
 		private async Task CheckForNewTweetsAsync()
 		{
-			var latestTweets = await _twitter.GetLatestTweetsAsync(_settings.SourceTwitterUser);
-			var lastTweet = latestTweets.FirstOrDefault();
-
-			if (_lastTweetIDSeen != null && _lastTweetIDSeen != lastTweet?.Id)
+			try
 			{
-				await SendTweetToTargetChannelAsync(lastTweet);
-			}
+				var latestTweets = await _twitter.GetLatestTweetsAsync(_settings.SourceTwitterUser);
+				var lastTweet = latestTweets.FirstOrDefault();
 
-			_lastTweetIDSeen = lastTweet != null ? lastTweet.Id : -1;
+				if (_lastTweetIDSeen != null && _lastTweetIDSeen != lastTweet?.Id)
+				{
+					await SendTweetToTargetChannelAsync(lastTweet);
+				}
+
+				_lastTweetIDSeen = lastTweet != null ? lastTweet.Id : -1;
+			}
+			catch (AccessViolationException)
+			{
+				_logger.LogWarning("Could not check for new Tweets. Failed to authenticate with Twitter.");
+			}
 		}
 
 		protected virtual async Task SendTweetToTargetChannelAsync(Tweet tweet)

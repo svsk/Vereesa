@@ -1,0 +1,68 @@
+{
+    "prefix": "!",
+
+    "DiscordSettings": {
+        "Token": null
+    },
+    "AzureStorageSettings": {
+        "ConnectionString": ""
+    },
+    "GameStateEmissionSettings": {
+        "EmissionEndpoint": "",
+        "EmissionEndpointUserKey": ""
+    },
+    "GoogleSheetSettings": {
+        "GoogleSheetCsvUrl": "",
+        "CheckIntervalSeconds": 3000
+    },
+    "GuildApplicationSettings": {
+        "NotificationMessageChannelName": "",
+        "SourceTimeZone": "",
+        "NotificationRoleId": ""
+    },
+    "GamblingSettings": {
+        "GamblingChannelName": ""
+    },
+    "VoiceChannelTrackerSettings": {
+        "AnnouncementChannelName": ""
+    },
+    "BattleNetApiSettings": {
+        "ClientId": "",
+        "ClientSecret": ""
+    },
+    "TwitterClientSettings": {
+        "ClientId": "",
+        "ClientSecret": ""
+    },
+    "TwitterServiceSettings": {
+        "SourceTwitterUser": "",
+        "TargetDiscordGuild": "",
+        "TargetDiscordChannel": "",
+        "CheckIntervalSeconds": 300
+    },
+    "SignupsSettings": {
+        "EventsUrl": "",
+        "EventsUpdateUrl": "",
+        "ApiKey": ""
+    },
+    "AnnouncementServiceSettings": {
+        "SourceTwitterUser": "",
+        "TargetDiscordGuild": "",
+        "TargetDiscordChannel": "",
+        "CheckIntervalSeconds": 300
+    },
+    "MythicPlusServiceSettings": {
+        "SheetId": ""
+    },
+    "WarcraftLogsApiSettings": {
+        "ApiKey": ""
+    },
+    "SpotifyClientSettings": {
+        "Credentials": ""
+    },
+    "YouTubeClientSettings": {
+        "ApiKey": "",
+        "ApplicationName": "",
+        "LocalCache": ""
+    }
+}

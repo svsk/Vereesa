@@ -382,7 +382,7 @@ namespace Vereesa.Core.Services
 
 				for (var i = 0; i < giveaway.NumberOfWinners; i++)
 				{
-					var winnerIndex = _rng.Next(0, participants.Count - 1);
+					var winnerIndex = _rng.Next(0, participants.Count);
 					var winner = participants[winnerIndex];
 					winners.Add(winner);
 					participants.Remove(winner);

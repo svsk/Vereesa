@@ -29,6 +29,7 @@ namespace Vereesa.Core.Infrastructure
 			var memberUpdatedMethods = new List<MethodInfo>();
 			var onMessageMethods = new List<MethodInfo>();
 			var onReadyMethods = new List<MethodInfo>();
+			var onReactionMethods = new List<MethodInfo>();
 
 			var allMethods = this.GetType().GetMethods();
 
@@ -52,6 +53,11 @@ namespace Vereesa.Core.Infrastructure
 				if (method.GetCustomAttribute<OnReadyAttribute>(true) != null)
 				{
 					onReadyMethods.Add(method);
+				}
+
+				if (method.GetCustomAttribute<OnReactionAttribute>(true) != null)
+				{
+					onReactionMethods.Add(method);
 				}
 			}
 
@@ -88,6 +94,14 @@ namespace Vereesa.Core.Infrastructure
 				Discord.Ready += async () =>
 				{
 					await ExecuteHandlersAsync(onReadyMethods, new object[0]);
+				};
+			}
+
+			if (onReactionMethods.Any())
+			{
+				Discord.ReactionAdded += async (message, channel, reaction) =>
+				{
+					await ExecuteHandlersAsync(onReactionMethods, new object[] { message.Id, channel, reaction });
 				};
 			}
 		}

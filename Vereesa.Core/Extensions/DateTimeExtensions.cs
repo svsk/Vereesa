@@ -5,6 +5,11 @@ using NodaTime.Text;
 
 namespace Vereesa.Core.Extensions
 {
+	public class TzHelper
+	{
+		public static DateTimeZone ServerTz => DateTimeZoneProviders.Tzdb["Europe/Paris"];
+	}
+
 	public static class DateTimeExtensions
 	{
 		public static DateTimeOffset ToCentralEuropeanTime(this DateTimeOffset dateTimeOffset)

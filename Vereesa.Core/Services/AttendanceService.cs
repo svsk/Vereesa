@@ -32,7 +32,8 @@ namespace Vereesa.Core.Services
 		{
 			//{ "ny'alotha, the waking city", "24" },
 			// { "castle nathria", "26" },
-			{ "sanctum of domination", "28" }
+			// { "sanctum of domination", "28" },
+			{ "sepulcher of the first ones", "29"}
 		};
 
 		public AttendanceService(DiscordSocketClient discord, IJobScheduler jobScheduler,

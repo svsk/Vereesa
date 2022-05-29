@@ -2,12 +2,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vereesa.Core\Vereesa.Core.csproj" />
+	<ProjectReference Include="..\Vereesa.Awdeo\Vereesa.Awdeo.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
-  	<LangVersion>8.0</LangVersion>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +17,7 @@
   <Target Name="CopyToOut" BeforeTargets="BeforeBuild">
     <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
   </Target>
-  <Target Name="CopyToOutOnPublish" AfterTargets="Publish"> 
+  <Target Name="CopyToOutOnPublish" AfterTargets="Publish">
     <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
   </Target>
 </Project>

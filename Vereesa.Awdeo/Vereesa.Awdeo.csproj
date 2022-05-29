@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ContentWithTargetPath Include="Binaries\ffmpeg.exe">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <TargetPath>ffmpeg.exe</TargetPath>
+    </ContentWithTargetPath>
+    <ContentWithTargetPath Include="Binaries\opus.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <TargetPath>opus.dll</TargetPath>
+    </ContentWithTargetPath>
+    <ContentWithTargetPath Include="Binaries\libsodium.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <TargetPath>libsodium.dll</TargetPath>
+    </ContentWithTargetPath>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vereesa.Core\Vereesa.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.55.0.2440" />
+    <PackageReference Include="mediatoolkit" Version="1.1.0.1" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
+    <PackageReference Include="VideoLibrary" Version="3.1.4" />
+  </ItemGroup>
+
+</Project>

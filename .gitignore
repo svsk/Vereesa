@@ -42,3 +42,6 @@ deploy.ps1
 launchSettings.json
 
 *.db
+
+Vereesa.Awdeo/Binaries/*
+AwdeoService.cs

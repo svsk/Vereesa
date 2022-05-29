@@ -15,12 +15,22 @@ namespace Vereesa.Core.Services
 	{
 		private readonly ILogger<EmojiService> _logger;
 
+		private ulong _neonGuildId = 124246560178438145;
+
 		private IRole _officerRole => Discord.GetRole(124251615489294337);
 
 		public EmojiService(DiscordSocketClient discord, ILogger<EmojiService> logger)
 			: base(discord)
 		{
 			_logger = logger;
+		}
+
+		[OnCommand("!emoji list")]
+		public async Task ListEmojis(IMessage message)
+		{
+			var emotes = Discord.GetGuild(_neonGuildId).Emotes;
+
+			await message.Channel.SendMessageAsync(string.Join(" ", emotes.Select(e => $"<:{e.Name}:{e.Id}>")));
 		}
 
 		[OnCommand("!emoji suggest")]
@@ -54,7 +64,7 @@ namespace Vereesa.Core.Services
 					var emoteUrl = message.Attachments.First().Url;
 					var request = WebRequest.Create(emoteUrl);
 					var emoteImage = new Image(request.GetResponse().GetResponseStream());
-					var emote = await Discord.GetGuild(124246560178438145).CreateEmoteAsync(emojiName, emoteImage);
+					var emote = await Discord.GetGuild(_neonGuildId).CreateEmoteAsync(emojiName, emoteImage);
 					responseMessage = $"OK, I made <:{emote.Name}:{emote.Id}>!";
 				}
 				catch (Exception ex)

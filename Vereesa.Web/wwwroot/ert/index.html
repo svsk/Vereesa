@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Vereesa ERT Note Export</title>
+    <link rel="icon" href="/favicon.png" type="image/png" />
+</head>
+
+<body>
+    <div class="background"></div>
+
+    <div class="content">
+        <h2>With Role Icons</h2>
+
+        <div id="raw" spellcheck="false" contenteditable="true" class="note"></div>
+
+        <h2>Without Role Icons</h2>
+        <div id="no-role" contenteditable="true" class="note"></div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async() => {
+            const searchParams = new URLSearchParams(window.location.search);
+
+            if (!searchParams.has("note")) {
+                return;
+            }
+
+            const note = searchParams.get("note");
+
+            const rawElement = document.getElementById("raw");
+
+            rawElement.innerText = await (
+                await fetch(`/ert/decode?raw=${encodeURIComponent(note)}`)
+            ).text();
+            const raw = rawElement.innerText;
+
+            const noIcons = raw
+                .split("\n")
+                .map((line) => {
+                    if (line[0] === "{") {
+                        return line.split(" ")[1];
+                    }
+
+                    return line;
+                })
+                .join("\n");
+
+            document.querySelector("#no-role").innerText = noIcons;
+        });
+    </script>
+
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap");
+        body {
+            font-family: "Roboto Mono", monospace;
+            background-color: #272727;
+            color: #e5e5e5;
+            margin: 0;
+        }
+        
+        .background {
+            z-index: -1;
+            position: fixed;
+            height: 100%;
+            width: 100%;
+            background-image: url("../background.png");
+            background-repeat: no-repeat;
+            background-position: left bottom;
+            opacity: 0.7;
+        }
+        
+        .content {
+            margin: 0 auto;
+            max-width: 850px;
+        }
+        
+        .note {
+            background-color: rgba(80, 80, 80, 0.5);
+            padding: 30px;
+            border-radius: 5px;
+            margin-bottom: 40px;
+        }
+    </style>
+</body>
+
+</html>

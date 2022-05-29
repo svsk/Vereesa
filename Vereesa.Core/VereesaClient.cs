@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -6,21 +7,20 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
-using Vereesa.Core.Services;
+using Vereesa.Core.Extensions;
+using Vereesa.Core.Infrastructure;
 using Vereesa.Core.Integrations;
 using Vereesa.Core.Integrations.Interfaces;
+using Vereesa.Core.Services;
+using Vereesa.Data.Configuration;
+using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Commands;
 using Vereesa.Data.Models.Gambling;
 using Vereesa.Data.Models.GameTracking;
 using Vereesa.Data.Models.Giveaways;
-using Vereesa.Data.Repositories;
-using Vereesa.Data.Interfaces;
 using Vereesa.Data.Models.Reminders;
-using Vereesa.Data.Configuration;
 using Vereesa.Data.Models.Statistics;
-using Vereesa.Core.Infrastructure;
-using System.Linq;
-using Vereesa.Core.Extensions;
+using Vereesa.Data.Repositories;
 
 namespace Vereesa.Core
 {
@@ -30,7 +30,7 @@ namespace Vereesa.Core
 		private IServiceProvider _serviceProvider;
 		private DiscordSocketClient _discord;
 
-		public async Task StartupAsync()
+		public async Task StartupAsync(Action<IServiceCollection, IConfigurationRoot> config = null)
 		{
 			//Set up configuration
 			var builder = new ConfigurationBuilder()
@@ -114,6 +114,8 @@ namespace Vereesa.Core
 					config.AddConsole();
 					config.AddProvider(new DiscordChannelLoggerProvider(_discord, 124446036637908995, LogLevel.Warning)); // todo: config the channel id?
 				});
+
+			config?.Invoke(services, _config);
 
 			//Build the service provider
 			_serviceProvider = services.BuildServiceProvider();
