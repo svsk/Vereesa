@@ -13,7 +13,7 @@ public class CountdownService : BotServiceBase
 	private static bool _started = false;
 	private readonly IJobScheduler _scheduler;
 
-	private IMessageChannel Channel => ((IMessageChannel)this.Discord.GetChannel(124446036637908995));
+	private IMessageChannel Channel => ((IMessageChannel)this.Discord.GetChannel(326097353633300480));
 	private Instant NeonCon2022 => Instant.FromDateTimeOffset(new DateTimeOffset(2022, 6, 8, 7, 0, 0, new TimeSpan(2, 0, 0)));
 
 	public CountdownService(DiscordSocketClient discord, IJobScheduler scheduler)
