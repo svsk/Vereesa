@@ -167,7 +167,7 @@ namespace Vereesa.Core.Services
 			Discord.ReactionAdded += HandleReaction;
 			Discord.ReactionRemoved += HandleReaction;
 
-			_jobScheduler.EveryTenSeconds += UpdateExpirationTimerAsync;
+			_jobScheduler.EveryHalfMinute += UpdateExpirationTimerAsync;
 
 			_jobScheduler.Schedule(expirationInstant, async () =>
 			{
@@ -183,7 +183,7 @@ namespace Vereesa.Core.Services
 
 				if (reaction.MessageId == hostMessage.Id)
 				{
-					await message.Value.RemoveReactionAsync(reaction.Emote, reaction.UserId);
+					_ = message.Value.RemoveReactionAsync(reaction.Emote, reaction.UserId);
 					var attendees = GetAttendees(hostMessage, maxAttendees);
 
 					if (reaction.Emote.Name == _joinEmote.Name)
@@ -222,7 +222,7 @@ namespace Vereesa.Core.Services
 
 			async Task EndWatchAsync()
 			{
-				_jobScheduler.EveryTenSeconds -= UpdateExpirationTimerAsync;
+				_jobScheduler.EveryHalfMinute -= UpdateExpirationTimerAsync;
 				Discord.ReactionAdded -= HandleReaction;
 				Discord.ReactionRemoved -= HandleReaction;
 				await UpdateStatusAsync(hostMessage, "🔴", "Event is closed!");

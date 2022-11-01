@@ -6,7 +6,7 @@ namespace Vereesa.Core.Helpers
 {
     public class TimerHelpers
     {
-        public static Timer SetTimeout(Action predicate, int interval, bool autoRefresh = false, bool runImmediately = false) 
+        public static Timer SetTimeout(Action predicate, int interval, bool autoRefresh = false, bool runImmediately = false)
         {
             var timer = new Timer(interval);
             timer.Elapsed += (object sender, ElapsedEventArgs args) => { predicate.Invoke(); };
@@ -19,7 +19,7 @@ namespace Vereesa.Core.Helpers
             return timer;
         }
 
-        public static async Task<Timer> SetTimeoutAsync(Func<Task> predicate, int interval, bool autoRefresh = false, bool runImmediately = false) 
+        public static async Task<Timer> SetTimeoutAsync(Func<Task> predicate, int interval, bool autoRefresh = false, bool runImmediately = false)
         {
             var timer = new Timer(interval);
             timer.Elapsed += async (object sender, ElapsedEventArgs args) => { await predicate.Invoke(); };
