@@ -48,7 +48,15 @@ namespace Vereesa.Core.Services
 			_checkInterval = await TimerHelpers.SetTimeoutAsync(
 				async () =>
 				{
-					await CheckForNewTweetsAsync();
+					try
+					{
+						await CheckForNewTweetsAsync();
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "Failed to check for new tweets.");
+					}
+
 				}, _settings.CheckIntervalSeconds * 1000, true, true
 			);
 		}
