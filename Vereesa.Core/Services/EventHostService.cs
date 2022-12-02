@@ -13,6 +13,12 @@ using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
+	internal class EventArgs
+	{
+		public int MaxAttendees { get; set; }
+		public double RemainingDuration { get; set; }
+	}
+
 	public class EventHostService : BotServiceBase
 	{
 		private static IEmote _joinEmote = new Emoji("✅");
@@ -23,6 +29,69 @@ namespace Vereesa.Core.Services
 		public EventHostService(DiscordSocketClient discord, IJobScheduler jobScheduler) : base(discord)
 		{
 			_jobScheduler = jobScheduler;
+		}
+
+		[OnReaction]
+		[Authorize("Guild Leader")]
+		public async Task HandleEventRewireReaction(ulong messageId, IMessageChannel channel, SocketReaction reaction)
+		{
+			if (reaction.Emote.Name != "🗓️")
+			{
+				return;
+			}
+
+			var message = await channel.GetMessageAsync(messageId) as IUserMessage;
+
+			if (TryValidateEventMessage(message, out var eventArgs))
+			{
+				await WatchForReactions(message, eventArgs.MaxAttendees, eventArgs.RemainingDuration);
+				_ = message.RemoveReactionAsync(reaction.Emote, reaction.User.Value);
+			}
+		}
+
+		private bool TryValidateEventMessage(IUserMessage message, out EventArgs eventArgs)
+		{
+			eventArgs = null;
+
+			bool IsEventMessage(IUserMessage msg)
+			{
+				if (!msg.Content.StartsWith("Hey, it's time for")) return false;
+				if (!msg.Content.Contains("people may join")) return false;
+				if (!msg.Author.IsBot) return false;
+				return true;
+			}
+
+			if (message == null) return false;
+			if (!IsEventMessage(message)) return false;
+
+			try
+			{
+				var remainingTimespan = message.Content.Substring(message.Content.IndexOf("🕒"))
+					.Split(' ')
+					.Skip(1)
+					.First()
+					.Replace("\r", "")
+					.Replace("\n🙋‍♂️", "");
+
+				var remainingTime = TimeSpan.Parse(remainingTimespan);
+				var eventTime = (message.EditedTimestamp ?? message.CreatedAt).Add(remainingTime);
+
+				eventArgs = new EventArgs
+				{
+					MaxAttendees = int.Parse(
+						message.Content.Substring(0, message.Content.IndexOf(" people may join"))
+							.Split(' ')
+							.Last()
+					),
+					RemainingDuration = (eventTime - DateTimeOffset.UtcNow).TotalMinutes
+				};
+
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
 		}
 
 		[OnCommand("!host")]
@@ -85,16 +154,13 @@ namespace Vereesa.Core.Services
 			);
 
 			var hostMessage = await triggerMessage.Channel.SendMessageAsync(hostMessageText);
-
-			await hostMessage.AddReactionsAsync(new[] { _joinEmote, _declineEmote });
-
 			if (defaultAttendees.Count >= maxAttendees)
 			{
 				await UpdateStatusAsync(hostMessage, "🔴", "Event is closed!");
 			}
 			else
 			{
-				WatchForReactions(hostMessage, maxAttendees, eventDurationMinutes.Value);
+				_ = WatchForReactions(hostMessage, maxAttendees, eventDurationMinutes.Value);
 			}
 
 		}
@@ -160,12 +226,12 @@ namespace Vereesa.Core.Services
 			return hostMessageText.ToString();
 		}
 
-		private void WatchForReactions(IUserMessage hostMessage, int maxAttendees, double eventDurationMinutes)
+		private async Task WatchForReactions(IUserMessage hostMessage, int maxAttendees, double eventDurationMinutes)
 		{
 			var expirationInstant = SystemClock.Instance.GetCurrentInstant().Plus(Duration.FromMinutes(eventDurationMinutes));
 
-			Discord.ReactionAdded += HandleReaction;
-			Discord.ReactionRemoved += HandleReaction;
+			Discord.ReactionAdded += HandleStuff;
+			Discord.ReactionRemoved += HandleStuff;
 
 			_jobScheduler.EveryHalfMinute += UpdateExpirationTimerAsync;
 
@@ -174,26 +240,42 @@ namespace Vereesa.Core.Services
 				await EndWatchAsync();
 			});
 
-			async Task HandleReaction(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel, SocketReaction reaction)
+			foreach (var relevantReaction in await GetRelevantReactions(hostMessage))
 			{
-				if (reaction.User.Value.IsBot)
+				await HandleReaction(
+					hostMessage.Id,
+					hostMessage.Channel,
+					relevantReaction.user,
+					new Emoji(relevantReaction.emoteName)
+				);
+			}
+
+			await hostMessage.AddReactionsAsync(new[] { _joinEmote, _declineEmote });
+
+			async Task HandleStuff(Cacheable<IUserMessage, ulong> messageId, IMessageChannel channel, SocketReaction reaction)
+				=> await HandleReaction(messageId.Id, channel, reaction.User.Value, reaction.Emote);
+
+			async Task HandleReaction(ulong messageId, IMessageChannel channel, IUser user, IEmote reactionEmote)
+			{
+				if (user.IsBot)
 				{
 					return;
 				}
 
-				if (reaction.MessageId == hostMessage.Id)
+				if (messageId == hostMessage.Id)
 				{
-					_ = message.Value.RemoveReactionAsync(reaction.Emote, reaction.UserId);
+					var message = await channel.GetMessageAsync(messageId);
+					_ = message.RemoveReactionAsync(reactionEmote, user.Id);
 					var attendees = GetAttendees(hostMessage, maxAttendees);
 
-					if (reaction.Emote.Name == _joinEmote.Name)
+					if (reactionEmote.Name == _joinEmote.Name)
 					{
-						attendees.Add(reaction.UserId.MentionPerson());
+						attendees.Add(user.Id.MentionPerson());
 					}
 
-					if (reaction.Emote.Name == _declineEmote.Name)
+					if (reactionEmote.Name == _declineEmote.Name)
 					{
-						attendees.Remove(reaction.UserId.MentionPerson());
+						attendees.Remove(user.Id.MentionPerson());
 					}
 
 					await UpdateAttendeeListAsync(hostMessage, attendees);
@@ -223,10 +305,32 @@ namespace Vereesa.Core.Services
 			async Task EndWatchAsync()
 			{
 				_jobScheduler.EveryHalfMinute -= UpdateExpirationTimerAsync;
-				Discord.ReactionAdded -= HandleReaction;
-				Discord.ReactionRemoved -= HandleReaction;
+				Discord.ReactionAdded -= HandleStuff;
+				Discord.ReactionRemoved -= HandleStuff;
 				await UpdateStatusAsync(hostMessage, "🔴", "Event is closed!");
 			}
+		}
+
+		private async Task<List<(IUser user, string emoteName)>> GetRelevantReactions(IUserMessage hostMessage)
+		{
+			var result = new List<(IUser user, string emoteName)>();
+
+			foreach (var reaction in hostMessage.Reactions)
+			{
+				if (reaction.Key.Name == _joinEmote.Name)
+				{
+					var accepts = await hostMessage.GetReactionUsersAsync(reaction.Key, 50).ToListAsync();
+					result.AddRange(accepts.SelectMany(e => e).Select(e => (e, _joinEmote.Name)));
+				}
+
+				if (reaction.Key.Name == _declineEmote.Name)
+				{
+					var declines = await hostMessage.GetReactionUsersAsync(reaction.Key, 50).ToListAsync();
+					result.AddRange(declines.SelectMany(e => e).Select(e => (e, _declineEmote.Name)));
+				}
+			}
+
+			return result;
 		}
 
 		private HashSet<string> GetAttendees(IUserMessage hostMessage, int maxAttendees)
