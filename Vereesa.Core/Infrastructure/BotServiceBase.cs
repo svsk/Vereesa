@@ -113,7 +113,14 @@ namespace Vereesa.Core.Infrastructure
 			{
 				try
 				{
-					await (Task)method.Invoke(this, invocationParameters);
+					if (method.ReturnType == typeof(Task))
+					{
+						await (Task)method.Invoke(this, invocationParameters);
+					}
+					else
+					{
+						method.Invoke(this, invocationParameters);
+					}
 				}
 				catch (Exception)
 				{
@@ -125,7 +132,7 @@ namespace Vereesa.Core.Infrastructure
 			{
 				if (method.GetCustomAttribute<AsyncHandlerAttribute>() != null)
 				{
-					ExecuteHandler(method, parameters);
+					_ = ExecuteHandler(method, parameters);
 				}
 				else
 				{
@@ -167,7 +174,7 @@ namespace Vereesa.Core.Infrastructure
 			// running.
 			if (commandHandler.method.GetCustomAttribute<AsyncHandlerAttribute>() != null)
 			{
-				ExecuteCommand(commandHandler.command, commandHandler.method);
+				_ = ExecuteCommand(commandHandler.command, commandHandler.method);
 			}
 			else
 			{
