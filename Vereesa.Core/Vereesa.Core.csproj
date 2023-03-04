@@ -9,7 +9,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Discord.Net" Version="2.3.1" />
+		<PackageReference Include="Discord.Net" Version="3.9.0" />
 		<PackageReference Include="google.apis.sheets.v4" Version="1.46.0.1981" />
 		<PackageReference Include="HtmlAgilityPack" Version="1.11.23" />
 		<PackageReference Include="HtmlAgilityPack.CssSelectors.NetCore" Version="1.2.1" />

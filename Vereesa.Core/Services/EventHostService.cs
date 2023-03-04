@@ -228,10 +228,12 @@ namespace Vereesa.Core.Services
 
 		private async Task WatchForReactions(IUserMessage hostMessage, int maxAttendees, double eventDurationMinutes)
 		{
+
+
 			var expirationInstant = SystemClock.Instance.GetCurrentInstant().Plus(Duration.FromMinutes(eventDurationMinutes));
 
-			Discord.ReactionAdded += HandleStuff;
-			Discord.ReactionRemoved += HandleStuff;
+			Discord.ReactionAdded += ReactionHandler;
+			Discord.ReactionRemoved += ReactionHandler;
 
 			_jobScheduler.EveryHalfMinute += UpdateExpirationTimerAsync;
 
@@ -243,7 +245,7 @@ namespace Vereesa.Core.Services
 			foreach (var relevantReaction in await GetRelevantReactions(hostMessage))
 			{
 				await HandleReaction(
-					hostMessage.Id,
+					hostMessage,
 					hostMessage.Channel,
 					relevantReaction.user,
 					new Emoji(relevantReaction.emoteName)
@@ -252,19 +254,18 @@ namespace Vereesa.Core.Services
 
 			await hostMessage.AddReactionsAsync(new[] { _joinEmote, _declineEmote });
 
-			async Task HandleStuff(Cacheable<IUserMessage, ulong> messageId, IMessageChannel channel, SocketReaction reaction)
-				=> await HandleReaction(messageId.Id, channel, reaction.User.Value, reaction.Emote);
+			async Task ReactionHandler(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+				=> await HandleReaction(await message.GetOrDownloadAsync(), await channel.GetOrDownloadAsync(), reaction.User.Value, reaction.Emote);
 
-			async Task HandleReaction(ulong messageId, IMessageChannel channel, IUser user, IEmote reactionEmote)
+			async Task HandleReaction(IUserMessage message, IMessageChannel channel, IUser user, IEmote reactionEmote)
 			{
 				if (user.IsBot)
 				{
 					return;
 				}
 
-				if (messageId == hostMessage.Id)
+				if (message.Id == hostMessage.Id)
 				{
-					var message = await channel.GetMessageAsync(messageId);
 					_ = message.RemoveReactionAsync(reactionEmote, user.Id);
 					var attendees = GetAttendees(hostMessage, maxAttendees);
 
@@ -305,8 +306,8 @@ namespace Vereesa.Core.Services
 			async Task EndWatchAsync()
 			{
 				_jobScheduler.EveryHalfMinute -= UpdateExpirationTimerAsync;
-				Discord.ReactionAdded -= HandleStuff;
-				Discord.ReactionRemoved -= HandleStuff;
+				Discord.ReactionAdded -= ReactionHandler;
+				Discord.ReactionRemoved -= ReactionHandler;
 				await UpdateStatusAsync(hostMessage, "🔴", "Event is closed!");
 			}
 		}

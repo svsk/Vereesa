@@ -51,6 +51,16 @@ namespace Vereesa.Core.Services
 		{
 			var userId = message.Author.Id;
 
+			if (!TryValidateCharacterName(characterName, out var errors))
+			{
+				await message.Channel.SendMessageAsync(
+					$"I couldn't assign {characterName} to {message.Author.Mention} because "
+						+ $"{errors.Join(", ")}."
+				);
+
+				return;
+			}
+
 			var response = await Prompt(_responsibleRole,
 				$"Does {characterName} belong to {userId.MentionPerson()} (Answer `yes` to confirm)?",
 					message.Channel, 1200000);
@@ -100,7 +110,7 @@ namespace Vereesa.Core.Services
 			return "Removed";
 		}
 
-		[OnCommand("!characters")]
+		[OnCommand("!character list")]
 		[Description("Lists the WoW characters you have claimed.")]
 		[AsyncHandler]
 		public async Task ListCharacters(IMessage message)
@@ -182,7 +192,7 @@ namespace Vereesa.Core.Services
 
 			var validationResult = restClient.Execute(request);
 
-			if (validationResult.StatusCode == HttpStatusCode.NotFound)
+			if (!validationResult.IsSuccessful)
 			{
 				errors.Add("the specified character was not found on the specified realm");
 			}

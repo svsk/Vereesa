@@ -71,7 +71,7 @@ namespace Vereesa.Core.Services
 
 			if (nextSpawnInstant > _eventEndTime)
 			{
-				await message.Channel.SendMessageAsync(":handbag: No more bag boi spawns to come. Enjoy Shadowlands!");
+				await message.Channel.SendMessageAsync(":handbag: No more bag boi spawns to come. Enjoy the new expansion!");
 				return;
 			}
 
@@ -102,7 +102,7 @@ namespace Vereesa.Core.Services
 			var responseText = spawnTime < _eventEndTime
 				? "The next rare to spawn in :snowflake: Icecrown should be " +
 				  $":crown: **{_rares[nextRareIndex]}** (activates at {spawnTime.AsServerTime().ToPrettyTime()})."
-				: ":crown: No more Icecrown rare spawns to come. Enjoy Shadowlands!";
+				: ":crown: No more Icecrown rare spawns to come. Enjoy the new expansion!";
 
 			await request.Channel.SendMessageAsync(responseText);
 		}
@@ -166,7 +166,7 @@ namespace Vereesa.Core.Services
 				) +
 				(
 					lastSpawn
-						? "\n\nThis was the last spawn! Enjoy Shadowlands!"
+						? "\n\nThis was the last spawn! Enjoy the new expansion!"
 						: "\n\nType `!join bagbois` to be notified about the next spawn!" +
 						  $"\nNext bag boi spawn is at **{nextSpawn.ToPrettyTime()} server time.**"
 				);

@@ -73,7 +73,8 @@ namespace Vereesa.Core
 			{
 				LogLevel = LogSeverity.Verbose,
 				MessageCacheSize = 1000,
-				AlwaysDownloadUsers = true
+				AlwaysDownloadUsers = true,
+				GatewayIntents = GatewayIntents.All
 			});
 
 			//Set up a service provider with all relevant resources for DI

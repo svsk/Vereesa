@@ -50,7 +50,7 @@ namespace Vereesa.Core.Services
 		[AsyncHandler]
 		public async Task StartGiveawayConfiguration(IMessage cmdMessage)
 		{
-			if (cmdMessage.Channel.Id == (await cmdMessage.Author.GetOrCreateDMChannelAsync())?.Id)
+			if (cmdMessage.Channel.Id == (await cmdMessage.Author.CreateDMChannelAsync())?.Id)
 			{
 				await cmdMessage.Channel.SendMessageAsync($"I can't create giveaways from direct messages. Please use the !gcreate command in a channel on the server where you want the giveaway to be created.");
 				return;

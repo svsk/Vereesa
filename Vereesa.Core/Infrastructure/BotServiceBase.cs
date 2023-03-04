@@ -75,8 +75,9 @@ namespace Vereesa.Core.Infrastructure
 
 			if (memberUpdatedMethods.Any())
 			{
-				Discord.GuildMemberUpdated += async (userBefore, userAfter) =>
+				Discord.GuildMemberUpdated += async (cacheUserBefore, userAfter) =>
 				{
+					var userBefore = await cacheUserBefore.GetOrDownloadAsync();
 					await ExecuteHandlersAsync(memberUpdatedMethods, new[] { userBefore, userAfter });
 				};
 			}
