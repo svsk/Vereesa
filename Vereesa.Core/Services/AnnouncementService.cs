@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
@@ -8,6 +9,7 @@ using Vereesa.Core.Integrations;
 
 namespace Vereesa.Core.Services
 {
+	[Obsolete]
 	public class AnnouncementService : TwitterService
 	{
 		private DiscordSocketClient _discord;

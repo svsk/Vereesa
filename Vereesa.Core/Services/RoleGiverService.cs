@@ -23,7 +23,15 @@ namespace Vereesa.Core.Services
 			"Damage Dealer",
 			"Goblin",
 			"PoGo Raider",
-			"Bagbois"
+			"Bagbois",
+			"Alchemy",
+			"Blacksmithing",
+			"Enchanting",
+			"Engineering",
+			"Inscription",
+			"Jewelcrafting",
+			"Leatherworking",
+			"Tailoring",
 		};
 
 		public RoleGiverService(DiscordSocketClient discord)

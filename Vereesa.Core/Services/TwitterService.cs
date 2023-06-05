@@ -15,6 +15,7 @@ using Vereesa.Core.Integrations;
 
 namespace Vereesa.Core.Services
 {
+	[Obsolete]
 	public class TwitterService : BotServiceBase
 	{
 		private readonly TwitterServiceSettings _settings;

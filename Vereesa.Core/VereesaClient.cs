@@ -48,11 +48,11 @@ namespace Vereesa.Core
 			var voiceChannelTrackerSettings = new VoiceChannelTrackerSettings();
 			var guildApplicationSettings = new GuildApplicationSettings();
 			var signupsSettings = new SignupsSettings();
-			var twitterClientSettings = new TwitterClientSettings();
 			var twitterServiceSettings = new TwitterServiceSettings();
 			var storageSettings = new AzureStorageSettings();
-			var announcementServiceSettings = new AnnouncementServiceSettings();
 			var warcraftLogsApiSettings = new WarcraftLogsApiSettings();
+
+			_config.Bind(discordSettings);
 
 			_config.GetSection(nameof(DiscordSettings)).Bind(discordSettings);
 			_config.GetSection(nameof(ChannelRuleSettings)).Bind(channelRuleSettings);
@@ -62,10 +62,8 @@ namespace Vereesa.Core
 			_config.GetSection(nameof(VoiceChannelTrackerSettings)).Bind(voiceChannelTrackerSettings);
 			_config.GetSection(nameof(GuildApplicationSettings)).Bind(guildApplicationSettings);
 			_config.GetSection(nameof(SignupsSettings)).Bind(signupsSettings);
-			_config.GetSection(nameof(TwitterClientSettings)).Bind(twitterClientSettings);
 			_config.GetSection(nameof(TwitterServiceSettings)).Bind(twitterServiceSettings);
 			_config.GetSection(nameof(AzureStorageSettings)).Bind(storageSettings);
-			_config.GetSection(nameof(AnnouncementServiceSettings)).Bind(announcementServiceSettings);
 			_config.GetSection(nameof(WarcraftLogsApiSettings)).Bind(warcraftLogsApiSettings);
 
 			//Set up discord client
@@ -88,9 +86,7 @@ namespace Vereesa.Core
 				.AddSingleton(voiceChannelTrackerSettings)
 				.AddSingleton(guildApplicationSettings)
 				.AddSingleton(signupsSettings)
-				.AddSingleton(twitterClientSettings)
 				.AddSingleton(twitterServiceSettings)
-				.AddSingleton(announcementServiceSettings)
 				.AddSingleton(storageSettings)
 				.AddSingleton(warcraftLogsApiSettings)
 				.AddSingleton<Random>()
@@ -109,7 +105,6 @@ namespace Vereesa.Core
 				.AddScoped<IRepository<UsersCharacters>, AzureStorageRepository<UsersCharacters>>()
 				.AddScoped<IRepository<Personality>, AzureStorageRepository<Personality>>()
 				.AddScoped<IWowheadClient, WowheadClient>()
-				.AddTransient<TwitterClient>()
 				.AddLogging(config =>
 				{
 					config.AddConsole();
@@ -129,8 +124,6 @@ namespace Vereesa.Core
 				{
 					_serviceProvider.GetRequiredService(s.ServiceType);
 				}
-
-				_serviceProvider.GetRequiredService<AnnouncementService>(); // todo: make this a BotService
 			}
 			catch (Exception)
 			{

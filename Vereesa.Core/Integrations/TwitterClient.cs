@@ -11,6 +11,7 @@ using Vereesa.Core.Services;
 
 namespace Vereesa.Core.Integrations
 {
+	[Obsolete]
 	public class TwitterClient : IMessageProvider
 	{
 		private readonly TwitterClientSettings _settings;
