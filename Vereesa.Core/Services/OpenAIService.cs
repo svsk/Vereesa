@@ -45,7 +45,7 @@ namespace Vereesa.Core.Services
         {
             _messageHistory.Add(new ChatMessage(ChatRole.User, message.Content));
 
-            var options = new ChatCompletionsOptions();
+            var options = new ChatCompletionsOptions { Temperature = 0f };
             foreach (var msg in _messageHistory)
                 options.Messages.Add(msg);
 
