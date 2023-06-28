@@ -64,5 +64,8 @@
         "ApiKey": "",
         "ApplicationName": "",
         "LocalCache": ""
+    },
+	"OpenAISettings": {
+        "ApiKey": ""
     }
 }

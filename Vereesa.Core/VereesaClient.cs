@@ -51,6 +51,7 @@ namespace Vereesa.Core
 			var twitterServiceSettings = new TwitterServiceSettings();
 			var storageSettings = new AzureStorageSettings();
 			var warcraftLogsApiSettings = new WarcraftLogsApiSettings();
+			var openAISettings = new OpenAISettings();
 
 			_config.Bind(discordSettings);
 
@@ -65,6 +66,7 @@ namespace Vereesa.Core
 			_config.GetSection(nameof(TwitterServiceSettings)).Bind(twitterServiceSettings);
 			_config.GetSection(nameof(AzureStorageSettings)).Bind(storageSettings);
 			_config.GetSection(nameof(WarcraftLogsApiSettings)).Bind(warcraftLogsApiSettings);
+			_config.GetSection(nameof(OpenAISettings)).Bind(openAISettings);
 
 			//Set up discord client
 			_discord = new DiscordSocketClient(new DiscordSocketConfig
@@ -89,6 +91,7 @@ namespace Vereesa.Core
 				.AddSingleton(twitterServiceSettings)
 				.AddSingleton(storageSettings)
 				.AddSingleton(warcraftLogsApiSettings)
+				.AddSingleton(openAISettings)
 				.AddSingleton<Random>()
 				.AddSingleton<IJobScheduler, JobScheduler>()
 				.AddBotServices()
