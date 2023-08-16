@@ -26,12 +26,15 @@ namespace Vereesa.Core.Infrastructure
         private void BindCommands()
         {
             var commandMethods = new List<(string command, MethodInfo method)>();
+            var onButtonClickMethods = new List<(string buttonId, MethodInfo method)>();
+            var onSelectMenuMethods = new List<(string componentId, MethodInfo method)>();
             var memberUpdatedMethods = new List<MethodInfo>();
             var onMessageMethods = new List<MethodInfo>();
             var onReadyMethods = new List<MethodInfo>();
             var onReactionMethods = new List<MethodInfo>();
             var onMentionMethods = new List<MethodInfo>();
             var onResponseMethods = new List<MethodInfo>();
+            var onUserJoinedMethods = new List<MethodInfo>();
 
             var allMethods = this.GetType().GetMethods();
 
@@ -41,6 +44,12 @@ namespace Vereesa.Core.Infrastructure
             {
                 var commandsAttributes = method.GetCustomAttributes(true).OfType<OnCommandAttribute>();
                 commandMethods.AddRange(commandsAttributes.Select(c => (c.Command, method)));
+
+                var buttonClickAttributes = method.GetCustomAttributes(true).OfType<OnButtonClickAttribute>();
+                onButtonClickMethods.AddRange(buttonClickAttributes.Select(c => (c.ButtonId, method)));
+
+                var selectMenuAttributes = method.GetCustomAttributes(true).OfType<OnSelectMenuExecutedAttribute>();
+                onSelectMenuMethods.AddRange(selectMenuAttributes.Select(c => (c.CustomId, method)));
 
                 if (method.GetCustomAttributes(true).OfType<OnMemberUpdatedAttribute>().Any())
                 {
@@ -66,6 +75,11 @@ namespace Vereesa.Core.Infrastructure
                 {
                     onMentionMethods.Add(method);
                 }
+
+                if (method.GetCustomAttribute<OnUserJoinedAttribute>(true) != null)
+                {
+                    onUserJoinedMethods.Add(method);
+                }
             }
 
             var commandHandlers = commandMethods.GroupBy(c => c.command).ToList();
@@ -77,6 +91,26 @@ namespace Vereesa.Core.Infrastructure
                     {
                         await ExecuteMessageHandlerAsync(messageForEvaluation, commandHandler);
                     }
+                };
+            }
+
+            if (onButtonClickMethods.Any())
+            {
+                Discord.ButtonExecuted += async (interaction) =>
+                {
+                    var methods = GetBestMatchingMethods(onButtonClickMethods, interaction.Data.CustomId);
+                    await interaction.DeferAsync();
+                    await ExecuteHandlersAsync(methods, new[] { interaction });
+                };
+            }
+
+            if (onSelectMenuMethods.Any())
+            {
+                Discord.SelectMenuExecuted += async (interaction) =>
+                {
+                    var methods = GetBestMatchingMethods(onSelectMenuMethods, interaction.Data.CustomId);
+                    await interaction.DeferAsync();
+                    await ExecuteHandlersAsync(methods, new[] { interaction });
                 };
             }
 
@@ -120,9 +154,26 @@ namespace Vereesa.Core.Infrastructure
             {
                 Discord.ReactionAdded += async (message, channel, reaction) =>
                 {
-                    await ExecuteHandlersAsync(onReactionMethods, new object[] { message.Id, channel, reaction });
+                    await ExecuteHandlersAsync(onReactionMethods, new object[] { message.Id, channel.Value, reaction });
                 };
             }
+
+            if (onUserJoinedMethods.Any())
+            {
+                Discord.UserJoined += async (user) =>
+                {
+                    await ExecuteHandlersAsync(onUserJoinedMethods, new object[] { user });
+                };
+            }
+        }
+
+        private List<MethodInfo> GetBestMatchingMethods(List<(string, MethodInfo)> handlers, string methodKey)
+        {
+            return handlers
+                .OrderByDescending(cd => cd.Item1.Length)
+                .Where(ch => methodKey.Equals(ch.Item1, StringComparison.CurrentCultureIgnoreCase))
+                .Select(p => p.Item2)
+                .ToList();
         }
 
         // this code is super similar to the message handler
@@ -149,13 +200,28 @@ namespace Vereesa.Core.Infrastructure
 
             foreach (var method in methods)
             {
+                async Task DoExecuteHandler()
+                {
+                    try
+                    {
+                        await ExecuteHandler(method, parameters);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                    }
+                }
+
                 if (method.GetCustomAttribute<AsyncHandlerAttribute>() != null)
                 {
-                    _ = ExecuteHandler(method, parameters);
+                    _ = Task.Run(async () =>
+                    {
+                        await DoExecuteHandler();
+                    });
                 }
                 else
                 {
-                    await ExecuteHandler(method, parameters);
+                    await DoExecuteHandler();
                 }
             }
         }
