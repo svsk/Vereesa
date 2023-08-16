@@ -1,6 +1,6 @@
-namespace Vereesa.Core.Configuration
-{
-    public class AnnouncementServiceSettings : TwitterServiceSettings
-    {
-    }
-}
+// namespace Vereesa.Core.Configuration
+// {
+//     public class AnnouncementServiceSettings : TwitterServiceSettings
+//     {
+//     }
+// }

@@ -30,26 +30,10 @@
         "ClientId": "",
         "ClientSecret": ""
     },
-    "TwitterClientSettings": {
-        "ClientId": "",
-        "ClientSecret": ""
-    },
-    "TwitterServiceSettings": {
-        "SourceTwitterUser": "",
-        "TargetDiscordGuild": "",
-        "TargetDiscordChannel": "",
-        "CheckIntervalSeconds": 300
-    },
     "SignupsSettings": {
         "EventsUrl": "",
         "EventsUpdateUrl": "",
         "ApiKey": ""
-    },
-    "AnnouncementServiceSettings": {
-        "SourceTwitterUser": "",
-        "TargetDiscordGuild": "",
-        "TargetDiscordChannel": "",
-        "CheckIntervalSeconds": 300
     },
     "MythicPlusServiceSettings": {
         "SheetId": ""
