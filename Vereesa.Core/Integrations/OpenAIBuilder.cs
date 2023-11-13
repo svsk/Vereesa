@@ -32,7 +32,7 @@ public class OpenAIClientBuilder
     public BuiltOpenAIClient Build()
     {
         var client = new OpenAIClient(_apiKey);
-        return new BuiltOpenAIClient(client, _instructions, _shouldRememberHistory);
+        return new BuiltOpenAIClient(client, _instructions, _shouldRememberHistory, _apiKey);
     }
 }
 
@@ -41,13 +41,15 @@ public class BuiltOpenAIClient
     private readonly OpenAIClient _client;
     private readonly List<string> _instructions;
     private readonly bool _shouldRememberHistory;
+    private readonly string _apiKey;
     private List<ChatMessage> _chatHistory = new List<ChatMessage>();
 
-    public BuiltOpenAIClient(OpenAIClient client, List<string> instructions, bool shouldRememberHistory)
+    public BuiltOpenAIClient(OpenAIClient client, List<string> instructions, bool shouldRememberHistory, string apiKey)
     {
         _client = client;
         _instructions = instructions;
         _shouldRememberHistory = shouldRememberHistory;
+        _apiKey = apiKey;
     }
 
     public async Task<string> Query(string query)
@@ -70,6 +72,24 @@ public class BuiltOpenAIClient
 
         return resultMessage;
     }
+
+    // public async Task QueryAsImage(string query, string path)
+    // {
+    //     using (var client = new HttpClient())
+    //     {
+    //         client.DefaultRequestHeaders.Clear();
+    //         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+    //         var Message = await client.PostAsync(
+    //             "https://api.openai.com/v1/images/generations",
+    //             new StringContent(JsonConvert.SerializeObject(input), Encoding.UTF8, "application/json")
+    //         );
+    //         if (Message.IsSuccessStatusCode)
+    //         {
+    //             var content = await Message.Content.ReadAsStringAsync();
+    //             resp = JsonConvert.DeserializeObject<ResponseModel>(content);
+    //         }
+    //     }
+    // }
 
     public async Task<T> QueryAs<T>(string query)
     {

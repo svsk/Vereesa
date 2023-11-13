@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -26,13 +27,20 @@ namespace Vereesa.Core.Services
         private static IEmote _declineEmote = new Emoji("❌");
         private readonly IJobScheduler _jobScheduler;
         private readonly OpenAISettings _openAISettings;
+        private readonly HttpClient _httpClient;
         private int _promptTimeout = 60000;
 
-        public EventHostService(DiscordSocketClient discord, IJobScheduler jobScheduler, OpenAISettings openAISettings)
+        public EventHostService(
+            DiscordSocketClient discord,
+            IJobScheduler jobScheduler,
+            OpenAISettings openAISettings,
+            HttpClient httpClient
+        )
             : base(discord)
         {
             _jobScheduler = jobScheduler;
             _openAISettings = openAISettings;
+            _httpClient = httpClient;
         }
 
         [OnReaction]
@@ -104,42 +112,66 @@ namespace Vereesa.Core.Services
 
         private MessageComponent BuildJoinComponents()
         {
-            var rowBuilder = new ActionRowBuilder()
-                .WithButton("Accept", "accept-btn", ButtonStyle.Success)
-                .WithButton("Decline", "decline-btn", ButtonStyle.Danger)
-                .WithButton("Tentative", "tentative-btn", ButtonStyle.Secondary);
+            var joinRow = new ActionRowBuilder()
+                .WithButton("Tank", "join-tank", ButtonStyle.Primary, new Emoji("🛡️"))
+                .WithButton("Ranged DPS", "join-ranged", ButtonStyle.Primary, new Emoji("🏹"))
+                .WithButton("Melee DPS", "join-melee", ButtonStyle.Primary, new Emoji("⚔️"))
+                .WithButton("Healer", "join-healer", ButtonStyle.Primary, new Emoji("💚"));
 
-            var components = new ComponentBuilder().AddRow(rowBuilder);
+            var declineRow = new ActionRowBuilder()
+                .WithButton("Decline", "decline-decline", ButtonStyle.Secondary, new Emoji("❌"))
+                .WithButton("Tentative", "decline-tentative", ButtonStyle.Secondary, new Emoji("🤷"))
+                .WithButton("Late", "decline-late", ButtonStyle.Secondary, new Emoji("🕒"));
+
+            var components = new ComponentBuilder().AddRow(joinRow).AddRow(declineRow);
 
             return components.Build();
         }
 
+        [OnButtonClick("join-tank")]
+        [OnButtonClick("join-ranged")]
+        [OnButtonClick("join-melee")]
+        [OnButtonClick("join-healer")]
+        [AsyncHandler]
+        public async Task HandleJoinClicked(SocketMessageComponent interaction)
+        {
+            var attendees = GetAttendees(interaction.Message);
+            attendees.Add(interaction.User.Id.MentionPerson());
+            await UpdateAttendeeListAsync(interaction.Message, attendees);
+        }
+
+        [OnButtonClick("decline-decline")]
+        [AsyncHandler]
+        public async Task HandleDeclineClicked(SocketMessageComponent interaction)
+        {
+            var attendees = GetAttendees(interaction.Message);
+            attendees = attendees.Where(d => d != interaction.User.Id.MentionPerson()).ToHashSet();
+            await UpdateAttendeeListAsync(interaction.Message, attendees);
+        }
+
         [OnCommand("!scheduleraids")]
         [AsyncHandler]
-        public async Task ScheduleRaids(IMessage message)
+        [Authorize("Officer")]
+        public async Task ScheduleRaids(IMessage message, string numberOfWeeks, string weekDays, string raidStart)
         {
-            var numberOfWeeks = await Prompt(
-                message.Author,
-                "How many weeks do you want to schedule for?",
-                message.Channel,
-                30000
-            );
+            numberOfWeeks ??= (
+                await Prompt(message.Author, "How many weeks do you want to schedule for?", message.Channel, 30000)
+            ).Content;
 
-            var numberOfWeeksNumeric = int.Parse(numberOfWeeks.Content);
+            var numberOfWeeksNumeric = int.Parse(numberOfWeeks);
 
-            var days = await Prompt(
-                message.Author,
-                "Which days of the week do you want to schedule for?",
-                message.Channel,
-                30000
-            );
+            weekDays ??= (
+                await Prompt(
+                    message.Author,
+                    "Which days of the week do you want to schedule for?",
+                    message.Channel,
+                    30000
+                )
+            ).Content;
 
-            var raidStart = await Prompt(
-                message.Author,
-                "At what time do the raids start (server time)?",
-                message.Channel,
-                30000
-            );
+            raidStart ??= (
+                await Prompt(message.Author, "At what time do the raids start (server time)?", message.Channel, 30000)
+            ).Content;
 
             var ai = new OpenAIClientBuilder(_openAISettings.ApiKey)
                 .WithInstruction("Your responses should be pure deserializable JSON at all times.")
@@ -148,81 +180,85 @@ namespace Vereesa.Core.Services
 
             var daysArray = await ai.QueryAs<string[]>(
                 "Give me the weekdays mentioned in this text as a JSON array with full day names in lower case: "
-                    + days.Content
+                    + weekDays
             );
 
             var eventDates = await ai.QueryAs<string[]>(
                 $"Given that the current time is {DateTime.UtcNow:u}, consider a time window that ends exactly "
-                    + $"{numberOfWeeks.Content} week(s) from this time. "
+                    + $"{numberOfWeeks} week(s) from this time. "
                     + $"Give me the ISO 8601 dates of every {daysArray.Join(" and ")} within the time window. "
-                    + $"The time of each date should be {raidStart.Content} Europe/Paris time. "
+                    + $"The time of each date should be {raidStart} Europe/Paris time. "
                     + $"You should find {numberOfWeeksNumeric * daysArray.Length} dates as a result. "
                     + $"Give me the result a JSON array of one string per date found."
             );
 
-            // await message.Channel.SendMessageAsync(
-            //     "Here are the dates I found:\n"
-            //         + eventDates.Select(d => DateTimeOffset.Parse(d).ToString("u")).Join("\n")
-            // );
+            var guild = (message.Channel as SocketGuildChannel).Guild;
+            var voiceChannel = guild.VoiceChannels.FirstOrDefault(
+                vc => vc.Name.Contains("Raid", StringComparison.OrdinalIgnoreCase)
+            );
+
+            var existingImageUrl = await GetImageUrlFromExistingEvent(guild);
+            var eventImage = await CreateImageFromUrl(existingImageUrl);
 
             foreach (var dateString in eventDates)
             {
                 var date = DateTimeOffset.Parse(dateString);
 
-                var hostMessage = BuildHostMessage(
-                    Discord.GetRolesByName("Raider").FirstOrDefault(),
-                    "Neon Raid Night " + date.ToCentralEuropeanTime(),
-                    message,
-                    30,
-                    3 * 60,
-                    new List<ulong>()
+                var discordEvent = await guild.CreateEventAsync(
+                    "Neon Raid Night",
+                    date,
+                    GuildScheduledEventType.Voice,
+                    GuildScheduledEventPrivacyLevel.Private,
+                    "",
+                    date.AddHours(3),
+                    voiceChannel.Id,
+                    null,
+                    eventImage
                 );
 
-                var joinComponents = BuildJoinComponents();
+                // This code blow is pointless if we can't sign people up for events...
 
-                await message.Channel.SendMessageAsync("\n", embed: hostMessage, components: joinComponents);
+                // var hostMessage = BuildHostMessage(
+                //     Discord.GetRolesByName("Raider").FirstOrDefault(),
+                //     "Neon Raid Night",
+                //     message,
+                //     30,
+                //     3 * 60,
+                //     new List<ulong>(),
+                //     new RoleDistribution(),
+                //     discordEvent.Id,
+                //     date,
+                //     existingImageUrl,
+                //     new Color(0x7565BF)
+                // );
+
+                // var joinComponents = BuildJoinComponents();
+
+                // await message.Channel.SendMessageAsync("\n", embed: hostMessage, components: joinComponents);
             }
         }
 
-        [OnSelectMenuExecuted("role-select")]
-        [AsyncHandler]
-        public async Task HandleRoleSelected(SocketMessageComponent interaction)
+        private async Task<Image?> CreateImageFromUrl(string imageUrl)
         {
-            if (interaction.Data is { Values: string[] } data)
+            if (imageUrl != null)
             {
-                // await interaction.Message.ModifyAsync(msg =>
-                // {
-                //     msg.Content = "You chose to join as: " + data.Values.FirstOrDefault();
-                //     msg.Components = null;
-                // });
+                var stream = await _httpClient.GetStreamAsync(imageUrl);
+                return new Image(stream);
             }
+
+            return null;
         }
 
-        [OnButtonClick("accept-btn")]
-        [AsyncHandler]
-        public async Task HandleJoinClicked(SocketMessageComponent interaction)
+        private static async Task<string> GetImageUrlFromExistingEvent(SocketGuild guild)
         {
-            var selectMenuBuilder = new SelectMenuBuilder()
-                .WithCustomId("role-select")
-                .WithOptions(
-                    new()
-                    {
-                        new() { Label = "Ranged DPS", Value = "ranged" },
-                        new() { Label = "Melee DPS", Value = "melee" },
-                        new() { Label = "Healer", Value = "healer" },
-                        new() { Label = "Tank", Value = "tank" }
-                    }
-                );
+            var existing = (
+                await guild
+                    .GetEventsAsync()
+                    .ToAsyncEnumerable()
+                    .FirstOrDefaultAsync(page => page.Any(e => e.Name.Contains("Neon Raid Night")))
+            ).FirstOrDefault();
 
-            var rowBuilder1 = new ActionRowBuilder().WithSelectMenu(selectMenuBuilder);
-
-            var components = new ComponentBuilder().AddRow(rowBuilder1);
-
-            await interaction.FollowupAsync(
-                "Please select your role.",
-                ephemeral: true,
-                components: components.Build()
-            );
+            return existing?.GetCoverImageUrl();
         }
 
         [OnCommand("!host")]
@@ -348,13 +384,18 @@ namespace Vereesa.Core.Services
             return remainingMinutes != null;
         }
 
-        private Embed BuildHostMessage(
+        private static Embed BuildHostMessage(
             SocketRole role,
             string eventName,
             IMessage triggerMessage,
             int maxAttendees,
             double eventDurationMinutes,
-            IReadOnlyCollection<ulong> defaultAttendees
+            IReadOnlyCollection<ulong> defaultAttendees,
+            RoleDistribution roleDistribution = null,
+            ulong? eventId = null,
+            DateTimeOffset? startDate = null,
+            string imageUrl = null,
+            Color? color = null
         )
         {
             var roleMention = role?.Mention != null ? $" {role.Mention}" : "";
@@ -365,15 +406,64 @@ namespace Vereesa.Core.Services
 
             var time = Duration.FromMinutes(eventDurationMinutes).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
 
+            var author =
+                startDate != null
+                    ? "📆 "
+                        + startDate.Value
+                            .ToCentralEuropeanTime()
+                            .ToString("ddd MMM d ∙ HH:mm", CultureInfo.InvariantCulture)
+                        + " CET"
+                    : $"{triggerMessage.Author.GetPreferredDisplayName()} is hosting an event";
+
+            var timeHeader = startDate != null ? "🕒 Duration" : "🕒 Time";
+
             var builder = new EmbedBuilder()
-                .WithColor(Color.Gold)
-                .WithAuthor($"{triggerMessage.Author.GetPreferredDisplayName()} is hosting an event")
+                .WithColor(color ?? Color.Gold)
+                .WithAuthor(author)
                 .WithTitle(eventName)
                 .WithDescription($"Hey{roleMention}, it's time for **{eventName}**!")
                 .AddField("🟢 Status", "Open", true)
                 .AddField("🙋‍♂️ Signups", $"{defaultAttendees.Count}/{maxAttendees}", true)
-                .AddField("🕒 Time", time, true)
-                .AddField("Attendees", attendees);
+                .AddField(timeHeader, time, true);
+
+            if (eventId != null)
+            {
+                builder.WithFooter(fb =>
+                {
+                    fb.WithText($"EID:{eventId}");
+                });
+            }
+
+            if (imageUrl != null)
+            {
+                builder.WithImageUrl(imageUrl);
+            }
+
+            if (roleDistribution != null)
+            {
+                builder.AddField(
+                    $"🛡️ ({roleDistribution.Tanks.Count})",
+                    roleDistribution.Tanks.Any() ? roleDistribution.Tanks.Join(" ") : "None",
+                    true
+                );
+                builder.AddField(
+                    $"🏹 ({roleDistribution.RangedDps.Count})",
+                    roleDistribution.RangedDps.Any() ? roleDistribution.RangedDps.Join(" ") : "None",
+                    true
+                );
+                builder.AddField(
+                    $"⚔️ ({roleDistribution.MeleeDps.Count})",
+                    roleDistribution.MeleeDps.Any() ? roleDistribution.MeleeDps.Join(" ") : "None",
+                    true
+                );
+                builder.AddField(
+                    $"💚 ({roleDistribution.Healers.Count})",
+                    roleDistribution.Healers.Any() ? roleDistribution.Healers.Join(" ") : "None",
+                    true
+                );
+            }
+
+            builder.AddField("Attendees", attendees);
 
             return builder.Build();
         }
@@ -542,5 +632,13 @@ namespace Vereesa.Core.Services
 
             await hostMessage.ModifyAsync(msg => msg.Embed = updatedEmbedBuilder.Build());
         }
+    }
+
+    public class RoleDistribution
+    {
+        public HashSet<string> Tanks { get; set; } = new();
+        public HashSet<string> RangedDps { get; set; } = new();
+        public HashSet<string> MeleeDps { get; set; } = new();
+        public HashSet<string> Healers { get; set; } = new();
     }
 }

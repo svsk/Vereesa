@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -79,6 +80,8 @@ namespace Vereesa.Core
                 }
             );
 
+            var httpClient = new HttpClient();
+
             //Set up a service provider with all relevant resources for DI
             IServiceCollection services = new ServiceCollection()
                 .AddSingleton<DiscordSocketClient>(_discord)
@@ -94,6 +97,7 @@ namespace Vereesa.Core
                 .AddSingleton(storageSettings)
                 .AddSingleton(warcraftLogsApiSettings)
                 .AddSingleton(openAISettings)
+                .AddSingleton(httpClient)
                 .AddSingleton<Random>()
                 .AddSingleton<IJobScheduler, JobScheduler>()
                 .AddBotServices()

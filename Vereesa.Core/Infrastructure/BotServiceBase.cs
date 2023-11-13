@@ -236,7 +236,12 @@ namespace Vereesa.Core.Infrastructure
                 try
                 {
                     var handlerParams = BuildHandlerParamList(command, handler, messageToHandle);
-                    await (Task)handler.Invoke(this, handlerParams.Take(handler.GetParameters().Length).ToArray());
+                    var parameters = handler
+                        .GetParameters()
+                        .Select((para, index) => handlerParams.ElementAtOrDefault(index))
+                        .ToArray();
+
+                    await (Task)handler.Invoke(this, parameters);
                 }
                 catch (Exception)
                 {
