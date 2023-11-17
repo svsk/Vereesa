@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -198,7 +199,7 @@ namespace Vereesa.Core.Services
             );
 
             var existingImageUrl = await GetImageUrlFromExistingEvent(guild);
-            var eventImage = await CreateImageFromUrl(existingImageUrl);
+            using var eventImage = await CreateImageFromUrl(existingImageUrl);
 
             foreach (var dateString in eventDates)
             {
@@ -215,6 +216,8 @@ namespace Vereesa.Core.Services
                     null,
                     eventImage
                 );
+
+                eventImage?.Stream.Seek(0, SeekOrigin.Begin);
 
                 // This code blow is pointless if we can't sign people up for events...
 
@@ -242,8 +245,9 @@ namespace Vereesa.Core.Services
         {
             if (imageUrl != null)
             {
-                var stream = await _httpClient.GetStreamAsync(imageUrl);
-                return new Image(stream);
+                var content = (await _httpClient.GetAsync(imageUrl)).Content;
+                var memoryStream = new MemoryStream(await content.ReadAsByteArrayAsync());
+                return new Image(memoryStream);
             }
 
             return null;
