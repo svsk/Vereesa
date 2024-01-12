@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Vereesa.Core\Vereesa.Core.csproj" />
-	<ProjectReference Include="..\Vereesa.Awdeo\Vereesa.Awdeo.csproj" />
+    <ProjectReference Include="..\Vereesa.Neon\Vereesa.Neon.csproj" />
+	<!-- <ProjectReference Include="..\Vereesa.Awdeo\Vereesa.Awdeo.csproj" /> -->
   </ItemGroup>
 
 </Project>
