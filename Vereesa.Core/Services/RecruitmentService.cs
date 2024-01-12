@@ -4,21 +4,21 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Discord;
-using Discord.WebSocket;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Core.Integrations;
 
 namespace Vereesa.Core.Services;
 
-public class RecruitmentService : BotServiceBase
+public class RecruitmentService : IBotService
 {
+    private readonly IMessagingClient _messaging;
     private readonly OpenAISettings _settings;
     private readonly GuildApplicationService _gapp;
 
-    public RecruitmentService(DiscordSocketClient discord, OpenAISettings aiSettings, GuildApplicationService gapp)
-        : base(discord)
+    public RecruitmentService(IMessagingClient messaging, OpenAISettings aiSettings, GuildApplicationService gapp)
     {
+        _messaging = messaging;
         _settings = aiSettings;
         _gapp = gapp;
     }
@@ -34,7 +34,7 @@ public class RecruitmentService : BotServiceBase
     public async Task InterviewApplicant(IUser user)
     {
         var channel = await user.CreateDMChannelAsync();
-        var result = await Prompt(
+        var result = await _messaging.Prompt(
             user,
             "Hello there! Do you want to apply to join Neon? All you need to do is write a little about yourself in this channel, and maybe answer a few of my questions 😇🤩",
             channel,
@@ -122,7 +122,7 @@ public class RecruitmentService : BotServiceBase
                 if (!satisfied)
                 {
                     userResponse += $"\nInterviewer says: {aiResponse}";
-                    var currentUserMessage = await Prompt(user, aiResponse, channel, 300000);
+                    var currentUserMessage = await _messaging.Prompt(user, aiResponse, channel, 300000);
 
                     if (currentUserMessage == null)
                     {

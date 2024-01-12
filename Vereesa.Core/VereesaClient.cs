@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
@@ -85,6 +84,8 @@ namespace Vereesa.Core
             //Set up a service provider with all relevant resources for DI
             IServiceCollection services = new ServiceCollection()
                 .AddSingleton<DiscordSocketClient>(_discord)
+                .AddTransient<IMessagingClient, DiscordMessagingClient>()
+                .AddTransient<IEmojiClient, DiscordEmojiClient>()
                 .AddSingleton(discordSettings)
                 .AddSingleton(channelRuleSettings)
                 .AddSingleton(battleNetApiSettings)
@@ -127,20 +128,10 @@ namespace Vereesa.Core
             //Build the service provider
             _serviceProvider = services.BuildServiceProvider();
 
-            //Start the desired services
-            try
-            {
-                foreach (var s in services.Where(s => s.ServiceType.BaseType == typeof(BotServiceBase)))
-                {
-                    _serviceProvider.GetRequiredService(s.ServiceType);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Failed to start services: " + ex.Message);
-            }
+            //Start the bot services
+            _serviceProvider.UseBotServices();
 
-            await _serviceProvider.GetRequiredService<StartupService>().StartAsync();
+            await Start(discordSettings.Token);
 
             // 			_serviceProvider.GetRequiredService<ILogger<VereesaClient>>().LogWarning(@"`
             // 							Neon's own Discord Bot!
@@ -152,6 +143,17 @@ namespace Vereesa.Core
             //   ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝
             // 	I am now accepting your requests!
             // `");
+        }
+
+        public async Task Start(string discordToken)
+        {
+            if (string.IsNullOrWhiteSpace(discordToken))
+                throw new Exception(
+                    "Please enter your bot's token into the `config.json` file found in the applications root directory."
+                );
+
+            await _discord.LoginAsync(TokenType.Bot, discordToken);
+            await _discord.StartAsync();
         }
 
         public void Shutdown()

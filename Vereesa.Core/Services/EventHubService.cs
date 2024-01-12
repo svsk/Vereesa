@@ -1,43 +1,41 @@
 using System.Collections.Generic;
 using System.Linq;
-using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Data.Models.EventHub;
 using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
-	public class EventHubService : BotServiceBase
-	{
-		private ILogger<EventHubService> _logger;
-		private List<EventHubEventListener> _eventListeners;
+    public class EventHubService : IBotService
+    {
+        private ILogger<EventHubService> _logger;
+        private List<EventHubEventListener> _eventListeners;
 
-		public EventHubService(DiscordSocketClient discord, ILogger<EventHubService> logger)
-			: base(discord)
-		{
-			_logger = logger;
-			this._eventListeners = new List<EventHubEventListener>();
-		}
+        public EventHubService(ILogger<EventHubService> logger)
+        {
+            _logger = logger;
+            this._eventListeners = new List<EventHubEventListener>();
+        }
 
-		public EventHubEventListener On(string eventName)
-		{
-			var listener = new EventHubEventListener(eventName);
+        public EventHubEventListener On(string eventName)
+        {
+            var listener = new EventHubEventListener(eventName);
 
-			this._eventListeners.Add(listener);
+            this._eventListeners.Add(listener);
 
-			return listener;
-		}
+            return listener;
+        }
 
-		public void Emit(string eventName, params object[] param)
-		{
-			_logger.LogInformation($"New event emitted: {eventName}.");
-			var eventListeners = this._eventListeners.Where(el => el.EventName == eventName).ToList();
-			_logger.LogInformation($"Invoking event callbacks for {eventListeners.Count} listeners.");
+        public void Emit(string eventName, params object[] param)
+        {
+            _logger.LogInformation($"New event emitted: {eventName}.");
+            var eventListeners = this._eventListeners.Where(el => el.EventName == eventName).ToList();
+            _logger.LogInformation($"Invoking event callbacks for {eventListeners.Count} listeners.");
 
-			foreach (var eventListener in eventListeners)
-			{
-				eventListener.EventCallback.Invoke(param);
-			}
-		}
-	}
+            foreach (var eventListener in eventListeners)
+            {
+                eventListener.EventCallback.Invoke(param);
+            }
+        }
+    }
 }

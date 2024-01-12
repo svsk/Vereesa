@@ -59,24 +59,6 @@ namespace Vereesa.Core.Extensions
             return discord.Guilds.SelectMany(g => g.Roles).FirstOrDefault(r => r.Id == roleId);
         }
 
-        public static List<SocketRole> GetRolesByName(
-            this DiscordSocketClient discord,
-            string roleName,
-            bool ignoreCase = true
-        )
-        {
-            return discord.Guilds
-                .SelectMany(g => g.Roles)
-                .Where(
-                    r =>
-                        r.Name.Equals(
-                            roleName,
-                            ignoreCase ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture
-                        )
-                )
-                .ToList();
-        }
-
         public static string GetPreferredDisplayName(this IUser author)
         {
             if (author is IGuildUser guildUser)

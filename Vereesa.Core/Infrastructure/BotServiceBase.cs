@@ -6,20 +6,71 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 using Vereesa.Core.Extensions;
 
 namespace Vereesa.Core.Infrastructure
 {
+    public enum WellknownRole : ulong
+    {
+        Officer = 124251615489294337
+    }
+
+    public class VereesaEmoji
+    {
+        public ulong Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    public class VereesaReaction
+    {
+        public IUser User { get; set; }
+        public IEmote Emote { get; set; }
+    }
+
+    public interface IEmojiClient
+    {
+        string GetCustomEmoji(string emojiName);
+        IReadOnlyCollection<VereesaEmoji> GetCustomEmojiByServerId(ulong neonGuildId);
+        Task<VereesaEmoji> CreateCustomEmoji(ulong guildId, string emojiName, Image emoteImage);
+    }
+
+    public interface IMessagingClient
+    {
+        Task<IMessage> Prompt(IUser author, string prompt, IMessageChannel channel, int timeout = 15000);
+        Task<IMessage> Prompt(WellknownRole role, string prompt, IMessageChannel channel, int timeout = 15000);
+        Task<IMessage> Prompt(ulong roleId, string prompt, IMessageChannel channel, int timeout = 15000);
+        Task SendMessageToChannelByIdAsync(ulong channelId, string message);
+        IReadOnlyCollection<IGuild> GetServers();
+        Task<IMessage> GetMessageById(ulong channelId, ulong messageId);
+        IChannel GetChannelById(ulong channelId);
+
+        // Maybe move out?
+        List<IRole> GetRolesByName(string roleName, bool ignoreCase = false);
+        IEnumerable<IUser> GetServerUsersById(ulong serverId);
+        IMessageChannel GetChannelById(object notificationMessageChannelId);
+        string EscapeSelfMentions(string message);
+    }
+
+    public interface IBotService { }
+
     /// <summary>
     /// Inheriting this class causes a singleton instance of it to automatically start in VereesaClient.cs
     /// </summary>
-    public class BotServiceBase
+    public class BotServiceBase<T>
+        where T : IBotService
     {
-        protected DiscordSocketClient Discord { get; }
+        private T _service;
 
-        public BotServiceBase(DiscordSocketClient discord)
+        protected DiscordSocketClient Discord { get; }
+        private readonly ILogger<BotServiceBase<T>> _logger;
+
+        // We need to get rid of the service provider dependency here...
+        public BotServiceBase(T service, DiscordSocketClient discord, ILogger<BotServiceBase<T>> logger)
         {
+            _service = service;
             Discord = discord;
+            _logger = logger;
             BindCommands();
         }
 
@@ -35,10 +86,11 @@ namespace Vereesa.Core.Infrastructure
             var onMentionMethods = new List<MethodInfo>();
             var onResponseMethods = new List<MethodInfo>();
             var onUserJoinedMethods = new List<MethodInfo>();
+            var onIntervalMethods = new List<MethodInfo>();
 
-            var allMethods = this.GetType().GetMethods();
+            var allMethods = _service.GetType().GetMethods();
 
-            Console.WriteLine(this.GetType().Name);
+            Console.WriteLine(_service.GetType().Name);
 
             foreach (var method in allMethods)
             {
@@ -79,6 +131,11 @@ namespace Vereesa.Core.Infrastructure
                 if (method.GetCustomAttribute<OnUserJoinedAttribute>(true) != null)
                 {
                     onUserJoinedMethods.Add(method);
+                }
+
+                if (method.GetCustomAttribute<OnIntervalAttribute>(true) != null)
+                {
+                    onIntervalMethods.Add(method);
                 }
             }
 
@@ -154,7 +211,11 @@ namespace Vereesa.Core.Infrastructure
             {
                 Discord.ReactionAdded += async (message, channel, reaction) =>
                 {
-                    await ExecuteHandlersAsync(onReactionMethods, new object[] { message.Id, channel.Value, reaction });
+                    var vReaction = new VereesaReaction { User = reaction.User.Value, Emote = reaction.Emote };
+                    await ExecuteHandlersAsync(
+                        onReactionMethods,
+                        new object[] { message.Id, channel.Value, vReaction }
+                    );
                 };
             }
 
@@ -185,16 +246,21 @@ namespace Vereesa.Core.Infrastructure
                 {
                     if (method.ReturnType == typeof(Task))
                     {
-                        await (Task)method.Invoke(this, invocationParameters);
+                        await (Task)method.Invoke(_service, invocationParameters);
                     }
                     else
                     {
-                        method.Invoke(this, invocationParameters);
+                        method.Invoke(_service, invocationParameters);
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // this would be nice to log
+                    _logger?.LogError(
+                        ex,
+                        "Failed to invoke handler {HandlerName} on {Class}",
+                        method.Name,
+                        method.DeclaringType.Name
+                    );
                 }
             }
 
@@ -208,7 +274,12 @@ namespace Vereesa.Core.Infrastructure
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex);
+                        _logger?.LogError(
+                            ex,
+                            "Failed to invoke handler {HandlerName} on {Class}",
+                            method.Name,
+                            method.DeclaringType.Name
+                        );
                     }
                 }
 
@@ -241,10 +312,17 @@ namespace Vereesa.Core.Infrastructure
                         .Select((para, index) => handlerParams.ElementAtOrDefault(index))
                         .ToArray();
 
-                    await (Task)handler.Invoke(this, parameters);
+                    await (Task)handler.Invoke(_service, parameters);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    _logger?.LogError(
+                        ex,
+                        "Failed to invoke handler {HandlerName} on {Class}",
+                        handler.Name,
+                        handler.DeclaringType.Name
+                    );
+
                     if (
                         handler.GetCustomAttribute(typeof(CommandUsageAttribute))
                         is CommandUsageAttribute usageAttribute
@@ -362,6 +440,16 @@ namespace Vereesa.Core.Infrastructure
 
             return isAuthorized;
         }
+    }
+
+    public class DiscordMessagingClient : IMessagingClient
+    {
+        public DiscordSocketClient Discord { get; }
+
+        public DiscordMessagingClient(DiscordSocketClient discord)
+        {
+            Discord = discord;
+        }
 
         /// <summary>
         /// Prompts a role for a response. Potentially a long lasting request. This should always be put in an
@@ -373,12 +461,36 @@ namespace Vereesa.Core.Infrastructure
         /// <param name="timeoutMs">Duration in milliseconds to wait for a response.</param>
         /// <returns>The first message sent by a person with the prompted role in the selected channel.
         /// Null if no one in the responsible role responds before the timeout.</returns>
-        protected Task<IMessage> Prompt(
-            IRole role,
+        public Task<IMessage> Prompt(
+            WellknownRole role,
             string promptMessage,
             IMessageChannel channel,
             int timeoutMs = 15000
-        ) => Prompt(role, promptMessage, channel, (u) => ((IGuildUser)u).RoleIds.Contains(role.Id), timeoutMs);
+        ) => Prompt((ulong)role, promptMessage, channel, timeoutMs);
+
+        /// <summary>
+        /// Prompts a role for a response. Potentially a long lasting request. This should always be put in an
+        /// async event handler.
+        /// </summary>
+        /// <param name="role">The role responsible for responding to the prompt.</param>
+        /// <param name="promptMessage">The message sent to the prompted role.</param>
+        /// <param name="channel">The channel in which to prompt the role.</param>
+        /// <param name="timeoutMs">Duration in milliseconds to wait for a response.</param>
+        /// <returns>The first message sent by a person with the prompted role in the selected channel.
+        /// Null if no one in the responsible role responds before the timeout.</returns>
+        public Task<IMessage> Prompt(
+            ulong roleId,
+            string promptMessage,
+            IMessageChannel channel,
+            int timeoutMs = 15000
+        ) =>
+            Prompt(
+                Discord.GetRole(roleId),
+                promptMessage,
+                channel,
+                (u) => ((IGuildUser)u).RoleIds.Contains(roleId),
+                timeoutMs
+            );
 
         /// <summary>
         /// Prompts a user for a response. Potentially a long lasting request. This should always be put in an
@@ -390,7 +502,7 @@ namespace Vereesa.Core.Infrastructure
         /// <param name="timeoutMs">Duration in milliseconds to wait for a response.</param>
         /// <returns>The first message sent by the prompted user in the selected channel. Null if there is no response
         /// from the responsible user before the timeout.</returns>
-        protected Task<IMessage> Prompt(
+        public Task<IMessage> Prompt(
             IUser user,
             string promptMessage,
             IMessageChannel channel,
@@ -435,6 +547,113 @@ namespace Vereesa.Core.Infrastructure
 
                 return response;
             });
+        }
+
+        public async Task SendMessageToChannelByIdAsync(ulong channelId, string message)
+        {
+            var channel = await Discord.GetChannelAsync(channelId);
+
+            if (channel is IMessageChannel messageChannel)
+            {
+                await messageChannel.SendMessageAsync(message);
+            }
+            else
+            {
+                throw new Exception($"Channel with id {channelId} is not a message channel.");
+            }
+        }
+
+        public List<IRole> GetRolesByName(string roleName, bool ignoreCase)
+        {
+            return Discord.Guilds
+                .SelectMany(g => g.Roles)
+                .Where(
+                    r =>
+                        r.Name.Equals(
+                            roleName,
+                            ignoreCase ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture
+                        )
+                )
+                .OfType<IRole>()
+                .ToList();
+        }
+
+        public async Task<IMessage> GetMessageById(ulong channelId, ulong messageId)
+        {
+            var channel = await Discord.GetChannelAsync(channelId);
+
+            if (channel is IMessageChannel messageChannel)
+            {
+                var message = await messageChannel.GetMessageAsync(messageId);
+                return message;
+            }
+
+            throw new Exception($"Channel with id {channelId} is not a message channel.");
+        }
+
+        public IReadOnlyCollection<IGuild> GetServers()
+        {
+            return Discord.Guilds.OfType<IGuild>().ToList().AsReadOnly();
+        }
+
+        public IEnumerable<IUser> GetServerUsersById(ulong serverId)
+        {
+            return Discord.Guilds.FirstOrDefault(g => g.Id == serverId)?.Users;
+        }
+
+        public IChannel GetChannelById(ulong channelId)
+        {
+            return Discord.GetChannel(channelId);
+        }
+
+        public IMessageChannel GetChannelById(object notificationMessageChannelId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string EscapeSelfMentions(string message)
+        {
+            if (message == null)
+                return null;
+
+            return message.Replace("@Vereesa", "Vereesa").Replace($"<@{Discord.CurrentUser.Id}>", "Vereesa");
+        }
+    }
+
+    public class DiscordEmojiClient : IEmojiClient
+    {
+        public DiscordSocketClient Discord { get; }
+
+        public DiscordEmojiClient(DiscordSocketClient discord)
+        {
+            Discord = discord;
+        }
+
+        public string GetCustomEmoji(string emojiName)
+        {
+            // Make this dynamic?
+            var guildName = "Neon";
+
+            var emoji = Discord.Guilds
+                .FirstOrDefault(g => g.Name == guildName)
+                ?.Emotes.FirstOrDefault(e => e.Name.ToLower() == emojiName.ToLower());
+
+            if (emoji == null)
+                return null;
+
+            return $"<:{emoji.Name}:{emoji.Id}>";
+        }
+
+        public IReadOnlyCollection<VereesaEmoji> GetCustomEmojiByServerId(ulong guildId)
+        {
+            var emotes = Discord.GetGuild(guildId).Emotes;
+            return emotes.Select(e => new VereesaEmoji { Id = e.Id, Name = e.Name }).ToList();
+        }
+
+        public async Task<VereesaEmoji> CreateCustomEmoji(ulong guildId, string emojiName, Image emoteImage)
+        {
+            var emote = await Discord.GetGuild(guildId).CreateEmoteAsync(emojiName, emoteImage);
+            return new VereesaEmoji { Id = emote.Id, Name = emote.Name };
         }
     }
 }

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.AI.OpenAI;
 using Discord;
-using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
 using Vereesa.Core.Extensions;
@@ -13,8 +12,9 @@ using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
-    public class OpenAIService : BotServiceBase
+    public class OpenAIService : IBotService
     {
+        private readonly IMessagingClient _messaging;
         private readonly OpenAIClient _client;
         private int _historySkip = 0;
         private readonly ILogger<OpenAIService> _logger;
@@ -45,19 +45,16 @@ namespace Vereesa.Core.Services
 
         private static List<ChatMessage> _messageHistory = new List<ChatMessage>();
 
-        public OpenAIService(OpenAISettings settings, DiscordSocketClient discord, ILogger<OpenAIService> logger)
-            : base(discord)
+        public OpenAIService(IMessagingClient messaging, OpenAISettings settings, ILogger<OpenAIService> logger)
         {
+            _messaging = messaging;
             _client = new OpenAIClient(settings.ApiKey);
             _logger = logger;
         }
 
         private string EscapeSelfMentions(string message)
         {
-            if (message == null)
-                return null;
-
-            return message.Replace("@Vereesa", "Vereesa").Replace($"<@{Discord.CurrentUser.Id}>", "Vereesa");
+            return _messaging.EscapeSelfMentions(message);
         }
 
         [OnMention]

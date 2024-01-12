@@ -16,15 +16,15 @@
         "CheckIntervalSeconds": 3000
     },
     "GuildApplicationSettings": {
-        "NotificationMessageChannelName": "",
+		"NotificationMessageChannelId": 0,
         "SourceTimeZone": "",
         "NotificationRoleId": ""
     },
     "GamblingSettings": {
-        "GamblingChannelName": ""
+        "GamblingChannelId": 0
     },
     "VoiceChannelTrackerSettings": {
-        "AnnouncementChannelName": ""
+        "AnnouncementChannelId": 0
     },
     "BattleNetApiSettings": {
         "ClientId": "",

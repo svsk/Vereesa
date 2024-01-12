@@ -15,11 +15,11 @@ using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
-    public class GuildApplicationService : BotServiceBase
+    public class GuildApplicationService : IBotService
     {
         private NeonApiService _neonApiService;
+        private readonly IMessagingClient _messaging;
         private ILogger<GuildApplicationService> _logger;
-        private DiscordSocketClient _discord;
         private BattleNetApiService _battleNetApi;
         private GuildApplicationSettings _settings;
         private Dictionary<string, ApplicationListItem> _cachedApplications;
@@ -30,25 +30,22 @@ namespace Vereesa.Core.Services
 
         /// This service is fully async
         public GuildApplicationService(
+            IMessagingClient messaging,
             NeonApiService neonApiService,
-            DiscordSocketClient discord,
             GuildApplicationSettings settings,
             BattleNetApiService battleNetApi,
             ILogger<GuildApplicationService> logger
         )
-            : base(discord)
         {
+            _messaging = messaging;
             _logger = logger;
-            _discord = discord;
             _battleNetApi = battleNetApi;
             _settings = settings;
             _neonApiService = neonApiService;
-
-            _discord.Ready -= Start;
-            _discord.Ready += Start;
         }
 
-        private async Task Start()
+        [OnReady]
+        public async Task Start()
         {
             await TimerHelpers.SetTimeoutAsync(
                 async () =>
@@ -71,12 +68,10 @@ namespace Vereesa.Core.Services
                 true,
                 true
             );
-
-            _discord.MessageReceived -= HandleMessage;
-            _discord.MessageReceived += HandleMessage;
         }
 
-        private async Task HandleMessage(SocketMessage message)
+        [OnMessage]
+        public async Task HandleMessage(IMessage message)
         {
             if (message.Content == "!debug applications")
             {
@@ -143,6 +138,31 @@ namespace Vereesa.Core.Services
                 $"<@&{_settings.NotificationRoleId}> {playerName}'s application has now been pending for more than {hoursPending} hours. Please review it and respond as soon as possible."
             );
         }
+
+        // [OnCommand("!purgeapps")]
+        // [Description("Purges all application messages from the notification channel.")]
+        // [Authorize("Guild Master")]
+        // public async Task PurgeTodaysApplicationMessages(IMessage msg)
+        // {
+        //     var notificationChannel = GetNotificationChannel();
+        //     if (notificationChannel != null)
+        //     {
+        //         try
+        //         {
+        //             var messages = await notificationChannel.GetMessagesAsync(100).FlattenAsync();
+        //             var todaysMessages = messages.Where(m => m.Timestamp.Date == DateTime.UtcNow.Date);
+
+        //             foreach (var message in todaysMessages)
+        //             {
+        //                 await message.DeleteAsync();
+        //             }
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             _logger.LogError(ex.Message, ex);
+        //         }
+        //     }
+        // }
 
         private async Task CheckForNewApplications(IEnumerable<ApplicationListItem> applications)
         {
@@ -220,17 +240,14 @@ namespace Vereesa.Core.Services
             }
         }
 
-        private ISocketMessageChannel GetNotificationChannel()
+        private IMessageChannel GetNotificationChannel()
         {
-            return _discord.Guilds
-                    .FirstOrDefault()
-                    ?.Channels.FirstOrDefault(c => c.Name == _settings.NotificationMessageChannelName)
-                as ISocketMessageChannel;
+            return _messaging.GetChannelById(_settings.NotificationMessageChannelId) as IMessageChannel;
         }
 
         private async Task<IUserMessage> RetrieveApplicationMessageAsync(string applicationId)
         {
-            ISocketMessageChannel channel = GetNotificationChannel();
+            var channel = GetNotificationChannel();
             IAsyncEnumerable<IMessage> messages = channel.GetMessagesAsync(100).Flatten();
             IUserMessage applicationEmbedMessage = null;
 

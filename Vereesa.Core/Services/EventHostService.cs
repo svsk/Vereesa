@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -22,31 +23,54 @@ namespace Vereesa.Core.Services
         public double RemainingDuration { get; set; }
     }
 
-    public class EventHostService : BotServiceBase
+    public class EventHostService : IBotService
     {
         private static IEmote _joinEmote = new Emoji("✅");
         private static IEmote _declineEmote = new Emoji("❌");
+        private readonly IMessagingClient _messaging;
         private readonly IJobScheduler _jobScheduler;
         private readonly OpenAISettings _openAISettings;
         private readonly HttpClient _httpClient;
         private int _promptTimeout = 60000;
+        private string _fallbackImageUrl = "https://media.sverr.es/2024-01-02_085448_wicked-subject.png";
+        private ConcurrentDictionary<ulong, HostedEvent> _watchedEvents { get; } = new();
 
         public EventHostService(
-            DiscordSocketClient discord,
+            IMessagingClient messaging,
             IJobScheduler jobScheduler,
             OpenAISettings openAISettings,
             HttpClient httpClient
         )
-            : base(discord)
         {
+            _messaging = messaging;
             _jobScheduler = jobScheduler;
             _openAISettings = openAISettings;
             _httpClient = httpClient;
+
+            _jobScheduler.EveryHalfMinute -= ProgressWatchedEvents;
+            _jobScheduler.EveryHalfMinute += ProgressWatchedEvents;
+        }
+
+        [OnInterval(Minutes = 5)]
+        public async Task UpdateDiscordEvents()
+        {
+            EnsureEventsStarted();
+            EnsureEventsEnded();
+        }
+
+        private void EnsureEventsStarted()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void EnsureEventsEnded()
+        {
+            throw new NotImplementedException();
         }
 
         [OnReaction]
-        [Authorize("Guild Leader")]
-        public async Task HandleEventRewireReaction(ulong messageId, IMessageChannel channel, SocketReaction reaction)
+        [Authorize("Guild Master")]
+        public async Task HandleEventRewireReaction(ulong messageId, IMessageChannel channel, VereesaReaction reaction)
         {
             if (reaction.Emote.Name != "🗓️")
             {
@@ -57,8 +81,8 @@ namespace Vereesa.Core.Services
 
             if (TryValidateEventMessage(message, out var eventArgs))
             {
-                await WatchForReactions(message, eventArgs.MaxAttendees, eventArgs.RemainingDuration);
-                _ = message.RemoveReactionAsync(reaction.Emote, reaction.User.Value);
+                await CreateEvent(message, eventArgs.MaxAttendees, eventArgs.RemainingDuration);
+                _ = message.RemoveReactionAsync(reaction.Emote, reaction.User);
             }
         }
 
@@ -156,13 +180,18 @@ namespace Vereesa.Core.Services
         public async Task ScheduleRaids(IMessage message, string numberOfWeeks, string weekDays, string raidStart)
         {
             numberOfWeeks ??= (
-                await Prompt(message.Author, "How many weeks do you want to schedule for?", message.Channel, 30000)
+                await _messaging.Prompt(
+                    message.Author,
+                    "How many weeks do you want to schedule for?",
+                    message.Channel,
+                    30000
+                )
             ).Content;
 
             var numberOfWeeksNumeric = int.Parse(numberOfWeeks);
 
             weekDays ??= (
-                await Prompt(
+                await _messaging.Prompt(
                     message.Author,
                     "Which days of the week do you want to schedule for?",
                     message.Channel,
@@ -171,7 +200,12 @@ namespace Vereesa.Core.Services
             ).Content;
 
             raidStart ??= (
-                await Prompt(message.Author, "At what time do the raids start (server time)?", message.Channel, 30000)
+                await _messaging.Prompt(
+                    message.Author,
+                    "At what time do the raids start (server time)?",
+                    message.Channel,
+                    30000
+                )
             ).Content;
 
             var ai = new OpenAIClientBuilder(_openAISettings.ApiKey)
@@ -253,7 +287,7 @@ namespace Vereesa.Core.Services
             return null;
         }
 
-        private static async Task<string> GetImageUrlFromExistingEvent(SocketGuild guild)
+        private async Task<string> GetImageUrlFromExistingEvent(SocketGuild guild)
         {
             var existing = (
                 await guild
@@ -262,7 +296,7 @@ namespace Vereesa.Core.Services
                     .FirstOrDefaultAsync(page => page.Any(e => e.Name.Contains("Neon Raid Night")))
             ).FirstOrDefault();
 
-            return existing?.GetCoverImageUrl();
+            return existing?.GetCoverImageUrl() ?? _fallbackImageUrl;
         }
 
         [OnCommand("!host")]
@@ -271,7 +305,7 @@ namespace Vereesa.Core.Services
         public async Task CreateEventAsync(IMessage triggerMessage)
         {
             var eventName = (
-                await Prompt(
+                await _messaging.Prompt(
                     triggerMessage.Author,
                     "What's the name of the event you're hosting?",
                     triggerMessage.Channel,
@@ -281,7 +315,7 @@ namespace Vereesa.Core.Services
 
             var maxAttendees = int.Parse(
                 (
-                    await Prompt(
+                    await _messaging.Prompt(
                         triggerMessage.Author,
                         "How many people can attend?",
                         triggerMessage.Channel,
@@ -290,7 +324,7 @@ namespace Vereesa.Core.Services
                 ).Content
             );
 
-            var preSignedPeople = await Prompt(
+            var preSignedPeople = await _messaging.Prompt(
                 triggerMessage.Author,
                 "Mention anyone who you want to sign up preemptively. Type `none` to skip.",
                 triggerMessage.Channel,
@@ -306,11 +340,11 @@ namespace Vereesa.Core.Services
                 return;
             }
 
-            double? eventDurationMinutes = null;
+            double? eventDurationMinutes;
             do
             {
                 var eventTime = (
-                    await Prompt(
+                    await _messaging.Prompt(
                         triggerMessage.Author,
                         "When will the event begin?\r\n"
                             + "(Simply type a number of minutes from now like `10`"
@@ -331,14 +365,15 @@ namespace Vereesa.Core.Services
                 }
             } while (eventDurationMinutes == null);
 
-            var alertRole = await Prompt(
+            var alertRole = await _messaging.Prompt(
                 triggerMessage.Author,
                 "Name the role you want me to alert about the event (do not mention it with @, just give me the name)."
                     + "Type `none` to skip.",
                 triggerMessage.Channel,
                 _promptTimeout
             );
-            var role = Discord.GetRolesByName(alertRole.Content).FirstOrDefault();
+
+            var role = _messaging.GetRolesByName(alertRole.Content).FirstOrDefault();
 
             var hostMessageEmbed = BuildHostMessage(
                 role,
@@ -356,7 +391,7 @@ namespace Vereesa.Core.Services
             }
             else
             {
-                _ = WatchForReactions(hostMessage, maxAttendees, eventDurationMinutes.Value);
+                _ = CreateEvent(hostMessage, maxAttendees, eventDurationMinutes.Value);
             }
         }
 
@@ -389,7 +424,7 @@ namespace Vereesa.Core.Services
         }
 
         private static Embed BuildHostMessage(
-            SocketRole role,
+            IRole role,
             string eventName,
             IMessage triggerMessage,
             int maxAttendees,
@@ -472,112 +507,124 @@ namespace Vereesa.Core.Services
             return builder.Build();
         }
 
-        private async Task WatchForReactions(IUserMessage hostMessage, int maxAttendees, double eventDurationMinutes)
+        [OnReaction]
+        [AsyncHandler]
+        public async Task HandleReactionAddedAsync(ulong messageId, IMessageChannel channel, VereesaReaction reaction)
+        {
+            var user = reaction.User;
+            if (user.IsBot)
+            {
+                return;
+            }
+
+            foreach (var hostedEvent in _watchedEvents.Values)
+            {
+                if (messageId == hostedEvent.HostMessage.Id)
+                {
+                    await ProcessReactionOnEvent(hostedEvent, reaction);
+                }
+            }
+        }
+
+        private async Task ProcessReactionOnEvent(HostedEvent hostedEvent, VereesaReaction reaction)
+        {
+            var user = reaction.User;
+            var hostMessage = hostedEvent.HostMessage;
+            var reactionEmote = reaction.Emote;
+
+            _ = hostMessage.RemoveReactionAsync(reactionEmote, user.Id);
+            var attendees = GetAttendees(hostMessage);
+
+            if (reactionEmote.Name == _joinEmote.Name)
+            {
+                attendees.Add(user.Id.MentionPerson());
+            }
+
+            if (reactionEmote.Name == _declineEmote.Name)
+            {
+                attendees.Remove(user.Id.MentionPerson());
+            }
+
+            await UpdateAttendeeListAsync(hostMessage, attendees);
+
+            if (attendees.Count >= hostedEvent.MaxAttendees)
+            {
+                await CloseEvent(hostedEvent);
+            }
+        }
+
+        private async Task CreateEvent(IUserMessage hostMessage, int maxAttendees, double eventDurationMinutes)
         {
             var expirationInstant = SystemClock.Instance
                 .GetCurrentInstant()
                 .Plus(Duration.FromMinutes(eventDurationMinutes));
 
-            Discord.ReactionAdded += ReactionHandler;
-            Discord.ReactionRemoved += ReactionHandler;
-
-            _jobScheduler.EveryHalfMinute += ProgressTowardEventExpiration;
+            var hostedEvent = new HostedEvent
+            {
+                HostMessage = hostMessage,
+                MaxAttendees = maxAttendees,
+                ExpirationInstant = expirationInstant
+            };
 
             _jobScheduler.Schedule(
                 expirationInstant,
                 async () =>
                 {
-                    await EndWatchAsync();
+                    await CloseEvent(hostedEvent);
                 }
             );
 
             foreach (var relevantReaction in await GetRelevantReactions(hostMessage))
             {
-                await HandleReaction(
-                    hostMessage,
-                    hostMessage.Channel,
-                    relevantReaction.user,
-                    new Emoji(relevantReaction.emoteName)
-                );
+                await ProcessReactionOnEvent(hostedEvent, new VereesaReaction());
             }
 
             await hostMessage.AddReactionsAsync(new[] { _joinEmote, _declineEmote });
 
-            async Task ReactionHandler(
-                Cacheable<IUserMessage, ulong> message,
-                Cacheable<IMessageChannel, ulong> channel,
-                SocketReaction reaction
-            ) =>
-                await HandleReaction(
-                    await message.GetOrDownloadAsync(),
-                    await channel.GetOrDownloadAsync(),
-                    reaction.User.Value,
-                    reaction.Emote
-                );
+            _watchedEvents.TryAdd(hostedEvent.Id, hostedEvent);
+        }
 
-            async Task HandleReaction(IUserMessage message, IMessageChannel channel, IUser user, IEmote reactionEmote)
+        private async Task ProgressWatchedEvents()
+        {
+            foreach (var hostedEvent in _watchedEvents.Values)
             {
-                if (user.IsBot)
-                {
-                    return;
-                }
-
-                if (message.Id == hostMessage.Id)
-                {
-                    _ = message.RemoveReactionAsync(reactionEmote, user.Id);
-                    var attendees = GetAttendees(hostMessage);
-
-                    if (reactionEmote.Name == _joinEmote.Name)
-                    {
-                        attendees.Add(user.Id.MentionPerson());
-                    }
-
-                    if (reactionEmote.Name == _declineEmote.Name)
-                    {
-                        attendees.Remove(user.Id.MentionPerson());
-                    }
-
-                    await UpdateAttendeeListAsync(hostMessage, attendees);
-
-                    if (attendees.Count >= maxAttendees)
-                    {
-                        await EndWatchAsync();
-                    }
-                }
-            }
-
-            async Task ProgressTowardEventExpiration()
-            {
+                var hostMessage = hostedEvent.HostMessage;
                 var attendees = GetAttendees(hostMessage);
                 await UpdateAttendeeListAsync(hostMessage, attendees);
-                await UpdateExpirationTimerAsync(hostMessage, expirationInstant);
-            }
-
-            async Task EndWatchAsync()
-            {
-                _jobScheduler.EveryHalfMinute -= ProgressTowardEventExpiration;
-                Discord.ReactionAdded -= ReactionHandler;
-                Discord.ReactionRemoved -= ReactionHandler;
-                await UpdateStatusAsync(hostMessage, "🔴", "Closed");
+                await UpdateExpirationTimerAsync(hostMessage, hostedEvent.ExpirationInstant);
             }
         }
 
-        private async Task<List<(IUser user, string emoteName)>> GetRelevantReactions(IUserMessage hostMessage)
+        private async Task CloseEvent(HostedEvent hostedEvent)
         {
-            var result = new List<(IUser user, string emoteName)>();
+            _watchedEvents.Remove(hostedEvent.Id, out _);
+            await UpdateStatusAsync(hostedEvent.HostMessage, "🔴", "Closed");
+        }
+
+        private async Task<List<VereesaReaction>> GetRelevantReactions(IUserMessage hostMessage)
+        {
+            var result = new List<VereesaReaction>();
 
             foreach (var reaction in hostMessage.Reactions)
             {
                 if (reaction.Key.Name == _joinEmote.Name)
                 {
                     var accepts = await hostMessage.GetReactionUsersAsync(reaction.Key, 50).ToListAsync();
-                    result.AddRange(accepts.SelectMany(e => e).Select(e => (e, _joinEmote.Name)));
+                    var acceptReactions = accepts
+                        .SelectMany(users => users)
+                        .Select(user => new VereesaReaction { User = user, Emote = reaction.Key });
+
+                    result.AddRange(acceptReactions);
                 }
 
                 if (reaction.Key.Name == _declineEmote.Name)
                 {
                     var declines = await hostMessage.GetReactionUsersAsync(reaction.Key, 50).ToListAsync();
-                    result.AddRange(declines.SelectMany(e => e).Select(e => (e, _declineEmote.Name)));
+                    var declineReactions = declines
+                        .SelectMany(users => users)
+                        .Select(user => new VereesaReaction { User = user, Emote = reaction.Key });
+
+                    result.AddRange(declineReactions);
                 }
             }
 
@@ -636,6 +683,14 @@ namespace Vereesa.Core.Services
 
             await hostMessage.ModifyAsync(msg => msg.Embed = updatedEmbedBuilder.Build());
         }
+    }
+
+    public class HostedEvent
+    {
+        public ulong Id => HostMessage.Id;
+        public IUserMessage HostMessage { get; set; }
+        public int MaxAttendees { get; set; }
+        public Instant ExpirationInstant { get; set; }
     }
 
     public class RoleDistribution

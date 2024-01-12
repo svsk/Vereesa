@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
@@ -12,20 +11,20 @@ using Vereesa.Data.Models.BattleNet;
 
 namespace Vereesa.Core.Services
 {
-    public class BattleNetApiService : BotServiceBase
+    public class BattleNetApiService : IBotService
     {
         private ILogger<BattleNetApiService> _logger;
         private BattleNetApiSettings _settings;
-        private Dictionary<string, (string token, DateTime expiryDateTime)> _regionTokens = new Dictionary<string, (string token, DateTime expiryDateTime)>();
+        private Dictionary<string, (string token, DateTime expiryDateTime)> _regionTokens =
+            new Dictionary<string, (string token, DateTime expiryDateTime)>();
 
-        public BattleNetApiService(DiscordSocketClient discord, BattleNetApiSettings settings, 
-			ILogger<BattleNetApiService> logger) : base(discord)
+        public BattleNetApiService(BattleNetApiSettings settings, ILogger<BattleNetApiService> logger)
         {
             _logger = logger;
             _settings = settings;
         }
 
-        private string GetAuthToken(string region) 
+        private string GetAuthToken(string region)
         {
             if (_regionTokens.ContainsKey(region) && _regionTokens[region].expiryDateTime > DateTime.Now)
                 return _regionTokens[region].token;
@@ -36,8 +35,8 @@ namespace Vereesa.Core.Services
             request.AddParameter("grant_type", "client_credentials");
 
             var response = client.Execute(request);
-            
-            if (!response.IsSuccessful) 
+
+            if (!response.IsSuccessful)
             {
                 throw new InvalidOperationException("Failed to perform Battle.net authentication.");
             }
@@ -45,16 +44,15 @@ namespace Vereesa.Core.Services
             var deserializedResponse = JsonConvert.DeserializeObject<Dictionary<string, string>>(response.Content);
             var tokenDuration = int.Parse(deserializedResponse["expires_in"]);
             var accessToken = deserializedResponse["access_token"];
-            
+
             _regionTokens[region] = (token: accessToken, expiryDateTime: DateTime.Now.AddSeconds(tokenDuration));
-            
+
             return _regionTokens[region].token;
         }
 
-        public void GetAuctionPrice(string itemName) 
+        public void GetAuctionPrice(string itemName)
         {
             // var auctionFiles = ExecuteApiRequest<AuctionFileResponse>("eu", "/wow/auction/data/karazhan", Method.GET);
-
         }
 
         private T ExecuteApiRequest<T>(string region, string endpoint, Method method)
@@ -69,9 +67,11 @@ namespace Vereesa.Core.Services
 
             var response = client.Execute(request);
 
-            if (!response.IsSuccessful) 
+            if (!response.IsSuccessful)
             {
-                throw new InvalidOperationException($"Failed to execute Battle.net API request: {endpoint}: {response.StatusCode} {response.Content}");
+                throw new InvalidOperationException(
+                    $"Failed to execute Battle.net API request: {endpoint}: {response.StatusCode} {response.Content}"
+                );
             }
 
             var deserializedResponse = JsonConvert.DeserializeObject<T>(response.Content);
@@ -80,10 +80,14 @@ namespace Vereesa.Core.Services
         }
 
         public string GetCharacterThumbnail(string region, string realm, string characterName)
-        {   
-            try  
+        {
+            try
             {
-                var response = ExecuteApiRequest<BattleNetMediaResponse>(region, $"/profile/wow/character/{realm.ToLowerInvariant()}/{characterName.ToLowerInvariant()}/character-media", Method.GET);
+                var response = ExecuteApiRequest<BattleNetMediaResponse>(
+                    region,
+                    $"/profile/wow/character/{realm.ToLowerInvariant()}/{characterName.ToLowerInvariant()}/character-media",
+                    Method.GET
+                );
                 return response.AvatarUrl;
             }
             catch (Exception ex)
@@ -97,7 +101,8 @@ namespace Vereesa.Core.Services
         {
             // var endpoint = $"profile/wow/character///equipment";
             //var endpoint = $"wow/character/{realm}/{characterName}?fields=stats,items&locale=en_GB";
-            var endpoint = $"/profile/wow/character/{realm.ToLowerInvariant()}/{characterName.ToLowerInvariant()}/equipment";
+            var endpoint =
+                $"/profile/wow/character/{realm.ToLowerInvariant()}/{characterName.ToLowerInvariant()}/equipment";
 
             try
             {
@@ -110,9 +115,13 @@ namespace Vereesa.Core.Services
             }
         }
 
-        public int GetCharacterHeartOfAzerothLevel(BattleNetCharacterResponse character) 
+        public int GetCharacterHeartOfAzerothLevel(BattleNetCharacterResponse character)
         {
-            return (int)(character?.EquippedItems.FirstOrDefault(i => i.Slot.Name == "Neck" && i.Name == "Heart of Azeroth")?.AzeriteDetails.Level.Value ?? 0);
+            return (int)(
+                character?.EquippedItems
+                    .FirstOrDefault(i => i.Slot.Name == "Neck" && i.Name == "Heart of Azeroth")
+                    ?.AzeriteDetails.Level.Value ?? 0
+            );
         }
     }
 }

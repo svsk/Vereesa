@@ -3,89 +3,110 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
-using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Configuration;
-using Vereesa.Core.Extensions;
 using Vereesa.Core.Helpers;
 using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Services
 {
-	public class VoiceChannelTrackerService : BotServiceBase
-	{
-		private ILogger<VoiceChannelTrackerService> _logger;
-		private DiscordSocketClient _discord;
-		private VoiceChannelTrackerSettings _settings;
-		private IMessageChannel _announcementChannel;
-		private Timer _clearOldMessagesInterval;
+    public class VoiceChannelTrackerService : IBotService
+    {
+        private readonly IMessagingClient _messaging;
+        private readonly ILogger<VoiceChannelTrackerService> _logger;
+        private readonly ulong _announcementChannelId;
+        private readonly Timer _clearOldMessagesInterval;
 
-		public VoiceChannelTrackerService(DiscordSocketClient discord, VoiceChannelTrackerSettings settings, ILogger<VoiceChannelTrackerService> logger)
-			: base(discord)
-		{
-			_logger = logger;
-			_discord = discord;
-			_discord.GuildAvailable += InitailizeVoiceChannelTracker;
-			_settings = settings;
-			_clearOldMessagesInterval = TimerHelpers.SetTimeout(async () => { await DeleteOldMessages(); }, 120000, true);
-		}
+        public VoiceChannelTrackerService(
+            IMessagingClient messaging,
+            VoiceChannelTrackerSettings settings,
+            ILogger<VoiceChannelTrackerService> logger
+        )
+        {
+            _messaging = messaging;
+            _logger = logger;
 
-		private async Task DeleteOldMessages()
-		{
-			if (_announcementChannel == null)
-				return;
+            _announcementChannelId = settings.AnnouncementChannelId;
+            _clearOldMessagesInterval = TimerHelpers.SetTimeout(
+                async () =>
+                {
+                    await DeleteOldMessages();
+                },
+                120000,
+                true
+            );
+        }
 
-			try
-			{
-				var messages = await _announcementChannel.GetMessagesAsync(1000).Flatten().ToListAsync();
-				foreach (var message in messages)
-				{
-					if (message.Timestamp < DateTimeOffset.UtcNow.AddHours(-3))
-					{
-						await message.DeleteAsync();
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex.Message, ex);
-			}
+        [OnReady]
+        public async Task InitializeVoiceChannelTracker()
+        {
+            await DeleteOldMessages();
+        }
 
-		}
+        [OnVoiceStateChange]
+        public async Task HandleVoiceStateChanged(
+            IUser user,
+            IVoiceState beforeChangeState,
+            IVoiceState afterChangeState
+        )
+        {
+            var beforeChannel = beforeChangeState.VoiceChannel;
+            var afterChannel = afterChangeState.VoiceChannel;
 
-		private async Task InitailizeVoiceChannelTracker(SocketGuild guild)
-		{
-			_discord.UserVoiceStateUpdated -= HandleVoiceStateChanged;
-			_discord.UserVoiceStateUpdated += HandleVoiceStateChanged;
-			_announcementChannel = guild.GetChannelByName(_settings.AnnouncementChannelName);
-			await DeleteOldMessages();
-		}
+            var action = string.Empty;
+            if (beforeChannel != null && afterChannel == null)
+            {
+                action = $"left `{beforeChannel.Name}`";
+            }
 
-		private async Task HandleVoiceStateChanged(SocketUser user, SocketVoiceState beforeChangeState, SocketVoiceState afterChangeState)
-		{
-			var beforeChannel = beforeChangeState.VoiceChannel;
-			var afterChannel = afterChangeState.VoiceChannel;
+            if (beforeChannel != null && afterChannel != null)
+            {
+                action = $"switched from `{beforeChannel.Name}` to `{afterChannel.Name}`";
+            }
 
-			var action = string.Empty;
-			if (beforeChannel != null && afterChannel == null)
-			{
-				action = $"left `{beforeChannel.Name}`";
-			}
+            if (beforeChannel == null && afterChannel != null)
+            {
+                action = $"joined `{afterChannel.Name}`";
+            }
 
-			if (beforeChannel != null && afterChannel != null)
-			{
-				action = $"switched from `{beforeChannel.Name}` to `{afterChannel.Name}`";
-			}
+            if (beforeChannel?.Id == afterChannel?.Id)
+                return;
 
-			if (beforeChannel == null && afterChannel != null)
-			{
-				action = $"joined `{afterChannel.Name}`";
-			}
+            await SendTTSMessage($"{user.Username} {action}.");
+        }
 
-			if (beforeChannel?.Id == afterChannel?.Id)
-				return;
+        private IMessageChannel GetChannel() => _messaging.GetChannelById(_announcementChannelId) as IMessageChannel;
 
-			await _announcementChannel.SendMessageAsync($"{user.Username} {action}.", isTTS: true);
-		}
-	}
+        private async Task SendTTSMessage(string message)
+        {
+            var channel = GetChannel();
+            if (channel == null)
+                return;
+
+            await channel.SendMessageAsync(message, isTTS: true);
+        }
+
+        private async Task DeleteOldMessages()
+        {
+            var channel = GetChannel();
+            if (channel == null)
+                return;
+
+            try
+            {
+                var messages = await channel.GetMessagesAsync(1000).Flatten().ToListAsync();
+                foreach (var message in messages)
+                {
+                    if (message.Timestamp < DateTimeOffset.UtcNow.AddHours(-3))
+                    {
+                        await message.DeleteAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message, ex);
+            }
+        }
+    }
 }
