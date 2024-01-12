@@ -65,7 +65,6 @@ namespace Vereesa.Core.Infrastructure
         protected DiscordSocketClient Discord { get; }
         private readonly ILogger<BotServiceBase<T>> _logger;
 
-        // We need to get rid of the service provider dependency here...
         public BotServiceBase(T service, DiscordSocketClient discord, ILogger<BotServiceBase<T>> logger)
         {
             _service = service;
@@ -87,6 +86,7 @@ namespace Vereesa.Core.Infrastructure
             var onResponseMethods = new List<MethodInfo>();
             var onUserJoinedMethods = new List<MethodInfo>();
             var onIntervalMethods = new List<MethodInfo>();
+            var onVoiceStateChangeMethods = new List<MethodInfo>();
 
             var allMethods = _service.GetType().GetMethods();
 
@@ -136,6 +136,11 @@ namespace Vereesa.Core.Infrastructure
                 if (method.GetCustomAttribute<OnIntervalAttribute>(true) != null)
                 {
                     onIntervalMethods.Add(method);
+                }
+
+                if (method.GetCustomAttribute<OnVoiceStateChangeAttribute>(true) != null)
+                {
+                    onVoiceStateChangeMethods.Add(method);
                 }
             }
 
@@ -224,6 +229,14 @@ namespace Vereesa.Core.Infrastructure
                 Discord.UserJoined += async (user) =>
                 {
                     await ExecuteHandlersAsync(onUserJoinedMethods, new object[] { user });
+                };
+            }
+
+            if (onVoiceStateChangeMethods.Any())
+            {
+                Discord.UserVoiceStateUpdated += async (user, oldState, newState) =>
+                {
+                    await ExecuteHandlersAsync(onVoiceStateChangeMethods, new object[] { user, oldState, newState });
                 };
             }
         }
