@@ -9,8 +9,8 @@ namespace Vereesa.Neon.Integrations
     {
         private string[] _scopes = { SheetsService.Scope.Spreadsheets };
         private string _applicationName = "Vereesa";
-        private string _sheetId;
-        private SheetsService _googleSheetService;
+        private string? _sheetId;
+        private SheetsService? _googleSheetService;
 
         private SheetsService CreateGoogleSheetsService()
         {
@@ -38,7 +38,12 @@ namespace Vereesa.Neon.Integrations
             }
             catch (AggregateException ex)
             {
-                throw ex.InnerException;
+                if (ex.InnerException != null)
+                {
+                    throw ex.InnerException;
+                }
+
+                throw;
             }
 
             // Create Google Sheets API service.
@@ -54,6 +59,13 @@ namespace Vereesa.Neon.Integrations
         public IList<IList<object>> GetValueRange(string rangeAddress)
         {
             EnsureSheetOpened();
+
+            if (_googleSheetService == null)
+            {
+                throw new InvalidOperationException(
+                    $@"Please use the {nameof(Open)}() method to open a sheet before operating on it."
+                );
+            }
 
             var request = _googleSheetService.Spreadsheets.Values.Get(_sheetId, rangeAddress);
 

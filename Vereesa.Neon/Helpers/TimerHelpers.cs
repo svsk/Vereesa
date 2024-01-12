@@ -13,7 +13,7 @@ namespace Vereesa.Neon.Helpers
         )
         {
             var timer = new Timer(interval);
-            timer.Elapsed += (object sender, ElapsedEventArgs args) =>
+            timer.Elapsed += (object? sender, ElapsedEventArgs args) =>
             {
                 predicate.Invoke();
             };
@@ -34,10 +34,11 @@ namespace Vereesa.Neon.Helpers
         )
         {
             var timer = new Timer(interval);
-            timer.Elapsed += async (object sender, ElapsedEventArgs args) =>
+            timer.Elapsed += async (object? sender, ElapsedEventArgs args) =>
             {
                 await predicate.Invoke();
             };
+
             timer.AutoReset = autoRefresh;
             timer.Start();
 

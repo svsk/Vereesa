@@ -2,6 +2,6 @@ namespace Vereesa.Neon.Configuration
 {
     public class MythicPlusServiceSettings
     {
-        public string SheetId { get; set; }
+        public string? SheetId { get; set; }
     }
 }

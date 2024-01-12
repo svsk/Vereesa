@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Azure.AI.OpenAI;
 
 namespace Vereesa.Neon.Integrations;
@@ -52,7 +49,7 @@ public class BuiltOpenAIClient
         _apiKey = apiKey;
     }
 
-    public async Task<string> Query(string query)
+    public async Task<string?> Query(string query)
     {
         var options = new ChatCompletionsOptions { Temperature = 0f };
         options.Messages.Add(new ChatMessage(ChatRole.System, string.Join(" ", _instructions)));
@@ -91,9 +88,14 @@ public class BuiltOpenAIClient
     //     }
     // }
 
-    public async Task<T> QueryAs<T>(string query)
+    public async Task<T?> QueryAs<T>(string query)
     {
         var resultMessage = await Query(query);
+        if (resultMessage == null)
+        {
+            throw new Exception("OpenAI returned null");
+        }
+
         return JsonSerializer.Deserialize<T>(resultMessage);
     }
 }
