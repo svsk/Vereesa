@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vereesa.Neon.Tests", "Veree
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vereesa.Web", "Vereesa.Web\Vereesa.Web.csproj", "{68A53B00-7770-4CC3-BB51-E1EA16939908}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vereesa.TestBot", "Vereesa.TestBot\Vereesa.TestBot.csproj", "{DA9753B4-F128-4AF3-8AD8-594003423961}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{68A53B00-7770-4CC3-BB51-E1EA16939908}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68A53B00-7770-4CC3-BB51-E1EA16939908}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{68A53B00-7770-4CC3-BB51-E1EA16939908}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA9753B4-F128-4AF3-8AD8-594003423961}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA9753B4-F128-4AF3-8AD8-594003423961}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA9753B4-F128-4AF3-8AD8-594003423961}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA9753B4-F128-4AF3-8AD8-594003423961}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

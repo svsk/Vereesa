@@ -1,7 +1,7 @@
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 
-namespace Vereesa.Core.Infrastructure
+namespace Vereesa.Core.Discord
 {
     public class DiscordChannelLoggerProvider : ILoggerProvider
     {
@@ -16,14 +16,12 @@ namespace Vereesa.Core.Infrastructure
             _logLevel = logLevel;
         }
 
-        public ILogger CreateLogger(string categoryName)
-        {
-            return new DiscordChannelLogger(categoryName, _discord, _channelId, _logLevel);
-        }
+        public ILogger CreateLogger(string categoryName) =>
+            new DiscordChannelLogger(categoryName, _discord, _channelId, _logLevel);
 
         public void Dispose()
         {
-            // Not sure if we should dispose the _discord client... Probably not...?
+            // Nothing to do here.
         }
     }
 }

@@ -12,11 +12,19 @@ namespace Vereesa.Core.Discord
 {
     public class DiscordMessagingClient : IMessagingClient
     {
+        private readonly DiscordSettings _settings;
         public DiscordSocketClient Discord { get; }
 
-        public DiscordMessagingClient(DiscordSocketClient discord)
+        public DiscordMessagingClient(DiscordSocketClient discord, DiscordSettings settings)
         {
             Discord = discord;
+            _settings = settings;
+        }
+
+        public async Task Start()
+        {
+            await Discord.LoginAsync(TokenType.Bot, _settings.Token);
+            await Discord.StartAsync();
         }
 
         /// <summary>
@@ -185,6 +193,12 @@ namespace Vereesa.Core.Discord
                 return null;
 
             return message.Replace("@Vereesa", "Vereesa").Replace($"<@{Discord.CurrentUser.Id}>", "Vereesa");
+        }
+
+        public async Task Stop()
+        {
+            await Discord.LogoutAsync();
+            Discord.Dispose();
         }
     }
 }

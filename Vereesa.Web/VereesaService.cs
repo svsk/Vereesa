@@ -1,25 +1,29 @@
-using Vereesa.Core;
+using Vereesa.Neon;
 
 internal class VereesaService : IHostedService
 {
-    private static VereesaClient? _client;
+    private static VereesaNeonClient? _client;
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         if (_client != null)
-            return;
+            return Task.CompletedTask;
 
-        _client = new VereesaClient();
-        await _client.StartupAsync(
+        _client = new VereesaNeonClient();
+        _client.Start(
             (services, config) => {
                 // services.AddAwdeo(config);
             }
         );
+
+        return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _client?.Shutdown();
-        return Task.CompletedTask;
+        if (_client == null)
+            return;
+
+        await _client.Shutdown();
     }
 }

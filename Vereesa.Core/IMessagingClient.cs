@@ -20,5 +20,7 @@ namespace Vereesa.Core
         IEnumerable<IUser> GetServerUsersById(ulong serverId);
         IMessageChannel GetChannelById(object notificationMessageChannelId);
         string EscapeSelfMentions(string message);
+        Task Start();
+        Task Stop();
     }
 }
