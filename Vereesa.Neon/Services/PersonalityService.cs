@@ -1,13 +1,11 @@
-using System;
 using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
 using Discord;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 using RestSharp;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Interfaces;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

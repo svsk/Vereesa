@@ -6,6 +6,7 @@ using Vereesa.Neon.Data.Models.Gambling;
 using Vereesa.Core.Infrastructure;
 using Discord;
 using Timer = System.Timers.Timer;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

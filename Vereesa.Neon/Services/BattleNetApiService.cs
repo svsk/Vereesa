@@ -1,13 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Authenticators;
 using Vereesa.Neon.Configuration;
-using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Models.BattleNet;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

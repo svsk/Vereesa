@@ -6,6 +6,7 @@ using Vereesa.Neon.Data.Interfaces;
 using Vereesa.Neon.Data.Models.Commands;
 using Vereesa.Core.Infrastructure;
 using System.ComponentModel;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

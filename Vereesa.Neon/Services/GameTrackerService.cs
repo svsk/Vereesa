@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
@@ -13,6 +8,7 @@ using Vereesa.Neon.Configuration;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Interfaces;
 using Vereesa.Neon.Data.Models.GameTracking;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

@@ -1,10 +1,8 @@
-using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
 using Discord;
 using Microsoft.Extensions.Logging;
+using Vereesa.Core;
 using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Neon.Services

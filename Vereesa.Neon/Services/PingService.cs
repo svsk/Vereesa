@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Threading.Tasks;
 using Discord;
 using RestSharp;
 using Vereesa.Core.Infrastructure;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

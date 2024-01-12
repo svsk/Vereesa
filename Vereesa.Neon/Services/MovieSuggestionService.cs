@@ -1,10 +1,8 @@
-using System;
-using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Discord;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Infrastructure;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

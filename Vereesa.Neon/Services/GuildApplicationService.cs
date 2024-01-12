@@ -7,6 +7,7 @@ using Vereesa.Neon.Helpers;
 using Vereesa.Neon.Data.Models.BattleNet;
 using Vereesa.Neon.Data.Models.NeonApi;
 using Vereesa.Core.Infrastructure;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

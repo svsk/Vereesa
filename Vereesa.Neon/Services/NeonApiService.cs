@@ -1,10 +1,8 @@
-using System.Collections.Generic;
 using System.Net;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RestSharp;
-using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Models.NeonApi;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

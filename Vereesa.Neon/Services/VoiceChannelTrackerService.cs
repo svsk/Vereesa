@@ -1,10 +1,10 @@
-using System.Timers;
 using Discord;
 using Microsoft.Extensions.Logging;
 using Vereesa.Neon.Configuration;
 using Vereesa.Neon.Helpers;
 using Vereesa.Core.Infrastructure;
 using Timer = System.Timers.Timer;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

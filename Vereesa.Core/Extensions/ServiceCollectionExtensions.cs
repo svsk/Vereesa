@@ -21,7 +21,7 @@ namespace Vereesa.Core.Extensions
         {
             foreach (var serviceType in GetBotServices())
             {
-                var botServiceType = typeof(BotServiceBase<>).MakeGenericType(serviceType);
+                var botServiceType = typeof(DiscordBotService<>).MakeGenericType(serviceType);
 
                 // Add the type as singleton
                 services.AddSingleton(serviceType);
@@ -37,8 +37,8 @@ namespace Vereesa.Core.Extensions
             {
                 try
                 {
-                    // Resolve all services using BotServiceBase<T>
-                    var botServiceType = typeof(BotServiceBase<>).MakeGenericType(serviceType);
+                    // Resolve all services using DiscordBotService<T>
+                    var botServiceType = typeof(DiscordBotService<>).MakeGenericType(serviceType);
                     serviceProvider.GetRequiredService(botServiceType);
                 }
                 catch (Exception ex)

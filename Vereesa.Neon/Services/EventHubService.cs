@@ -1,8 +1,6 @@
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Extensions.Logging;
 using Vereesa.Neon.Data.Models.EventHub;
-using Vereesa.Core.Infrastructure;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

@@ -18,6 +18,7 @@ using Vereesa.Neon.Data.Models.Giveaways;
 using Vereesa.Neon.Data.Models.Reminders;
 using Vereesa.Neon.Data.Models.Statistics;
 using Vereesa.Neon.Data.Repositories;
+using Vereesa.Core.Discord;
 
 namespace Vereesa.Core
 {

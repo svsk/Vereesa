@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Azure;
 using Azure.AI.OpenAI;
 using Discord;
@@ -9,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Vereesa.Neon.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Infrastructure;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

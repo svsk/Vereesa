@@ -4,8 +4,6 @@ using Discord;
 using Xunit;
 using Moq;
 using Vereesa.Neon.Services;
-using Discord.WebSocket;
-using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Tests.ServicesTests
 {

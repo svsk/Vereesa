@@ -7,6 +7,7 @@ using RestSharp;
 using Vereesa.Core.Extensions;
 using Vereesa.Neon.Extensions;
 using Vereesa.Core.Infrastructure;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {

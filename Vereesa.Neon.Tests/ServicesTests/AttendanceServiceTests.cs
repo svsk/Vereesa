@@ -1,12 +1,10 @@
 using System.Threading.Tasks;
-using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Services;
 using Vereesa.Neon.Data.Interfaces;
 using Xunit;
-using Discord;
 
 namespace Vereesa.Core.Tests
 {

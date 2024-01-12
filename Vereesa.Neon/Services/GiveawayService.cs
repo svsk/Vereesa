@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.Serialization;
 using Discord;
 using Microsoft.Extensions.Logging;
+using Vereesa.Core;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Interfaces;
