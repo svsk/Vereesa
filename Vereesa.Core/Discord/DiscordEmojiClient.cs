@@ -42,15 +42,5 @@ namespace Vereesa.Core.Discord
             var emote = await Discord.GetGuild(guildId).CreateEmoteAsync(emojiName, emoteImage);
             return new VereesaEmoji { Id = emote.Id, Name = emote.Name };
         }
-
-        IReadOnlyCollection<VereesaEmoji> IEmojiClient.GetCustomEmojiByServerId(ulong neonGuildId)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        Task<VereesaEmoji> IEmojiClient.CreateCustomEmoji(ulong guildId, string emojiName, Image emoteImage)
-        {
-            throw new System.NotImplementedException();
-        }
     }
 }
