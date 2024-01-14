@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Net;
 using Discord;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core;
@@ -12,14 +11,20 @@ namespace Vereesa.Neon.Services
         private readonly IMessagingClient _messaging;
         private readonly IEmojiClient _emoji;
         private readonly ILogger<EmojiService> _logger;
-
+        private readonly HttpClient _httpClient;
         private ulong _neonGuildId = 124246560178438145;
 
-        public EmojiService(IMessagingClient messaging, IEmojiClient emoji, ILogger<EmojiService> logger)
+        public EmojiService(
+            IMessagingClient messaging,
+            IEmojiClient emoji,
+            ILogger<EmojiService> logger,
+            HttpClient httpClient
+        )
         {
             _messaging = messaging;
             _emoji = emoji;
             _logger = logger;
+            _httpClient = httpClient;
         }
 
         [OnCommand("!emoji list")]
@@ -51,6 +56,22 @@ namespace Vereesa.Neon.Services
                 await message.Channel.SendMessageAsync("Please include an emoji name.");
             }
 
+            var emoteUrl = message.Attachments.First().Url;
+            var request = await _httpClient.GetAsync(emoteUrl);
+            var stream = await request.Content.ReadAsStreamAsync();
+
+            // Check if stream is larger than 2048kb
+            if (stream.Length > 2048000)
+            {
+                await message.Channel.SendMessageAsync(
+                    "💥 The image you attached is too large. Please try again with an image smaller than 2MB."
+                );
+
+                return;
+            }
+
+            var emoteImage = new Image(stream);
+
             var response = await _messaging.Prompt(
                 WellknownRole.Officer,
                 "Should this be an emoji? (answer `yes` to confirm)",
@@ -64,9 +85,6 @@ namespace Vereesa.Neon.Services
             {
                 try
                 {
-                    var emoteUrl = message.Attachments.First().Url;
-                    var request = WebRequest.Create(emoteUrl);
-                    var emoteImage = new Image(request.GetResponse().GetResponseStream());
                     var emote = await _emoji.CreateCustomEmoji(_neonGuildId, emojiName, emoteImage);
                     responseMessage = $"OK, I made <:{emote.Name}:{emote.Id}>!";
                 }
