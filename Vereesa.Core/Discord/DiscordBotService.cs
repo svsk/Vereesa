@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Extensions;
@@ -18,15 +19,122 @@ namespace Vereesa.Core.Infrastructure
     {
         private T _service;
 
-        protected DiscordSocketClient Discord { get; }
+        private readonly DiscordSocketClient _discord;
         private readonly ILogger<DiscordBotService<T>> _logger;
 
         public DiscordBotService(T service, DiscordSocketClient discord, ILogger<DiscordBotService<T>> logger)
         {
             _service = service;
-            Discord = discord;
+            _discord = discord;
             _logger = logger;
+            _discord.Ready += RegisterSlashCommandsToGuild;
             BindCommands();
+        }
+
+        private async Task RegisterSlashCommandsToGuild()
+        {
+            var commandMethods = new List<(string command, MethodInfo method)>();
+
+            foreach (var guild in _discord.Guilds)
+            {
+                var commands = await guild.GetApplicationCommandsAsync();
+
+                var methods = _service.GetType().GetMethods();
+
+                var slashCommandMethods = methods
+                    .Where(m => m.GetCustomAttribute<SlashCommandAttribute>() != null)
+                    .Select(m => new { Attributes = m.GetCustomAttribute<SlashCommandAttribute>(), Method = m })
+                    .ToList();
+
+                foreach (var command in slashCommandMethods)
+                {
+                    var existingCommand = commands.FirstOrDefault(c => c.Name == command.Attributes.Name);
+                    if (existingCommand != null)
+                    {
+                        await existingCommand.DeleteAsync();
+                    }
+
+                    var builder = new SlashCommandBuilder()
+                        .WithName(command.Attributes.Name)
+                        .WithDescription(command.Attributes.Description ?? "");
+
+                    var parameters = command.Method.GetParameters().Skip(1);
+                    foreach (var parameter in parameters)
+                    {
+                        builder.AddOption(
+                            parameter.Name,
+                            InterpretType(parameter.ParameterType),
+                            "It is what it is.",
+                            parameter.DefaultValue != null
+                        );
+                    }
+
+                    await guild.CreateApplicationCommandAsync(builder.Build());
+                    commandMethods.Add((command.Attributes.Name, command.Method));
+                }
+            }
+
+            if (commandMethods.Any())
+            {
+                _discord.SlashCommandExecuted += async (interaction) =>
+                {
+                    var invocationParameters = new List<object> { interaction };
+                    var methods = GetBestMatchingMethods(commandMethods, interaction.CommandName);
+
+                    foreach (var method in methods)
+                    {
+                        // Match items in interaction.Data.Options to parameters in the method
+                        // and add them to invocationParameters.
+                        var methodParameters = method.GetParameters().Skip(1);
+                        foreach (var parameter in methodParameters)
+                        {
+                            var option = interaction.Data.Options.FirstOrDefault(o => o.Name == parameter.Name);
+                            if (option != null)
+                            {
+                                invocationParameters.Add(option.Value);
+                            }
+                            else
+                            {
+                                invocationParameters.Add(parameter.DefaultValue);
+                            }
+                        }
+
+                        await ExecuteHandlersAsync(new() { method }, invocationParameters.ToArray());
+                    }
+                };
+            }
+        }
+
+        private ApplicationCommandOptionType InterpretType(Type parameterType)
+        {
+            if (parameterType == typeof(string))
+            {
+                return ApplicationCommandOptionType.String;
+            }
+            else if (parameterType == typeof(int))
+            {
+                return ApplicationCommandOptionType.Integer;
+            }
+            else if (parameterType == typeof(bool))
+            {
+                return ApplicationCommandOptionType.Boolean;
+            }
+            else if (parameterType == typeof(IUser))
+            {
+                return ApplicationCommandOptionType.User;
+            }
+            else if (parameterType == typeof(IChannel))
+            {
+                return ApplicationCommandOptionType.Channel;
+            }
+            else if (parameterType == typeof(IRole))
+            {
+                return ApplicationCommandOptionType.Role;
+            }
+            else
+            {
+                throw new Exception($"Unsupported parameter type {parameterType.Name}");
+            }
         }
 
         private void BindCommands()
@@ -45,8 +153,6 @@ namespace Vereesa.Core.Infrastructure
             var onVoiceStateChangeMethods = new List<MethodInfo>();
 
             var allMethods = _service.GetType().GetMethods();
-
-            Console.WriteLine(_service.GetType().Name);
 
             foreach (var method in allMethods)
             {
@@ -103,7 +209,7 @@ namespace Vereesa.Core.Infrastructure
             var commandHandlers = commandMethods.GroupBy(c => c.command).ToList();
             if (commandHandlers.Any())
             {
-                Discord.MessageReceived += async (messageForEvaluation) =>
+                _discord.MessageReceived += async (messageForEvaluation) =>
                 {
                     if (GetBestMatchingCommandHandler(messageForEvaluation, commandHandlers) is { } commandHandler)
                     {
@@ -114,7 +220,7 @@ namespace Vereesa.Core.Infrastructure
 
             if (onButtonClickMethods.Any())
             {
-                Discord.ButtonExecuted += async (interaction) =>
+                _discord.ButtonExecuted += async (interaction) =>
                 {
                     var methods = GetBestMatchingMethods(onButtonClickMethods, interaction.Data.CustomId);
                     await interaction.DeferAsync();
@@ -124,7 +230,7 @@ namespace Vereesa.Core.Infrastructure
 
             if (onSelectMenuMethods.Any())
             {
-                Discord.SelectMenuExecuted += async (interaction) =>
+                _discord.SelectMenuExecuted += async (interaction) =>
                 {
                     var methods = GetBestMatchingMethods(onSelectMenuMethods, interaction.Data.CustomId);
                     await interaction.DeferAsync();
@@ -134,9 +240,9 @@ namespace Vereesa.Core.Infrastructure
 
             if (onMentionMethods.Any())
             {
-                Discord.MessageReceived += async (message) =>
+                _discord.MessageReceived += async (message) =>
                 {
-                    if (message.MentionedUsers.Any(u => u.Id == Discord.CurrentUser.Id))
+                    if (message.MentionedUsers.Any(u => u.Id == _discord.CurrentUser.Id))
                     {
                         await ExecuteHandlersAsync(onMentionMethods, new[] { message });
                     }
@@ -145,7 +251,7 @@ namespace Vereesa.Core.Infrastructure
 
             if (memberUpdatedMethods.Any())
             {
-                Discord.GuildMemberUpdated += async (cacheUserBefore, userAfter) =>
+                _discord.GuildMemberUpdated += async (cacheUserBefore, userAfter) =>
                 {
                     var userBefore = await cacheUserBefore.GetOrDownloadAsync();
                     await ExecuteHandlersAsync(memberUpdatedMethods, new[] { userBefore, userAfter });
@@ -154,7 +260,7 @@ namespace Vereesa.Core.Infrastructure
 
             if (onMessageMethods.Any())
             {
-                Discord.MessageReceived += async (message) =>
+                _discord.MessageReceived += async (message) =>
                 {
                     await ExecuteHandlersAsync(onMessageMethods, new[] { message });
                 };
@@ -162,7 +268,7 @@ namespace Vereesa.Core.Infrastructure
 
             if (onReadyMethods.Any())
             {
-                Discord.Ready += async () =>
+                _discord.Ready += async () =>
                 {
                     await ExecuteHandlersAsync(onReadyMethods, new object[0]);
                 };
@@ -170,7 +276,7 @@ namespace Vereesa.Core.Infrastructure
 
             if (onReactionMethods.Any())
             {
-                Discord.ReactionAdded += async (message, channel, reaction) =>
+                _discord.ReactionAdded += async (message, channel, reaction) =>
                 {
                     var vReaction = new VereesaReaction { User = reaction.User.Value, Emote = reaction.Emote };
                     await ExecuteHandlersAsync(
@@ -182,7 +288,7 @@ namespace Vereesa.Core.Infrastructure
 
             if (onUserJoinedMethods.Any())
             {
-                Discord.UserJoined += async (user) =>
+                _discord.UserJoined += async (user) =>
                 {
                     await ExecuteHandlersAsync(onUserJoinedMethods, new object[] { user });
                 };
@@ -190,7 +296,7 @@ namespace Vereesa.Core.Infrastructure
 
             if (onVoiceStateChangeMethods.Any())
             {
-                Discord.UserVoiceStateUpdated += async (user, oldState, newState) =>
+                _discord.UserVoiceStateUpdated += async (user, oldState, newState) =>
                 {
                     await ExecuteHandlersAsync(onVoiceStateChangeMethods, new object[] { user, oldState, newState });
                 };
@@ -397,7 +503,7 @@ namespace Vereesa.Core.Infrastructure
             var isAuthorized = true;
             var authorizeAttributes = method.GetCustomAttributes(true).OfType<AuthorizeAttribute>();
             var guildUser = caller as IGuildUser;
-            var userRoles = guildUser?.RoleIds.Select(rid => Discord.GetRole(rid)).ToList();
+            var userRoles = guildUser?.RoleIds.Select(rid => _discord.GetRole(rid)).ToList();
 
             foreach (var authorizeAttribute in authorizeAttributes)
             {
