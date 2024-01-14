@@ -66,7 +66,7 @@ namespace Vereesa.Neon
             //Set up a service provider with all relevant resources for DI
             var vereesaHost = new VereesaHostBuilder()
                 .AddDiscord(discordSettings.Token)
-                .AddDiscordChannelLogging(_logChannelId, LogLevel.Debug)
+                .AddDiscordChannelLogging(_logChannelId, LogLevel.Warning)
                 .AddServices(services =>
                 {
                     services
