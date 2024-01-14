@@ -5,6 +5,8 @@ using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Extensions;
 using NodaTime;
 using Vereesa.Core;
+using Discord.Interactions;
+using System.ComponentModel;
 
 namespace Vereesa.Neon.Services
 {
@@ -26,12 +28,32 @@ namespace Vereesa.Neon.Services
         }
 
         [OnCommand(_commandWord)]
-        public async Task HandleMessageReceived(IMessage receivedMessage)
+        public async Task HandleMessageReceived(IMessage receivedMessage) =>
+            await receivedMessage.Channel.SendMessageAsync(
+                "This command is deprecated. Please use `/remindme` instead.",
+                messageReference: new(receivedMessage.Id)
+            );
+
+        [SlashCommand("remindme", "Remind yourself of something!")]
+        public async Task HandleSlashCommand(
+            IDiscordInteraction interaction,
+            [Description("Example: \"10 minutes\", or \"3 days\", or \"347 hours\"")] string when,
+            [Description("Example: \"Eat pizza!\"")] string what
+        )
         {
-            if (TryParseReminder(receivedMessage, out var reminder))
+            if (interaction.ChannelId == null)
+            {
+                await interaction.RespondAsync("I can't find the channel you're in. Please try again.");
+                return;
+            }
+
+            if (TryParseReminder(when, what, interaction.User, interaction.ChannelId.Value, out var reminder))
             {
                 await AddReminderAsync(reminder);
-                await AnnounceReminderAddedAsync(receivedMessage.Channel.Id, receivedMessage.Author.Id);
+                await interaction.RespondAsync(
+                    $"OK, {interaction.User.Mention}! I'll remind you! :sparkles:",
+                    ephemeral: true
+                );
             }
         }
 
@@ -41,38 +63,37 @@ namespace Vereesa.Neon.Services
             return (IMessageChannel)channel;
         }
 
-        private async Task AnnounceReminderAddedAsync(ulong channelId, ulong reminderUser)
-        {
-            var channel = GetChannel(channelId);
-            await channel.SendMessageAsync($"OK, <@{reminderUser}>! I'll remind you! :sparkles:");
-        }
-
         private async Task AddReminderAsync(Reminder reminder)
         {
             await _reminderRepository.AddAsync(reminder);
         }
 
-        private bool TryParseReminder(IMessage message, out Reminder reminder)
+        private bool TryParseReminder(
+            string rawWhen,
+            string rawWhat,
+            IUser author,
+            ulong channelId,
+            out Reminder reminder
+        )
         {
             reminder = null;
-            var msgContent = message.Content;
 
-            if (msgContent.StartsWith(_commandWord))
+            if (string.IsNullOrWhiteSpace(rawWhen) || string.IsNullOrWhiteSpace(rawWhat))
             {
-                msgContent = msgContent.Replace("“", "\"").Replace("”", "\"").Replace("«", "\"").Replace("»", "\"");
+                return false;
             }
 
-            if (msgContent.StartsWith(_commandWord) && msgContent.Contains("\""))
-            {
-                string reminderMessage = ExtractReminderMessage(msgContent);
-                string reminderTime = ExtractReminderTime(msgContent, reminderMessage);
-                bool reminderTimeParsed = TryParseReminderTime(reminderTime, out long remindUnixTimestamp);
+            string reminderMessage = rawWhat;
+            string reminderTime = rawWhen;
+            bool reminderTimeParsed = TryParseReminderTime(reminderTime, out long remindUnixTimestamp);
 
+            if (reminderTimeParsed)
+            {
                 reminder = new Reminder();
                 reminder.Message = reminderMessage;
                 reminder.RemindTime = remindUnixTimestamp;
-                reminder.UserId = message.Author.Id;
-                reminder.ChannelId = message.Channel.Id;
+                reminder.UserId = author.Id;
+                reminder.ChannelId = channelId;
             }
 
             return reminder != null;
@@ -131,19 +152,6 @@ namespace Vereesa.Neon.Services
             }
 
             return true;
-        }
-
-        private string ExtractReminderMessage(string msgContent)
-        {
-            return msgContent.Split("\"").Skip(1).FirstOrDefault();
-        }
-
-        private string ExtractReminderTime(string msgContent, string reminderMessage)
-        {
-            return msgContent
-                .Replace($"{_commandWord} ", string.Empty)
-                .Replace($"\"{reminderMessage}\"", string.Empty)
-                .ToLowerInvariant();
         }
 
         private async Task AnnounceElapsedIntervalsAsync()

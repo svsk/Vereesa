@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -64,7 +65,7 @@ namespace Vereesa.Core.Infrastructure
                         builder.AddOption(
                             parameter.Name,
                             InterpretType(parameter.ParameterType),
-                            "It is what it is.",
+                            parameter.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty,
                             parameter.DefaultValue != null
                         );
                     }
