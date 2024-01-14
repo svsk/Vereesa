@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using Discord;
 using HtmlAgilityPack;
+using Microsoft.Extensions.Logging;
 using NodaTime;
 using RestSharp;
 using Vereesa.Core;
@@ -13,6 +14,7 @@ namespace Vereesa.Neon.Services
 {
     public class AttendanceService : IBotService
     {
+        private readonly ILogger<AttendanceService> _logger;
         private IMessagingClient _messagingClient;
         private RestClient _restClient;
         private IRepository<RaidAttendance> _attendanceRepo;
@@ -37,9 +39,11 @@ namespace Vereesa.Neon.Services
             IJobScheduler jobScheduler,
             IRepository<RaidAttendance> attendanceRepo,
             IRepository<RaidAttendanceSummary> attendanceSummaryRepo,
-            IRepository<UsersCharacters> userCharacters
+            IRepository<UsersCharacters> userCharacters,
+            ILogger<AttendanceService> logger
         )
         {
+            _logger = logger;
             _messagingClient = messagingClient;
             _restClient = new RestClient();
             _attendanceRepo = attendanceRepo;
@@ -203,11 +207,17 @@ namespace Vereesa.Neon.Services
             {
                 var thresholds = new Dictionary<decimal, string>() { { 50, "Raider" }, { 90, "Devoted Raider" }, };
 
+                if (tenRaidSnapshotSummary.Rankings == null)
+                {
+                    throw new Exception("Rankings were null.");
+                }
+
                 foreach (var currentRanking in tenRaidSnapshotSummary.Rankings)
                 {
-                    var previousRanking = prvSnapshot.Rankings.FirstOrDefault(
+                    var previousRanking = prvSnapshot.Rankings?.FirstOrDefault(
                         c => c.CharacterName == currentRanking.CharacterName
                     );
+
                     var currentPct = decimal.Parse(
                         currentRanking.AttendancePercentage,
                         NumberStyles.Any,
@@ -359,7 +369,7 @@ namespace Vereesa.Neon.Services
             await message.Channel.SendMessageAsync(attendanceReport);
         }
 
-        private string GetRaidIdOrDefault(string raid = null)
+        private string GetRaidIdOrDefault(string? raid = null)
         {
             var defaultRaidId = _raidIds.Last().Value;
 
@@ -417,8 +427,20 @@ namespace Vereesa.Neon.Services
             foreach (var characterRow in characterRows)
             {
                 var rowValues = characterRow.SelectNodes(".//td");
-                var characterName = rowValues.Skip(0).FirstOrDefault().InnerText.Replace("\n", string.Empty);
+                if (rowValues == null)
+                {
+                    _logger.LogWarning("Row values were null. Skipping row.");
+                    continue;
+                }
+
+                var characterName = rowValues.Skip(0).FirstOrDefault()?.InnerText.Replace("\n", string.Empty);
                 var attendanceRecord = rowValues.Skip(2).ToList();
+
+                if (characterName == null)
+                {
+                    _logger.LogWarning("Character name was null. Skipping row.");
+                    continue;
+                }
 
                 for (var i = 0; i < attendanceRecord.Count; i++)
                 {
@@ -454,7 +476,7 @@ namespace Vereesa.Neon.Services
         }
 
         public string Id { get; set; }
-        public List<RaidAttendanceRanking> Rankings { get; set; }
+        public List<RaidAttendanceRanking>? Rankings { get; set; }
     }
 
     public class RaidAttendanceRanking

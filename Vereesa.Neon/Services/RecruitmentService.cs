@@ -178,32 +178,32 @@ internal class ApplicantTooSlowException : Exception
 
 public class RecruitmentInterviewSummary
 {
-    public string Id { get; set; }
+    public string? Id { get; set; }
 
     [JsonPropertyName("age")]
-    public string Age { get; set; }
+    public string? Age { get; set; }
 
     [JsonPropertyName("characterName")]
-    public string CharacterName { get; set; }
+    public string? CharacterName { get; set; }
 
     [JsonPropertyName("characterClass")]
-    public string CharacterClass { get; set; }
+    public string? CharacterClass { get; set; }
 
     [JsonPropertyName("characterSpec")]
-    public string CharacterSpec { get; set; }
+    public string? CharacterSpec { get; set; }
 
     [JsonPropertyName("characterRealm")]
-    public string CharacterRealm { get; set; }
+    public string? CharacterRealm { get; set; }
 
     [JsonPropertyName("realName")]
-    public string RealName { get; set; }
+    public string? RealName { get; set; }
 
     [JsonPropertyName("country")]
-    public string Country { get; set; }
+    public string? Country { get; set; }
 
     [JsonPropertyName("reasonForJoining")]
-    public string ReasonForJoining { get; set; }
+    public string? ReasonForJoining { get; set; }
 
     [JsonPropertyName("reasonForLeaving")]
-    public string ReasonForLeaving { get; set; }
+    public string? ReasonForLeaving { get; set; }
 }

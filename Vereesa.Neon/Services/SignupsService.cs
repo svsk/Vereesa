@@ -200,27 +200,27 @@ namespace Vereesa.Neon.Services
 
         private class SignupReport
         {
-            public RestUserMessage DiscordMessage { get; set; }
-            public CalendarEvent Event { get; set; }
-            public SocketUser RequestedBy { get; set; }
+            public RestUserMessage? DiscordMessage { get; set; }
+            public CalendarEvent? Event { get; set; }
+            public SocketUser? RequestedBy { get; set; }
         }
 
         private class CalendarEvent
         {
-            public string Name { get; set; }
-            public string Type { get; set; }
-            public string Instance { get; set; }
-            public string Description { get; set; }
-            public string Time { get; set; }
-            public IEnumerable<EventAttendee> InvitationList { get; set; }
+            public string? Name { get; set; }
+            public string? Type { get; set; }
+            public string? Instance { get; set; }
+            public string? Description { get; set; }
+            public string? Time { get; set; }
+            public IEnumerable<EventAttendee>? InvitationList { get; set; }
         }
 
         private class EventAttendee
         {
-            public string Name { get; set; }
-            public string Realm { get; set; }
-            public string Class { get; set; }
-            public string Status { get; set; }
+            public string? Name { get; set; }
+            public string? Realm { get; set; }
+            public string? Class { get; set; }
+            public string? Status { get; set; }
         }
     }
 }
