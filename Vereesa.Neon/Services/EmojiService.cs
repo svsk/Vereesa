@@ -47,13 +47,16 @@ namespace Vereesa.Neon.Services
             if (message.Attachments.Count != 1)
             {
                 await message.Channel.SendMessageAsync(
-                    "Please attach an image file to your suggestion message for evalulation."
+                    "💥 Please attach an image file to your suggestion message for evaluation."
                 );
+
+                return;
             }
 
             if (string.IsNullOrWhiteSpace(emojiName))
             {
-                await message.Channel.SendMessageAsync("Please include an emoji name.");
+                await message.Channel.SendMessageAsync("💥 Please include an emoji name.");
+                return;
             }
 
             var emoteUrl = message.Attachments.First().Url;
