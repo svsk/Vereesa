@@ -15,12 +15,13 @@ namespace Vereesa.Neon.Services
         public async Task HandleMessage(IMessage message)
         {
             var services = BotServices.GetBotServices();
+            var helpMessage = "";
+
             foreach (var service in services)
             {
-                var helpMessage = "";
-                var invokableMethods = service.GetMethodsWithAttribute<OnCommandAttribute>();
+                var invocableMethods = service.GetMethodsWithAttribute<OnCommandAttribute>();
 
-                foreach (var method in invokableMethods)
+                foreach (var method in invocableMethods)
                 {
                     var obsoleteAttribute = method.GetCustomAttribute<ObsoleteAttribute>();
                     var commandAttribute = method.GetCustomAttribute<OnCommandAttribute>();
@@ -28,7 +29,7 @@ namespace Vereesa.Neon.Services
                     var usageAttribute = method.GetCustomAttribute<CommandUsageAttribute>();
                     var restrictionAttributes = method.GetCustomAttributes<AuthorizeAttribute>();
 
-                    if (obsoleteAttribute != null)
+                    if (obsoleteAttribute != null || commandAttribute == null)
                     {
                         continue;
                     }
@@ -53,12 +54,32 @@ namespace Vereesa.Neon.Services
                     helpMessage += "\n";
                 }
 
-                if (invokableMethods.Any() && !string.IsNullOrWhiteSpace(helpMessage))
+                if (invocableMethods.Any() && !string.IsNullOrWhiteSpace(helpMessage))
                 {
                     helpMessage += "\n";
-                    await message.Channel.SendMessageAsync(helpMessage);
                     await Task.Delay(50);
                 }
+            }
+
+            // Split helpMessage into multiple messages of max 2000 characters.
+            // Split by line breaks.
+            var lines = helpMessage.Split('\n').Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
+
+            var currentMessage = "";
+            foreach (var line in lines)
+            {
+                if (currentMessage.Length + line.Length + 2 > 2000)
+                {
+                    await message.Channel.SendMessageAsync(currentMessage);
+                    currentMessage = "";
+                }
+
+                currentMessage += line.Replace("\n", "") + "\n";
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentMessage))
+            {
+                await message.Channel.SendMessageAsync(currentMessage);
             }
         }
     }
