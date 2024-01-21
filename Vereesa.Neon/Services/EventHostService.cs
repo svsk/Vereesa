@@ -10,6 +10,8 @@ using Vereesa.Neon.Extensions;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Integrations;
 using Vereesa.Core;
+using Discord.Interactions;
+using System.Runtime.InteropServices;
 
 namespace Vereesa.Neon.Services
 {
@@ -285,145 +287,102 @@ namespace Vereesa.Neon.Services
 
         private async Task<string> GetImageUrlFromExistingEvent(SocketGuild guild)
         {
-            var existing = (
-                await guild
-                    .GetEventsAsync()
-                    .ToAsyncEnumerable()
-                    .FirstOrDefaultAsync(page => page.Any(e => e.Name.Contains("Neon Raid Night")))
-            ).FirstOrDefault();
+            var previousRaidEvent = await guild
+                .GetEventsAsync()
+                .ToAsyncEnumerable()
+                .FirstOrDefaultAsync(page => page.Any(e => e.Name.Contains("Neon Raid Night")));
 
-            return existing?.GetCoverImageUrl() ?? _fallbackImageUrl;
+            if (previousRaidEvent == null || !previousRaidEvent.Any())
+            {
+                return _fallbackImageUrl;
+            }
+
+            return previousRaidEvent.First().GetCoverImageUrl() ?? _fallbackImageUrl;
+        }
+
+        [SlashCommand("host", "Host an event")]
+        public async Task HostEventAsync(
+            IDiscordInteraction interaction,
+            [Description("Name of the event")] string eventName,
+            [Description("How many people who can join?")] long maxAttendees,
+            [Description("How long until the event begins?")] long minutesUntilStart,
+            [Optional] [Description("Role to notify?")] IRole? role
+        )
+        {
+            if (interaction.ChannelId == null)
+            {
+                await interaction.RespondAsync("💥 This command can only be used in a channel.");
+                return;
+            }
+
+            var hostMessageEmbed = BuildHostMessage(
+                role,
+                eventName,
+                interaction.User,
+                maxAttendees,
+                minutesUntilStart,
+                new List<ulong>()
+            );
+
+            var hostMessage = await _messaging.SendMessageToChannelByIdAsync(
+                interaction.ChannelId.Value,
+                null,
+                embed: hostMessageEmbed
+            );
+
+            if (hostMessage is IUserMessage userMessage)
+            {
+                _ = CreateEvent(userMessage, maxAttendees, minutesUntilStart);
+                await interaction.RespondAsync("✨ I made the event for you!", ephemeral: true);
+            }
+            else
+            {
+                await interaction.RespondAsync("💥 Something went wrong.");
+            }
         }
 
         [OnCommand("!host")]
         [AsyncHandler]
         [Description("Please only answer with a number when prompted for max attendees.")]
-        public async Task CreateEventAsync(IMessage triggerMessage)
-        {
-            var eventName = (
-                await _messaging.Prompt(
-                    triggerMessage.Author,
-                    "What's the name of the event you're hosting?",
-                    triggerMessage.Channel,
-                    _promptTimeout
-                )
-            ).Content;
-
-            var maxAttendees = int.Parse(
-                (
-                    await _messaging.Prompt(
-                        triggerMessage.Author,
-                        "How many people can attend?",
-                        triggerMessage.Channel,
-                        _promptTimeout
-                    )
-                ).Content
+        public async Task CreateEventAsync(IMessage triggerMessage) =>
+            await triggerMessage.Channel.SendMessageAsync(
+                "This command is deprecated. Please use `/host` instead.",
+                messageReference: new(triggerMessage.Id)
             );
 
-            var preSignedPeople = await _messaging.Prompt(
-                triggerMessage.Author,
-                "Mention anyone who you want to sign up preemptively. Type `none` to skip.",
-                triggerMessage.Channel,
-                _promptTimeout
-            );
-            var defaultAttendees = preSignedPeople.MentionedUserIds;
+        // private bool TryParseEventTime(string eventTime, out double? remainingMinutes)
+        // {
+        //     remainingMinutes = null;
 
-            if (defaultAttendees.Count > maxAttendees)
-            {
-                await triggerMessage.Channel.SendMessageAsync(
-                    "You can't pre-sign more people than the max attendee count."
-                );
-                return;
-            }
+        //     try
+        //     {
+        //         if (eventTime.Contains(":"))
+        //         {
+        //             var (hours, minutes, rest) = eventTime.Split(":").Select(int.Parse).ToList();
+        //             var now = DateTimeOffset.Now.ToCentralEuropeanTime();
+        //             var startOfDay = now.Date;
+        //             var eventStart = startOfDay.AddHours(hours).AddMinutes(minutes);
 
-            double? eventDurationMinutes;
-            do
-            {
-                var eventTime = (
-                    await _messaging.Prompt(
-                        triggerMessage.Author,
-                        "When will the event begin?\r\n"
-                            + "(Simply type a number of minutes from now like `10`"
-                            + " **OR** "
-                            + "if the event is today you can type a (CET/CEST) time like `20:00`)",
-                        triggerMessage.Channel,
-                        _promptTimeout
-                    )
-                ).Content;
+        //             remainingMinutes = (eventStart - now).TotalMinutes;
+        //         }
+        //         else
+        //         {
+        //             remainingMinutes = double.Parse(eventTime);
+        //         }
+        //     }
+        //     catch
+        //     {
+        //         return false;
+        //     }
 
-                if (!TryParseEventTime(eventTime, out eventDurationMinutes))
-                {
-                    await triggerMessage.Channel.SendMessageAsync(
-                        "I couldn't quite understand what time you meant. "
-                            + "Please tell me just a number of minutes like `10` or if the event is today a CET/CEST timestamp "
-                            + "like `14:00` or `06:00`."
-                    );
-                }
-            } while (eventDurationMinutes == null);
-
-            var alertRole = await _messaging.Prompt(
-                triggerMessage.Author,
-                "Name the role you want me to alert about the event (do not mention it with @, just give me the name)."
-                    + "Type `none` to skip.",
-                triggerMessage.Channel,
-                _promptTimeout
-            );
-
-            var role = _messaging.GetRolesByName(alertRole.Content).FirstOrDefault();
-
-            var hostMessageEmbed = BuildHostMessage(
-                role,
-                eventName,
-                triggerMessage,
-                maxAttendees,
-                eventDurationMinutes.Value,
-                defaultAttendees
-            );
-
-            var hostMessage = await triggerMessage.Channel.SendMessageAsync(embed: hostMessageEmbed);
-            if (defaultAttendees.Count >= maxAttendees)
-            {
-                await UpdateStatusAsync(hostMessage, "🔴", "Closed");
-            }
-            else
-            {
-                _ = CreateEvent(hostMessage, maxAttendees, eventDurationMinutes.Value);
-            }
-        }
-
-        private bool TryParseEventTime(string eventTime, out double? remainingMinutes)
-        {
-            remainingMinutes = null;
-
-            try
-            {
-                if (eventTime.Contains(":"))
-                {
-                    var (hours, minutes, rest) = eventTime.Split(":").Select(int.Parse).ToList();
-                    var now = DateTimeOffset.Now.ToCentralEuropeanTime();
-                    var startOfDay = now.Date;
-                    var eventStart = startOfDay.AddHours(hours).AddMinutes(minutes);
-
-                    remainingMinutes = (eventStart - now).TotalMinutes;
-                }
-                else
-                {
-                    remainingMinutes = double.Parse(eventTime);
-                }
-            }
-            catch
-            {
-                return false;
-            }
-
-            return remainingMinutes != null;
-        }
+        //     return remainingMinutes != null;
+        // }
 
         private static Embed BuildHostMessage(
-            IRole role,
+            IRole? role,
             string eventName,
-            IMessage triggerMessage,
-            int maxAttendees,
+            IUser host,
+            long maxAttendees,
             double eventDurationMinutes,
             IReadOnlyCollection<ulong> defaultAttendees,
             RoleDistribution roleDistribution = null,
@@ -448,7 +407,7 @@ namespace Vereesa.Neon.Services
                             .ToCentralEuropeanTime()
                             .ToString("ddd MMM d ∙ HH:mm", CultureInfo.InvariantCulture)
                         + " CET"
-                    : $"{triggerMessage.Author.GetPreferredDisplayName()} is hosting an event";
+                    : $"{host.GetPreferredDisplayName()} is hosting an event";
 
             var timeHeader = startDate != null ? "🕒 Duration" : "🕒 Time";
 
@@ -549,7 +508,7 @@ namespace Vereesa.Neon.Services
             }
         }
 
-        private async Task CreateEvent(IUserMessage hostMessage, int maxAttendees, double eventDurationMinutes)
+        private async Task CreateEvent(IUserMessage hostMessage, long maxAttendees, double eventDurationMinutes)
         {
             var expirationInstant = SystemClock.Instance
                 .GetCurrentInstant()
@@ -685,7 +644,7 @@ namespace Vereesa.Neon.Services
     {
         public ulong Id => HostMessage.Id;
         public IUserMessage HostMessage { get; set; }
-        public int MaxAttendees { get; set; }
+        public long MaxAttendees { get; set; }
         public Instant ExpirationInstant { get; set; }
     }
 
