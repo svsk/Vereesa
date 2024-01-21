@@ -10,7 +10,7 @@ namespace Vereesa.Core
         Task<IMessage> Prompt(IUser author, string prompt, IMessageChannel channel, int timeout = 15000);
         Task<IMessage> Prompt(WellknownRole role, string prompt, IMessageChannel channel, int timeout = 15000);
         Task<IMessage> Prompt(ulong roleId, string prompt, IMessageChannel channel, int timeout = 15000);
-        Task SendMessageToChannelByIdAsync(ulong channelId, string message);
+        Task<IMessage> SendMessageToChannelByIdAsync(ulong channelId, string message, Embed embed = null);
         IReadOnlyCollection<IGuild> GetServers();
         Task<IMessage> GetMessageById(ulong channelId, ulong messageId);
         IChannel GetChannelById(ulong channelId);

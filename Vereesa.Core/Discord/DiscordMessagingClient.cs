@@ -125,13 +125,13 @@ namespace Vereesa.Core.Discord
             });
         }
 
-        public async Task SendMessageToChannelByIdAsync(ulong channelId, string message)
+        public async Task<IMessage> SendMessageToChannelByIdAsync(ulong channelId, string message, Embed embed = null)
         {
             var channel = await Discord.GetChannelAsync(channelId);
 
             if (channel is IMessageChannel messageChannel)
             {
-                await messageChannel.SendMessageAsync(message);
+                return await messageChannel.SendMessageAsync(message, embed: embed);
             }
             else
             {
