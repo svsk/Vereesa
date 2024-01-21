@@ -116,9 +116,13 @@ namespace Vereesa.Core.Infrastructure
             {
                 return ApplicationCommandOptionType.String;
             }
-            else if (parameterType == typeof(int))
+            else if (parameterType == typeof(long))
             {
                 return ApplicationCommandOptionType.Integer;
+            }
+            else if (parameterType == typeof(double))
+            {
+                return ApplicationCommandOptionType.Number;
             }
             else if (parameterType == typeof(bool))
             {
@@ -135,6 +139,10 @@ namespace Vereesa.Core.Infrastructure
             else if (parameterType == typeof(IRole))
             {
                 return ApplicationCommandOptionType.Role;
+            }
+            else if (parameterType == typeof(int))
+            {
+                throw new Exception("int is not supported as a parameter type for slash commands. Use long instead.");
             }
             else
             {
