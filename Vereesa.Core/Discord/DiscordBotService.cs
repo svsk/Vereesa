@@ -64,7 +64,7 @@ namespace Vereesa.Core.Infrastructure
                     foreach (var parameter in parameters)
                     {
                         builder.AddOption(
-                            parameter.Name,
+                            parameter.Name.ToLower(),
                             InterpretType(parameter.ParameterType),
                             parameter.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty,
                             parameter.GetCustomAttribute<OptionalAttribute>() == null
@@ -90,7 +90,10 @@ namespace Vereesa.Core.Infrastructure
                         var methodParameters = method.GetParameters().Skip(1);
                         foreach (var parameter in methodParameters)
                         {
-                            var option = interaction.Data.Options.FirstOrDefault(o => o.Name == parameter.Name);
+                            var option = interaction.Data.Options.FirstOrDefault(
+                                o => o.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase)
+                            );
+
                             if (option != null)
                             {
                                 invocationParameters.Add(option.Value);
