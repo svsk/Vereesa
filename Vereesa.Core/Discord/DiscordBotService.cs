@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
@@ -66,7 +67,7 @@ namespace Vereesa.Core.Infrastructure
                             parameter.Name,
                             InterpretType(parameter.ParameterType),
                             parameter.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty,
-                            parameter.DefaultValue != null
+                            parameter.GetCustomAttribute<OptionalAttribute>() == null
                         );
                     }
 
