@@ -100,7 +100,7 @@ namespace Vereesa.Core.Infrastructure
                             }
                             else
                             {
-                                invocationParameters.Add(parameter.DefaultValue);
+                                invocationParameters.Add(null);
                             }
                         }
 
