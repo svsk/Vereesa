@@ -5,24 +5,35 @@ using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Services;
 using Vereesa.Neon.Data.Interfaces;
 using Xunit;
+using Discord;
 
 namespace Vereesa.Core.Tests
 {
     public class AttendanceServiceTests
     {
         [Fact]
-        public void UpdateAttendance_ClockHitsUtcNoon_AttendanceUpdatedCorrectly()
+        public async Task UpdateAttendance_ClockHitsUtcNoon_AttendanceUpdatedCorrectly()
         {
             // Arrange
-            var messagingMock = new Mock<IMessagingClient>();
-            var jobScheduleMock = new Mock<IJobScheduler>();
-            var attRepo = new Mock<IRepository<RaidAttendance>>();
-            var summRepo = new Mock<IRepository<RaidAttendanceSummary>>();
-            var usersChars = new Mock<IRepository<UsersCharacters>>();
+            var messagingClient = new Mock<IMessagingClient>();
+            var jobScheduler = new Mock<IJobScheduler>();
+            var repository = new Mock<IRepository<RaidAttendance>>();
+            var raidAttendanceSummary = new Mock<IRepository<RaidAttendanceSummary>>();
+            var usersCharacters = new Mock<IRepository<UsersCharacters>>();
             var logger = new Mock<ILogger<AttendanceService>>();
+
+            var target = new AttendanceService(
+                messagingClient.Object,
+                jobScheduler.Object,
+                repository.Object,
+                raidAttendanceSummary.Object,
+                usersCharacters.Object,
+                logger.Object
+            );
+
             var addedRaids = 0;
 
-            attRepo
+            repository
                 .Setup(r => r.AddOrEditAsync(It.IsAny<RaidAttendance>()))
                 .Callback(() =>
                 {
@@ -30,16 +41,27 @@ namespace Vereesa.Core.Tests
                 })
                 .Returns(Task.CompletedTask);
 
-            var target = new AttendanceService(
-                messagingMock.Object,
-                jobScheduleMock.Object,
-                attRepo.Object,
-                summRepo.Object,
-                usersChars.Object
-            );
+            var messageMock = new Mock<IMessage>();
+            messageMock
+                .Setup(
+                    m =>
+                        m.Channel.SendMessageAsync(
+                            It.IsAny<string>(),
+                            false,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            MessageFlags.None
+                        )
+                )
+                .Returns(Task.FromResult(new Mock<IUserMessage>().Object));
 
             // Act
-            jobScheduleMock.Raise(c => c.EveryDayAtUtcNoon += null);
+            await target.ForceAttendanceUpdate(messageMock.Object);
 
             // Assert
             Assert.True(addedRaids > 0);
