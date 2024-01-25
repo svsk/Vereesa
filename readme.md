@@ -45,7 +45,6 @@ A very minimal console application would look something like this:
 ### Program.cs
 
 ```CSharp
-// See https://aka.ms/new-console-template for more information
 using Vereesa.Core;
 using Vereesa.Core.Discord;
 
@@ -73,10 +72,10 @@ namespace MyBot;
 
 public class HelloWorldService : IBotService
 {
-	[SlashCommand("ping", "Pings the bot")]
-	public async Task HandlePing(IDiscordInteraction interaction)
-	{
-		await interaction.RespondAsync("Pong!");
-	}
+    [SlashCommand("ping", "Pings the bot")]
+    public async Task HandlePing(IDiscordInteraction interaction)
+    {
+        await interaction.RespondAsync("Pong!");
+    }
 }
 ```
