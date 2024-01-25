@@ -1,6 +1,6 @@
 using Discord;
 
-namespace Vereesa.Core.Infrastructure;
+namespace Vereesa.Core.Models;
 
 public class VereesaReaction
 {

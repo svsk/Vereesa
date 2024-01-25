@@ -1,4 +1,4 @@
-namespace Vereesa.Core.Infrastructure;
+namespace Vereesa.Core.Models;
 
 public class VereesaEmoji
 {

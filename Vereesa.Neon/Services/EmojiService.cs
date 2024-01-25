@@ -3,6 +3,7 @@ using Discord;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core;
 using Vereesa.Core.Infrastructure;
+using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
@@ -12,7 +13,6 @@ namespace Vereesa.Neon.Services
         private readonly IEmojiClient _emoji;
         private readonly ILogger<EmojiService> _logger;
         private readonly HttpClient _httpClient;
-        private ulong _neonGuildId = 124246560178438145;
 
         public EmojiService(
             IMessagingClient messaging,
@@ -30,7 +30,7 @@ namespace Vereesa.Neon.Services
         [OnCommand("!emoji list")]
         public async Task ListEmojis(IMessage message)
         {
-            var emotes = _emoji.GetCustomEmojiByServerId(_neonGuildId);
+            var emotes = _emoji.GetCustomEmojiByServerId(WellknownGuilds.Neon);
             await message.Channel.SendMessageAsync(string.Join(" ", emotes.Select(e => $"<:{e.Name}:{e.Id}>")));
         }
 
@@ -88,7 +88,7 @@ namespace Vereesa.Neon.Services
             {
                 try
                 {
-                    var emote = await _emoji.CreateCustomEmoji(_neonGuildId, emojiName, emoteImage);
+                    var emote = await _emoji.CreateCustomEmoji(WellknownGuilds.Neon, emojiName, emoteImage);
                     responseMessage = $"OK, I made <:{emote.Name}:{emote.Id}>!";
                 }
                 catch (Exception ex)

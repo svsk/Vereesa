@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
-using Vereesa.Core.Infrastructure;
+using Vereesa.Core.Discord;
 
 namespace Vereesa.Core.Extensions
 {

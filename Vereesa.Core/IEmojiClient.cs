@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord;
-using Vereesa.Core.Infrastructure;
+using Vereesa.Core.Models;
 
 namespace Vereesa.Core;
 

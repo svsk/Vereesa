@@ -10,8 +10,10 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core.Extensions;
+using Vereesa.Core.Infrastructure;
+using Vereesa.Core.Models;
 
-namespace Vereesa.Core.Infrastructure
+namespace Vereesa.Core.Discord
 {
     /// <summary>
     /// Inheriting this class causes a singleton instance of it to automatically start in VereesaClient.cs
@@ -21,20 +23,31 @@ namespace Vereesa.Core.Infrastructure
     {
         private T _service;
 
+        private readonly IJobScheduler _jobScheduler;
         private readonly DiscordSocketClient _discord;
         private readonly ILogger<DiscordBotService<T>> _logger;
+        private bool _ready = false;
 
-        public DiscordBotService(T service, DiscordSocketClient discord, ILogger<DiscordBotService<T>> logger)
+        public DiscordBotService(
+            T service,
+            IJobScheduler jobScheduler,
+            DiscordSocketClient discord,
+            ILogger<DiscordBotService<T>> logger
+        )
         {
+            _jobScheduler = jobScheduler;
             _service = service;
             _discord = discord;
             _logger = logger;
             _discord.Ready += RegisterSlashCommandsToGuild;
             BindCommands();
+            BindIntervalHandlers();
         }
 
         private async Task RegisterSlashCommandsToGuild()
         {
+            _ready = true;
+
             var commandMethods = new List<(string command, MethodInfo method)>();
 
             foreach (var guild in _discord.Guilds)
@@ -147,6 +160,51 @@ namespace Vereesa.Core.Infrastructure
             else
             {
                 throw new Exception($"Unsupported parameter type {parameterType.Name}");
+            }
+        }
+
+        private Dictionary<string, DateTime?> _lastInvocationTimes = new();
+
+        private void BindIntervalHandlers()
+        {
+            // Check for methods on the service that have the OnInterval attribute.
+            var intervalMethods = _service
+                .GetType()
+                .GetMethods()
+                .Where(m => m.GetCustomAttribute<OnIntervalAttribute>() != null);
+
+            // If there are any, add a handler to jobSchedulers EverySecond event. The handler
+            // should keep track of the interval of each method, and execute it each time the interval
+            // has passed.
+            if (intervalMethods.Any())
+            {
+                _jobScheduler.EverySecond += async () =>
+                {
+                    if (!_ready)
+                    {
+                        return;
+                    }
+
+                    foreach (var method in intervalMethods)
+                    {
+                        var intervalAttribute = method.GetCustomAttribute<OnIntervalAttribute>();
+                        var interval = new TimeSpan(0, 0, intervalAttribute.Minutes, intervalAttribute.Seconds);
+
+                        var lastInvocationTime = _lastInvocationTimes.GetValueOrDefault(method.Name);
+                        if (lastInvocationTime == null || DateTime.UtcNow - lastInvocationTime > interval)
+                        {
+                            try
+                            {
+                                await ExecuteHandlersAsync(new() { method }, new object[0]);
+                            }
+                            finally
+                            {
+                                // Store invocation times in a dictionary, keyed by method name.
+                                _lastInvocationTimes[method.Name] = DateTime.UtcNow;
+                            }
+                        }
+                    }
+                };
             }
         }
 

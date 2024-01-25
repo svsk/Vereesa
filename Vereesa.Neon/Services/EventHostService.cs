@@ -8,10 +8,12 @@ using Vereesa.Neon.Configuration;
 using Vereesa.Core.Extensions;
 using Vereesa.Neon.Extensions;
 using Vereesa.Core.Infrastructure;
+using Vereesa.Core.Models;
 using Vereesa.Neon.Integrations;
 using Vereesa.Core;
 using Discord.Interactions;
 using System.Runtime.InteropServices;
+using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
@@ -29,12 +31,14 @@ namespace Vereesa.Neon.Services
         private readonly IJobScheduler _jobScheduler;
         private readonly OpenAISettings _openAISettings;
         private readonly HttpClient _httpClient;
-        private int _promptTimeout = 60000;
+        private readonly IEventsClient _events;
+
         private string _fallbackImageUrl = "https://media.sverr.es/2024-01-02_085448_wicked-subject.png";
         private ConcurrentDictionary<ulong, HostedEvent> _watchedEvents { get; } = new();
 
         public EventHostService(
             IMessagingClient messaging,
+            IEventsClient events,
             IJobScheduler jobScheduler,
             OpenAISettings openAISettings,
             HttpClient httpClient
@@ -44,26 +48,26 @@ namespace Vereesa.Neon.Services
             _jobScheduler = jobScheduler;
             _openAISettings = openAISettings;
             _httpClient = httpClient;
-
-            _jobScheduler.EveryHalfMinute -= ProgressWatchedEvents;
-            _jobScheduler.EveryHalfMinute += ProgressWatchedEvents;
+            _events = events;
         }
 
-        [OnInterval(Minutes = 5)]
-        public async Task UpdateDiscordEvents()
+        [OnInterval(Seconds = 30)]
+        public Task UpdateDiscordEvents()
         {
-            EnsureEventsStarted();
-            EnsureEventsEnded();
+            _ = EnsureEventsStarted();
+            return Task.CompletedTask;
         }
 
-        private void EnsureEventsStarted()
+        private async Task EnsureEventsStarted()
         {
-            throw new NotImplementedException();
-        }
-
-        private void EnsureEventsEnded()
-        {
-            throw new NotImplementedException();
+            var events = await _events.GetGuildEvents(WellknownGuilds.Neon);
+            foreach (var guildEvent in events)
+            {
+                if (guildEvent.Status == VereesaEventStatus.Scheduled && guildEvent.StartTime < DateTimeOffset.UtcNow)
+                {
+                    await _events.StartEvent(WellknownGuilds.Neon, guildEvent.Id);
+                }
+            }
         }
 
         [OnReaction]
@@ -539,7 +543,8 @@ namespace Vereesa.Neon.Services
             _watchedEvents.TryAdd(hostedEvent.Id, hostedEvent);
         }
 
-        private async Task ProgressWatchedEvents()
+        [OnInterval(Seconds = 30)]
+        public async Task ProgressWatchedEvents()
         {
             foreach (var hostedEvent in _watchedEvents.Values)
             {

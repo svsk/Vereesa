@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
-using Vereesa.Core.Infrastructure;
+using Vereesa.Core.Models;
 
 namespace Vereesa.Core.Discord
 {

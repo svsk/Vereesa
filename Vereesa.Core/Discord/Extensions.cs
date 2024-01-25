@@ -28,6 +28,7 @@ public static class Extensions
             services.AddSingleton(discord);
             services.AddTransient<IMessagingClient, DiscordMessagingClient>();
             services.AddTransient<IEmojiClient, DiscordEmojiClient>();
+            services.AddTransient<IEventsClient, DiscordEventsClient>();
         });
 
         return builder;
