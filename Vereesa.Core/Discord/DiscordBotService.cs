@@ -52,7 +52,12 @@ namespace Vereesa.Core.Discord
 
             foreach (var guild in _discord.Guilds)
             {
-                var commands = await guild.GetApplicationCommandsAsync();
+                // Delete all existing commands.
+                var existingCommands = await guild.GetApplicationCommandsAsync();
+                foreach (var existingCommand in existingCommands)
+                {
+                    await existingCommand.DeleteAsync();
+                }
 
                 var methods = _service.GetType().GetMethods();
 
@@ -63,12 +68,6 @@ namespace Vereesa.Core.Discord
 
                 foreach (var command in slashCommandMethods)
                 {
-                    var existingCommand = commands.FirstOrDefault(c => c.Name == command.Attributes.Name);
-                    if (existingCommand != null)
-                    {
-                        await existingCommand.DeleteAsync();
-                    }
-
                     var builder = new SlashCommandBuilder()
                         .WithName(command.Attributes.Name)
                         .WithDescription(command.Attributes.Description ?? "");
