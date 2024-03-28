@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Vereesa.Core.Discord;
 
@@ -31,8 +33,25 @@ namespace Vereesa.Core.Extensions
             return services;
         }
 
+        private static async Task ClearCommandsAsync(DiscordSocketClient discord)
+        {
+            foreach (var guild in discord.Guilds)
+            {
+                var existingCommands = await guild.GetApplicationCommandsAsync();
+                foreach (var existingCommand in existingCommands)
+                {
+                    await existingCommand.DeleteAsync();
+                }
+            }
+        }
+
         public static void UseBotServices(this IServiceProvider serviceProvider)
         {
+            var discord = serviceProvider.GetRequiredService<DiscordSocketClient>();
+
+            // Clear all existing commands before the BotServices register their current ones.
+            ClearCommandsAsync(discord).GetAwaiter().GetResult();
+
             foreach (var serviceType in GetBotServices())
             {
                 try
