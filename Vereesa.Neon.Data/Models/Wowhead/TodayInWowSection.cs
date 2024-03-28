@@ -10,8 +10,9 @@ public class ElementalStorm
     public string Type { get; set; }
     public string Zone { get; set; }
     public string Status { get; set; }
-    public DateTimeOffset EndingAt { get; set; }
-    public DateTimeOffset StartingAt => EndingAt.AddHours(-2);
+    public DateTimeOffset Time { get; set; }
+    public DateTimeOffset EndingAt => Time < DateTimeOffset.UtcNow ? Time : Time.AddHours(2);
+    public DateTimeOffset StartingAt => Time > DateTimeOffset.UtcNow ? Time : Time.AddHours(-2);
 }
 
 public class TodayInWowSection

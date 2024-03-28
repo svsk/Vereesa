@@ -44,7 +44,7 @@ namespace Vereesa.Neon.Integrations
                 Type = type,
                 Zone = zone,
                 Status = zone != null ? "Active" : "Upcoming",
-                EndingAt = DateTimeOffset.FromUnixTimeSeconds(currentElementalStorm?.EndingUt ?? 0),
+                Time = DateTimeOffset.FromUnixTimeSeconds(currentElementalStorm?.EndingUt ?? 0),
             };
         }
 

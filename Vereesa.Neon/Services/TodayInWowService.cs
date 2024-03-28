@@ -25,12 +25,16 @@ namespace Vereesa.Neon.Services
                 return;
             }
 
+            var startingOrStarted = currentElementalStorm.StartingAt > DateTimeOffset.UtcNow ? "Starting" : "Started";
+
             var embed = new EmbedBuilder()
                 .WithTitle("Current Elemental Storm")
-                .AddField("Type", currentElementalStorm.Type, true)
-                .AddField("Zone", currentElementalStorm.Zone, true)
-                .AddField("Status", currentElementalStorm.Status, true)
-                .WithFooter($"Ending at {currentElementalStorm.EndingAt:HH:mm} (UTC)");
+                .AddField("Type", currentElementalStorm.Type ?? "Unknown", true)
+                .AddField("Zone", currentElementalStorm.Zone ?? "Unknown", true)
+                .AddField("Status", currentElementalStorm.Status ?? "Unknown", true)
+                .WithFooter(
+                    $"{startingOrStarted} at {currentElementalStorm.StartingAt:HH:mm} (UTC)\nEnding at {currentElementalStorm.EndingAt:HH:mm} (UTC)"
+                );
 
             await interaction.RespondAsync(embed: embed.Build());
         }
