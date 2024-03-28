@@ -1,76 +1,90 @@
-using System.Net;
-using System.Text.RegularExpressions;
-using HtmlAgilityPack;
-using Vereesa.Core.Extensions;
 using Vereesa.Neon.Integrations.Interfaces;
 using Vereesa.Neon.Data.Models.Wowhead;
-using Vereesa.Neon.Extensions;
+using System.Text.Json;
 
 namespace Vereesa.Neon.Integrations
 {
     public class WowheadClient : IWowheadClient
     {
-        public TodayInWow GetTodayInWow()
+        private readonly HttpClient _httpClient;
+
+        public WowheadClient(HttpClient httpClient)
         {
-            string html = string.Empty;
-            using (var webClient = new WebClient())
+            _httpClient = httpClient;
+        }
+
+        public async Task<ElementalStorm> GetCurrentElementalStorm()
+        {
+            var todayInWow = await GetTodayInWow();
+
+            var eventsInEu = todayInWow.FirstOrDefault(grp => grp.Id == "events-and-rares" && grp.RegionId == "EU");
+            var currentElementalStorm = eventsInEu?.Groups
+                .Where(grp => grp != null)
+                .FirstOrDefault(grp => grp.Id == "elemental-storms")
+                ?.Content.Lines.First();
+
+            var name = currentElementalStorm?.Name;
+            var stormClass = currentElementalStorm
+                ?.Class?.Replace("elemental-storm-", string.Empty)
+                .Replace("elemental-storm", string.Empty);
+
+            var zone = name != "Upcoming" && name != "In Progress" ? name : null;
+
+            var type = stormClass switch
             {
-                html = webClient.DownloadString("https://www.wowhead.com");
-                Regex rRemScript = new Regex(@"<script[^>]*>[\s\S]*?</script>");
-                html = rRemScript.Replace(html, string.Empty);
+                "water" => "Water",
+                "earth" => "Earth",
+                "fire" => "Fire",
+                "air" => "Air",
+                _ => "Unknown",
+            };
+
+            return new ElementalStorm
+            {
+                Type = type,
+                Zone = zone,
+                Status = zone != null ? "Active" : "Upcoming",
+                EndingAt = DateTimeOffset.FromUnixTimeSeconds(currentElementalStorm?.EndingUt ?? 0),
+            };
+        }
+
+        public async Task<TodayInWowSection[]> GetTodayInWow()
+        {
+            try
+            {
+                var result = await _httpClient.GetAsync("https://wwww.wowhead.com/");
+
+                var html = await result.Content.ReadAsStringAsync();
+
+                var start = html.IndexOf("new WH.Wow.TodayInWow(");
+                var end = html.IndexOf(");", start);
+                var arrayStart = html.IndexOf("[", start);
+                var json = html.Substring(arrayStart, end - arrayStart);
+
+                // Ignore null values in collections.
+                // Specialized converter for handling arrays that are suppoed to be objects.
+                var todayInWow = JsonSerializer.Deserialize<TodayInWowSection[]>(
+                    json,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        Converters = { new TodayInWowSectionGroupContentLineConverter() },
+                    }
+                );
+
+                if (todayInWow == null)
+                {
+                    throw new Exception("Failed to parse TodayInWow JSON");
+                }
+
+                return todayInWow;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
 
-            HtmlDocument doc = new HtmlDocument();
-            doc.LoadHtml(html);
-
-            var tiwSections = doc.DocumentNode.SelectNodes(
-                "//div[contains(@class,'tiw-region-EU')]//table[contains(@class,'tiw-group') and not( contains(@class,'tiw-blocks-warfront'))]"
-            );
-            var warfronts = doc.DocumentNode.SelectNodes(
-                "//div[contains(@class,'tiw-region-EU')]//table[contains(@class, 'tiw-group tiw-blocks-warfront')]"
-            );
-            var assaults = doc.DocumentNode.SelectNodes("//*[contains(@class,'tiw-assault-EU-wrapper')]");
-
-            var todayInWow = new TodayInWow();
-            todayInWow.Sections = tiwSections
-                .Select(
-                    c =>
-                        new TodayInWowSection
-                        {
-                            Title = c.ChildNodes.First(n => n.Name == "tr").InnerText.StripTrim(),
-                            Entries = c.ChildNodes
-                                .Where(n => n.Name == "tr")
-                                .Skip(1)
-                                .Select(n => n.InnerText.StripTrim())
-                                .ToList()
-                        }
-                )
-                .ToList();
-
-            var warfrontSections = warfronts.Select(
-                n =>
-                    new TodayInWowSection
-                    {
-                        Title = n.SelectSingleChildNode("//div[contains(@class,'tiw-blocks-status-name')]")
-                            .InnerText.StripTrim(),
-                        Entries = new List<string>
-                        {
-                            n.SelectSingleChildNode("//div[contains(@class,'status-state')]").InnerText.StripTrim(),
-                            n.SelectSingleChildNode("//div[contains(@class,'status-progress')]").InnerText.StripTrim()
-                        }
-                    }
-            );
-
-            // var assaultSections = assaults.Select(n => new TodayInWowSection {
-            //     Title = n.SelectSingleChildNode("//*[contains(@class,'tiw-blocks-status-name')]").InnerText.StripTrim(),
-            //     Entries = new List<string> {
-            //         ""
-            //     }
-            // });
-
-            todayInWow.Sections.AddRange(warfrontSections);
-
-            return todayInWow;
+            return new TodayInWowSection[0];
         }
     }
 }

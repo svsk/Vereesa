@@ -4,6 +4,7 @@ namespace Vereesa.Neon.Integrations.Interfaces
 {
     public interface IWowheadClient
     {
-        TodayInWow GetTodayInWow();
+        Task<ElementalStorm> GetCurrentElementalStorm();
+        Task<TodayInWowSection[]> GetTodayInWow();
     }
 }

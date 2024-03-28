@@ -1,83 +1,38 @@
 using Discord;
-using Discord.WebSocket;
-using Vereesa.Core.Extensions;
-using Vereesa.Neon.Extensions;
 using Vereesa.Neon.Integrations.Interfaces;
-using Vereesa.Neon.Data.Models.Wowhead;
+using Discord.Interactions;
+using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class TodayInWoWService //: BotServiceBase
+    public class TodayInWoWService : IBotService
     {
-        private bool _isInitialized = false;
-        private DiscordSocketClient _discord;
         private IWowheadClient _wowhead;
 
-        public TodayInWoWService(DiscordSocketClient discord, IWowheadClient wowhead)
+        public TodayInWoWService(IWowheadClient wowhead)
         {
-            _discord = discord;
             _wowhead = wowhead;
-
-            _discord.Ready -= InitializeServiceAsync;
-            _discord.Ready += InitializeServiceAsync;
         }
 
-        private Task InitializeServiceAsync()
+        [SlashCommand("elemental-storm", "Show current elemental storm")]
+        public async Task Test(IDiscordInteraction interaction)
         {
-            if (_isInitialized)
-                return Task.CompletedTask;
+            var currentElementalStorm = await _wowhead.GetCurrentElementalStorm();
 
-            _isInitialized = true;
-
-            // TimerHelpers.SetTimeout(() => {
-            //     DateTime cetNow = DateTime.UtcNow.ToCentralEuropeanTime();
-            //     if (cetNow.Hour == 9 && cetNow.Minute == 0)
-            //     {
-            //         AnnounceTodayInWow();
-            //     }
-            // }, 1000 * 60, true, true);
-
-            return Task.CompletedTask;
-        }
-
-        private void AnnounceTodayInWow()
-        {
-            var todayInWow = _wowhead.GetTodayInWow();
-
-            _discord.Guilds
-                .First(g => g.Name == "Neon")
-                .GetChannelByName("botplayground")
-                .SendMessageAsync(string.Empty, embed: GenerateEmbed(todayInWow));
-        }
-
-        private Embed GenerateEmbed(TodayInWow todayInWow)
-        {
-            var embed = new EmbedBuilder();
-            embed.Color = new Color(155, 89, 182);
-
-            var title = $"Today in WoW";
-            embed.Title = title.Length > 256 ? title.Substring(0, 256) : title;
-
-            foreach (var section in todayInWow.Sections)
+            if (currentElementalStorm == null)
             {
-                embed.AddField($"__{section.Title}__", new List<string> { "Test", "Hest", "Lest" }, true);
-                section.Entries.ForEach(e => embed.AddField($"{e}", new List<string> { "Test", "Hest", "Lest" }, true));
+                await interaction.RespondAsync("No elemental storms found.");
+                return;
             }
 
-            // embed.AddField("__Age__", playerAge, true);
-            // embed.AddField("__Country__", playerCountry, true);
-            // embed.AddField("__Status__", GetIconedStatusString(application.CurrentStatusString), true);
-            // embed.AddField("__Character Stats__", $"**Heart of Azeroth level:** {artifactLevel} \r\n**Avg ilvl:** {character.Items.AverageItemLevelEquipped}\r\n**Achi points:** {character.AchievementPoints} | **Total HKs:** {character.TotalHonorableKills}", false);
-            // embed.AddField("__External sites__", $@"[Armory]({armoryProfileUrl}) | [RaiderIO](https://raider.io/characters/eu/{charAndRealm.realm}/{charAndRealm.name}) | [WoWProgress](https://www.wowprogress.com/character/eu/{charAndRealm.realm}/{charAndRealm.name}) | [WarcraftLogs](https://www.warcraftlogs.com/character/eu/{charAndRealm.realm}/{charAndRealm.name})", false);
+            var embed = new EmbedBuilder()
+                .WithTitle("Current Elemental Storm")
+                .AddField("Type", currentElementalStorm.Type, true)
+                .AddField("Zone", currentElementalStorm.Zone, true)
+                .AddField("Status", currentElementalStorm.Status, true)
+                .WithFooter($"Ending at {currentElementalStorm.EndingAt:HH:mm} (UTC)");
 
-            embed.Footer = new EmbedFooterBuilder();
-            embed.Footer.WithIconUrl(
-                "https://render-eu.worldofwarcraft.com/character/karazhan/102/54145126-avatar.jpg"
-            );
-            embed.Footer.Text =
-                $"Requested by Veinlash - Today at {DateTimeExtensions.NowInCentralEuropeanTime().ToString("HH:mm")}";
-
-            return embed.Build();
+            await interaction.RespondAsync(embed: embed.Build());
         }
     }
 }
