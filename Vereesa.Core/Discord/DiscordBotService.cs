@@ -200,12 +200,18 @@ namespace Vereesa.Core.Discord
                         {
                             try
                             {
-                                await ExecuteHandlersAsync(new() { method }, new object[0]);
-                            }
-                            finally
-                            {
                                 // Store invocation times in a dictionary, keyed by method name.
                                 _lastInvocationTimes[method.Name] = DateTime.UtcNow;
+                                await ExecuteHandlersAsync(new() { method }, new object[0]);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger?.LogError(
+                                    ex,
+                                    "Failed to invoke handler {HandlerName} on {Class}",
+                                    method.Name,
+                                    method.DeclaringType.Name
+                                );
                             }
                         }
                     }
