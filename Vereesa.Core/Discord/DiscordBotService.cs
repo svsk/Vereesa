@@ -72,7 +72,20 @@ namespace Vereesa.Core.Discord
                             parameter.Name.ToLower(),
                             InterpretType(parameter.ParameterType),
                             parameter.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty,
-                            parameter.GetCustomAttribute<OptionalAttribute>() == null
+                            parameter.GetCustomAttribute<OptionalAttribute>() == null,
+                            choices: parameter
+                                .GetCustomAttributes<ChoiceAttribute>()
+                                .Select(c =>
+                                {
+                                    var choice = new ApplicationCommandOptionChoiceProperties
+                                    {
+                                        Name = c.Name,
+                                        Value = c.Value
+                                    };
+
+                                    return choice;
+                                })
+                                .ToArray()
                         );
                     }
 
