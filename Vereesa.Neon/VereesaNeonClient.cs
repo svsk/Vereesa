@@ -16,6 +16,7 @@ using Vereesa.Neon.Data.Models.Statistics;
 using Vereesa.Neon.Data.Repositories;
 using Vereesa.Core.Discord;
 using Vereesa.Core;
+using Vereesa.Neon.Data.Models.Wowhead;
 
 namespace Vereesa.Neon
 {
@@ -94,6 +95,10 @@ namespace Vereesa.Neon
                         .AddScoped<IRepository<RaidAttendanceSummary>, AzureStorageRepository<RaidAttendanceSummary>>()
                         .AddScoped<IRepository<UsersCharacters>, AzureStorageRepository<UsersCharacters>>()
                         .AddScoped<IRepository<Personality>, AzureStorageRepository<Personality>>()
+                        .AddScoped<
+                            IRepository<ElementalStormSubscription>,
+                            AzureStorageRepository<ElementalStormSubscription>
+                        >()
                         .AddScoped<IWowheadClient, WowheadClient>()
                         .AddLogging(config =>
                         {

@@ -1,6 +1,7 @@
 using Vereesa.Neon.Integrations.Interfaces;
 using Vereesa.Neon.Data.Models.Wowhead;
 using System.Text.Json;
+using Vereesa.Neon.Data.Models;
 
 namespace Vereesa.Neon.Integrations
 {
@@ -32,17 +33,20 @@ namespace Vereesa.Neon.Integrations
 
             var type = stormClass switch
             {
-                "water" => "Water",
-                "earth" => "Earth",
-                "fire" => "Fire",
-                "air" => "Air",
-                _ => "Unknown",
+                "water" => ElementalStormType.Water,
+                "earth" => ElementalStormType.Earth,
+                "fire" => ElementalStormType.Fire,
+                "air" => ElementalStormType.Air,
+                _ => ElementalStormType.Unknown,
             };
+
+            WoWZone? wowZone = null;
+            WoWZoneHelper.TryParseWoWZone(zone, out wowZone);
 
             return new ElementalStorm
             {
                 Type = type,
-                Zone = zone,
+                ZoneId = wowZone,
                 Status = zone != null ? "Active" : "Upcoming",
                 Time = DateTimeOffset.FromUnixTimeSeconds(currentElementalStorm?.EndingUt ?? 0),
             };
