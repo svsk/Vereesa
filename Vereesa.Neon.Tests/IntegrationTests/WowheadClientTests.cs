@@ -35,7 +35,7 @@ namespace Vereesa.Neon.Tests.IntegrationTests
             var target = new WowheadClient(httpClient);
 
             // Act
-            var result = await target.GetCurrentElementalStorm();
+            var result = await target.GetCurrentElementalStorms();
 
             // Assert
             Assert.NotNull(result);
