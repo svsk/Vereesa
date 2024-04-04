@@ -302,7 +302,7 @@ namespace Vereesa.Neon.Services
             var playerCountry = application.Country;
 
             var embed = new EmbedBuilder();
-            embed.Color = new Color(155, 89, 182);
+            embed.Color = VereesaColors.VereesaPurple;
             embed.WithAuthor(
                 $"New application @ neon.gg/applications",
                 null,

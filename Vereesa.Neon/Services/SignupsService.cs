@@ -165,7 +165,7 @@ namespace Vereesa.Neon.Services
                 : "None";
 
             var embed = new EmbedBuilder();
-            embed.Color = new Color(155, 89, 182);
+            embed.Color = VereesaColors.VereesaPurple;
 
             embed.WithAuthor($"{calendarEvent.Name}");
             embed.WithThumbnailUrl("https://cdn.sverr.es/2018-07-02_16-43-45.png");

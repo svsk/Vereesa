@@ -8,6 +8,7 @@ using Vereesa.Neon.Data.Interfaces;
 using Vereesa.Neon.Data.Models.Wowhead;
 using Vereesa.Core.Infrastructure;
 using Microsoft.Extensions.Logging;
+using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services;
 
@@ -31,22 +32,22 @@ public class TodayInWoWService : IBotService
         _logger = logger;
     }
 
-    [SlashCommand("elemental-storm", "Show current elemental storm")]
+    [SlashCommand("elemental-storm", "Show current elemental storms")]
     public async Task GetCurrentElementalStorm(IDiscordInteraction interaction)
     {
         await interaction.DeferAsync();
 
-        var currentElementalStorm = await _wowhead.GetCurrentElementalStorm();
+        var currentStorms = await _wowhead.GetCurrentElementalStorms();
 
-        if (currentElementalStorm == null)
+        if (currentStorms == null || !currentStorms.Any())
         {
             await interaction.FollowupAsync("💥 No elemental storms found.");
             return;
         }
 
-        var embed = CreateStormEmbed(currentElementalStorm);
+        var embeds = currentStorms.Select(storm => CreateStormEmbed(storm).Build()).ToArray();
 
-        await interaction.FollowupAsync(embed: embed.Build());
+        await interaction.FollowupAsync(embeds: embeds);
     }
 
     [SlashCommand("subscribe-to-storm", "Subscribe to elemental storms")]
@@ -141,38 +142,44 @@ public class TodayInWoWService : IBotService
     [OnInterval(Minutes = 10)]
     public async Task CheckForElementalStorms()
     {
-        var currentElementalStorm = await _wowhead.GetCurrentElementalStorm();
-        if (currentElementalStorm == null || currentElementalStorm.ZoneId == null)
+        var currentElementalStorms = (await _wowhead.GetCurrentElementalStorms())
+            ?.Where(storm => storm.Status == "Active")
+            .ToList();
+
+        if (currentElementalStorms == null || !currentElementalStorms.Any())
         {
             return;
         }
 
         var subscriptions = await _subscriptionRepository.GetAllAsync();
-        var embed = CreateStormEmbed(currentElementalStorm).Build();
 
-        foreach (var subscription in subscriptions)
+        foreach (var storm in currentElementalStorms)
         {
-            var subscriptionIsForCurrentStorm =
-                subscription.Type == currentElementalStorm.Type && subscription.Zone == currentElementalStorm.ZoneId;
-
-            if (!subscriptionIsForCurrentStorm)
+            foreach (var subscription in subscriptions)
             {
-                continue;
+                var subscriptionIsForCurrentStorm =
+                    subscription.Type == storm.Type && subscription.Zone == storm.ZoneId;
+
+                if (!subscriptionIsForCurrentStorm)
+                {
+                    continue;
+                }
+
+                var recentlyNotified =
+                    subscription.LastNotifiedAt.HasValue && subscription.LastNotifiedAt.Value >= storm.StartingAt;
+
+                if (recentlyNotified)
+                {
+                    continue;
+                }
+
+                var embed = CreateStormEmbed(storm).Build();
+
+                await _messagingClient.SendMessageToUserByIdAsync(subscription.UserId, "", embed: embed);
+
+                subscription.LastNotifiedAt = storm.StartingAt;
+                await _subscriptionRepository.AddOrEditAsync(subscription);
             }
-
-            var recentlyNotified =
-                subscription.LastNotifiedAt.HasValue
-                && subscription.LastNotifiedAt.Value >= currentElementalStorm.StartingAt;
-
-            if (recentlyNotified)
-            {
-                continue;
-            }
-
-            await _messagingClient.SendMessageToUserByIdAsync(subscription.UserId, "", embed: embed);
-
-            subscription.LastNotifiedAt = currentElementalStorm.StartingAt;
-            await _subscriptionRepository.AddOrEditAsync(subscription);
         }
     }
 
@@ -185,6 +192,7 @@ public class TodayInWoWService : IBotService
             .AddField("Type", elementalStorm.Type?.ToString() ?? "Unknown", true)
             .AddField("Zone", elementalStorm.Zone ?? "Unknown", true)
             .AddField("Status", elementalStorm.Status ?? "Unknown", true)
+            .WithColor(VereesaColors.VereesaPurple)
             .WithFooter(
                 $"{startingOrStarted} at {elementalStorm.StartingAt:HH:mm} (UTC)\nEnding at {elementalStorm.EndingAt:HH:mm} (UTC)"
             );

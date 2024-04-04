@@ -14,42 +14,59 @@ namespace Vereesa.Neon.Integrations
             _httpClient = httpClient;
         }
 
-        public async Task<ElementalStorm> GetCurrentElementalStorm()
+        public async Task<List<ElementalStorm>?> GetCurrentElementalStorms()
         {
             var todayInWow = await GetTodayInWow();
 
             var eventsInEu = todayInWow.FirstOrDefault(grp => grp.Id == "events-and-rares" && grp.RegionId == "EU");
-            var currentElementalStorm = eventsInEu?.Groups
+            var elementalStormLines = eventsInEu?.Groups
                 .Where(grp => grp != null)
                 .FirstOrDefault(grp => grp.Id == "elemental-storms")
-                ?.Content.Lines.First();
+                ?.Content.Lines;
 
-            var name = currentElementalStorm?.Name;
-            var stormClass = currentElementalStorm
-                ?.Class?.Replace("elemental-storm-", string.Empty)
-                .Replace("elemental-storm", string.Empty);
-
-            var zone = name != "Upcoming" && name != "In Progress" ? name : null;
-
-            var type = stormClass switch
+            if (elementalStormLines == null)
             {
-                "water" => ElementalStormType.Water,
-                "earth" => ElementalStormType.Earth,
-                "fire" => ElementalStormType.Fire,
-                "air" => ElementalStormType.Air,
-                _ => ElementalStormType.Unknown,
-            };
+                return null;
+            }
 
-            WoWZone? wowZone = null;
-            WoWZoneHelper.TryParseWoWZone(zone, out wowZone);
+            var storms = elementalStormLines
+                .Where(line => line != null)
+                .Select(line =>
+                {
+                    var stormClass = line.Class
+                        ?.Replace("elemental-storm-", string.Empty)
+                        .Replace("elemental-storm", string.Empty);
 
-            return new ElementalStorm
-            {
-                Type = type,
-                ZoneId = wowZone,
-                Status = zone != null ? "Active" : "Upcoming",
-                Time = DateTimeOffset.FromUnixTimeSeconds(currentElementalStorm?.EndingUt ?? 0),
-            };
+                    var name = line.Name;
+                    var zone = name != "Upcoming" && name != "In Progress" ? name : null;
+
+                    var type = stormClass switch
+                    {
+                        "water" => ElementalStormType.Water,
+                        "earth" => ElementalStormType.Earth,
+                        "fire" => ElementalStormType.Fire,
+                        "air" => ElementalStormType.Air,
+                        _ => ElementalStormType.Unknown,
+                    };
+
+                    WoWZone? wowZone = null;
+                    WoWZoneHelper.TryParseWoWZone(zone, out wowZone);
+
+                    return new ElementalStorm
+                    {
+                        Type = type,
+                        ZoneId = wowZone,
+                        Status = zone != null ? "Active" : "Upcoming",
+                        Time = DateTimeOffset.FromUnixTimeSeconds(line.EndingUt ?? 0),
+                    };
+                })
+                .ToList();
+
+            var activeStorms = storms.Where(storm => storm.Status == "Active").ToList();
+            var upcomingStorms = storms.Where(storm => storm.Status == "Upcoming").ToList();
+
+            // If there are any active storms, return those. Otherwise, return the first upcoming storm.
+            return activeStorms.Any() ? activeStorms : upcomingStorms.Take(1).ToList();
         }
 
         public async Task<TodayInWowSection[]> GetTodayInWow()

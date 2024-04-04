@@ -4,6 +4,7 @@ using Vereesa.Neon.Integrations;
 using System.Web;
 using Vereesa.Neon.Extensions;
 using Vereesa.Core;
+using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
@@ -91,7 +92,7 @@ namespace Vereesa.Neon.Services
             IUser requester
         )
         {
-            var embed = new EmbedBuilder().WithTitle("Raid Split Result").WithColor(new Color(155, 89, 182));
+            var embed = new EmbedBuilder().WithTitle("Raid Split Result").WithColor(VereesaColors.VereesaPurple);
 
             var export = "";
             var grpNum = 1;

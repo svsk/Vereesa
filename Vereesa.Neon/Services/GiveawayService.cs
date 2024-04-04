@@ -8,6 +8,7 @@ using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Interfaces;
 using Vereesa.Neon.Data.Models.Giveaways;
 using Vereesa.Neon.Extensions;
+using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
@@ -336,7 +337,7 @@ namespace Vereesa.Neon.Services
                     $"Ends at {DateTimeOffset.FromUnixTimeSeconds(endsAt).ToCentralEuropeanTime()} (Server time)";
             }
 
-            embed.Color = new Color(155, 89, 182);
+            embed.Color = VereesaColors.VereesaPurple;
 
             return embed.Build();
         }
