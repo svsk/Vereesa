@@ -5,6 +5,7 @@ using Vereesa.Core;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Interfaces;
+using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
@@ -12,8 +13,7 @@ namespace Vereesa.Neon.Services
     {
         private IMessagingClient _messaging;
         private IRepository<UsersCharacters> _userCharactersRepository;
-
-        private WellknownRole _responsibleRole = WellknownRole.Officer;
+        private ulong _responsibleRole = WellknownRoles.Officer;
         public const string BlobContainer = "users-characters.json";
 
         public CharacterService(IMessagingClient messaging, IRepository<UsersCharacters> userCharactersRepository)

@@ -83,6 +83,7 @@ namespace Vereesa.Neon
                         .AddSingleton(openAISettings)
                         .AddSingleton(httpClient)
                         .AddSingleton<Random>()
+                        .AddTransient<AttendanceService>()
                         .AddScoped<IWarcraftLogsApi, WarcraftLogsApi>()
                         .AddScoped<ISpreadsheetClient, GoogleSheetsClient>()
                         .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()

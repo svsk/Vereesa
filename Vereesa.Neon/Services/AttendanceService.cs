@@ -1,514 +1,380 @@
-using System.ComponentModel;
 using System.Globalization;
-using Discord;
-using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
-using NodaTime;
-using RestSharp;
-using Vereesa.Core;
-using Vereesa.Core.Extensions;
-using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Interfaces;
+using HtmlAgilityPack;
+using RestSharp;
+using NodaTime;
+using Vereesa.Core.Extensions;
 
-namespace Vereesa.Neon.Services
+namespace Vereesa.Neon.Services;
+
+public class AttendanceService
 {
-    public class AttendanceService : IBotModule
+    private readonly IRepository<RaidAttendance> _attendanceRepo;
+    private readonly IRepository<RaidAttendanceSummary> _attendanceSummaryRepo;
+    private readonly IRepository<UsersCharacters> _userCharacters;
+    private readonly ILogger<AttendanceService> _logger;
+    private RestClient _restClient;
+    private string _guildId = "1179"; // Neon's WarcraftLogs guild ID.
+
+    private Dictionary<string, string> _raidIds = new Dictionary<string, string>
     {
-        private readonly ILogger<AttendanceService> _logger;
-        private IMessagingClient _messagingClient;
-        private RestClient _restClient;
-        private IRepository<RaidAttendance> _attendanceRepo;
-        private IRepository<RaidAttendanceSummary> _attendanceSummaryRepo;
-        private IRepository<UsersCharacters> _userCharacters;
+        //{ "ny'alotha, the waking city", "24" },
+        // { "castle nathria", "26" },
+        // { "sanctum of domination", "28" },
+        // { "sepulcher of the first ones", "29"}
+        { "vault of the incarnates", "31" }
+    };
 
-        private ulong _officerChatId = 247439963329789953; //124446036637908995;
-        private ulong _officerRoleId = 124251615489294337;
+    public AttendanceService(
+        IRepository<RaidAttendance> attendanceRepo,
+        IRepository<RaidAttendanceSummary> attendanceSummaryRepo,
+        IRepository<UsersCharacters> userCharacters,
+        ILogger<AttendanceService> logger
+    )
+    {
+        _restClient = new RestClient();
+        _attendanceRepo = attendanceRepo;
+        _attendanceSummaryRepo = attendanceSummaryRepo;
+        _userCharacters = userCharacters;
+        _logger = logger;
+    }
 
-        private string _guildId = "1179"; // Neon's WarcraftLogs guild ID.
-        private Dictionary<string, string> _raidIds = new Dictionary<string, string>
+    public RaidAttendanceSummary GetSummary(string raidId) =>
+        _attendanceSummaryRepo.FindById($"tenraid-wcl-zone-{raidId}");
+
+    public Dictionary<string, string> GetRaidIds() => _raidIds;
+
+    public async Task<List<string>?> UpdateAttendanceAsync(bool forceUpdate)
+    {
+        var zoneId = GetRaidIdOrDefault();
+
+        var attendance = GetAttendanceFromWarcraftLogs(zoneId);
+
+        foreach (var raid in attendance)
         {
-            //{ "ny'alotha, the waking city", "24" },
-            // { "castle nathria", "26" },
-            // { "sanctum of domination", "28" },
-            // { "sepulcher of the first ones", "29"}
-            { "vault of the incarnates", "31" }
-        };
-
-        public AttendanceService(
-            IMessagingClient messagingClient,
-            IJobScheduler jobScheduler,
-            IRepository<RaidAttendance> attendanceRepo,
-            IRepository<RaidAttendanceSummary> attendanceSummaryRepo,
-            IRepository<UsersCharacters> userCharacters,
-            ILogger<AttendanceService> logger
-        )
-        {
-            _logger = logger;
-            _messagingClient = messagingClient;
-            _restClient = new RestClient();
-            _attendanceRepo = attendanceRepo;
-            _attendanceSummaryRepo = attendanceSummaryRepo;
-            _userCharacters = userCharacters;
-            jobScheduler.EveryDayAtUtcNoon += TriggerPeriodicAttendanceUpdateAsync;
+            if (!await _attendanceRepo.ItemExistsAsync(raid.Id) || forceUpdate)
+            {
+                await _attendanceRepo.AddOrEditAsync(raid);
+            }
         }
 
-        private async Task TriggerPeriodicAttendanceUpdateAsync()
+        var storedAttendance = (await _attendanceRepo.GetAllAsync())
+            .Where(att => att.ZoneId == zoneId && !att.Excluded)
+            .ToList();
+
+        var attendanceSummary = GenerateAttendanceSummary(zoneId, storedAttendance);
+        await _attendanceSummaryRepo.AddOrEditAsync(attendanceSummary);
+
+        var rankChanges = await CalculateRankChangesAsync(zoneId, storedAttendance);
+
+        return rankChanges;
+    }
+
+    private async Task<List<string>> CalculateRankChangesAsync(string zoneId, List<RaidAttendance> storedAttendance)
+    {
+        var rankChanges = new List<string>();
+
+        var tenRaidSnapshotSummary = GenerateAttendanceSummary(
+            zoneId,
+            storedAttendance.OrderByDescending(r => r.Timestamp).Take(10).ToList()
+        );
+        tenRaidSnapshotSummary.Id = $"tenraid-{tenRaidSnapshotSummary.Id}";
+
+        var prvSnapshot = await _attendanceSummaryRepo.FindByIdAsync(tenRaidSnapshotSummary.Id);
+
+        if (prvSnapshot != null && storedAttendance.Count >= 3)
         {
-            await UpdateAttendanceAsync(false);
+            var thresholds = new Dictionary<decimal, string>() { { 50, "Raider" }, { 90, "Devoted Raider" }, };
+
+            if (tenRaidSnapshotSummary.Rankings == null)
+            {
+                throw new Exception("Rankings were null.");
+            }
+
+            foreach (var currentRanking in tenRaidSnapshotSummary.Rankings)
+            {
+                var previousRanking = prvSnapshot.Rankings?.FirstOrDefault(
+                    c => c.CharacterName == currentRanking.CharacterName
+                );
+
+                var currentPct = decimal.Parse(
+                    currentRanking.AttendancePercentage,
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture
+                );
+                var previousPct = decimal.Parse(
+                    previousRanking?.AttendancePercentage ?? "0",
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture
+                );
+
+                foreach (var threshold in thresholds)
+                {
+                    var thresholdPct = threshold.Key;
+                    var rankName = threshold.Value;
+
+                    if (previousPct >= thresholdPct && currentPct < thresholdPct)
+                    {
+                        rankChanges.Add(
+                            $"{currentRanking.CharacterName} should be demoted from {rankName} ({currentRanking.AttendancePercentage}%)."
+                        );
+                    }
+                    else if (previousPct < thresholdPct && currentPct >= thresholdPct)
+                    {
+                        rankChanges.Add(
+                            $"{currentRanking.CharacterName} should be promoted to {rankName} ({currentRanking.AttendancePercentage}%)."
+                        );
+                    }
+                }
+            }
         }
 
-        [OnCommand("!attendance update")]
-        [Description("Updates attendance. Only available to Guild Master role.")]
-        [Authorize("Guild Master")]
-        [AsyncHandler]
-        public async Task ForceAttendanceUpdate(IMessage message)
+        await _attendanceSummaryRepo.AddOrEditAsync(tenRaidSnapshotSummary);
+
+        return rankChanges;
+    }
+
+    private RaidAttendanceSummary GenerateAttendanceSummary(string zoneId, List<RaidAttendance> raids)
+    {
+        var dict = new Dictionary<string, decimal>();
+
+        foreach (var raid in raids)
         {
-            await message.Channel.SendMessageAsync("Updating attendance...");
-            await UpdateAttendanceAsync(false);
-            await message.Channel.SendMessageAsync("✅ Attendance updated.");
-        }
-
-        [OnCommand("!attendance prune")]
-        [Description("Prunes duplicate attendance. Only available to Guild Master role.")]
-        [Authorize("Guild Master")]
-        [AsyncHandler]
-        public async Task PruneAttendance(IMessage message)
-        {
-            var zoneId = (
-                await _messagingClient.Prompt(
-                    message.Author,
-                    $"What zone ID? (Hint: {_raidIds.Last().Value})",
-                    message.Channel
-                )
-            )?.Content;
-
-            var attendanceReports = (await _attendanceRepo.GetAllAsync()).Where(
-                att => att.ZoneId == zoneId && !att.Excluded
-            );
-
-            var raidGroupings = attendanceReports
-                .GroupBy(
-                    r =>
-                        Instant
-                            .FromUnixTimeMilliseconds(r.Timestamp)
-                            .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                )
+            var mappedAttendees = raid.Attendees
+                .Select((character) => CharacterToPerson(character))
+                .Distinct()
                 .ToList();
 
-            foreach (var raids in raidGroupings)
+            foreach (var character in mappedAttendees)
             {
-                if (raids.Count() > 1)
+                if (!dict.ContainsKey(character))
                 {
-                    var raidsToMerge = string.Join(
-                        "\n",
-                        raids.Select(
-                            (r, idx) => $"[{idx + 1}] {raids.Key} - {r.LogUrl} - {r.Attendees.Count} attendees"
-                        )
-                    );
-
-                    var response = await _messagingClient.Prompt(
-                        message.Author,
-                        $"Detected possible duplicate reports.\n\n{raidsToMerge}\n"
-                            + "Pick an action: \n`merge`\n`pick <id>`\n`ignore`",
-                        message.Channel,
-                        60000
-                    );
-
-                    if (response?.Content == "merge")
-                    {
-                        var recordToKeep = raids.First();
-                        foreach (var recordToExclude in raids.Skip(1))
-                        {
-                            recordToKeep.Attendees = recordToKeep.Attendees
-                                .Concat(recordToExclude.Attendees)
-                                .Distinct()
-                                .ToList();
-
-                            recordToExclude.Excluded = true;
-                            _attendanceRepo.AddOrEdit(recordToExclude);
-                        }
-
-                        _attendanceRepo.AddOrEdit(recordToKeep);
-                    }
-                    else if (response?.Content.StartsWith("pick ") == true)
-                    {
-                        var idx = int.Parse(response.Content.Replace("pick ", "").Trim()) - 1;
-                        var recordToKeep = raids.ElementAt(idx);
-
-                        foreach (var recordToExclude in raids.Where(r => r.Id != recordToKeep.Id))
-                        {
-                            recordToExclude.Excluded = true;
-                            _attendanceRepo.AddOrEdit(recordToExclude);
-                        }
-                    }
-                }
-            }
-
-            await message.Channel.SendMessageAsync("✅ Attendance pruned.");
-        }
-
-        private RaidAttendanceSummary GetSummary(string raidId)
-        {
-            return _attendanceSummaryRepo.FindById($"tenraid-wcl-zone-{raidId}");
-        }
-
-        private async Task UpdateAttendanceAsync(bool forceUpdate)
-        {
-            var zoneId = GetRaidIdOrDefault();
-
-            var attendance = GetAttendanceFromWarcraftLogs(zoneId);
-
-            foreach (var raid in attendance)
-            {
-                if (!(await _attendanceRepo.ItemExistsAsync(raid.Id)) || forceUpdate)
-                {
-                    await _attendanceRepo.AddOrEditAsync(raid);
-                }
-            }
-
-            var storedAttendance = (await _attendanceRepo.GetAllAsync())
-                .Where(att => att.ZoneId == zoneId && !att.Excluded)
-                .ToList();
-
-            var attendanceSummary = GenerateAttendanceSummary(zoneId, storedAttendance);
-            await _attendanceSummaryRepo.AddOrEditAsync(attendanceSummary);
-
-            var rankChanges = await CalculateRankChangesAsync(zoneId, storedAttendance);
-            await AnnounceRankChangesAsync(rankChanges);
-        }
-
-        private async Task AnnounceRankChangesAsync(List<string> rankChanges)
-        {
-            if (!rankChanges.Any())
-            {
-                return;
-            }
-
-            var rankChangeMessage =
-                $"{_officerRoleId.MentionRole()} Based on attendance from the **last 10 raids**, the following rank changes should be made:\n";
-            rankChangeMessage += rankChanges.Join("\n");
-
-            await _messagingClient.SendMessageToChannelByIdAsync(_officerChatId, rankChangeMessage);
-        }
-
-        private async Task<List<string>> CalculateRankChangesAsync(string zoneId, List<RaidAttendance> storedAttendance)
-        {
-            var rankChanges = new List<string>();
-
-            var tenRaidSnapshotSummary = GenerateAttendanceSummary(
-                zoneId,
-                storedAttendance.OrderByDescending(r => r.Timestamp).Take(10).ToList()
-            );
-            tenRaidSnapshotSummary.Id = $"tenraid-{tenRaidSnapshotSummary.Id}";
-
-            var prvSnapshot = await _attendanceSummaryRepo.FindByIdAsync(tenRaidSnapshotSummary.Id);
-
-            if (prvSnapshot != null && storedAttendance.Count >= 3)
-            {
-                var thresholds = new Dictionary<decimal, string>() { { 50, "Raider" }, { 90, "Devoted Raider" }, };
-
-                if (tenRaidSnapshotSummary.Rankings == null)
-                {
-                    throw new Exception("Rankings were null.");
+                    dict.Add(character, 0);
                 }
 
-                foreach (var currentRanking in tenRaidSnapshotSummary.Rankings)
+                dict[character]++;
+            }
+        }
+
+        var summary = new RaidAttendanceSummary($"wcl-zone-{zoneId}");
+
+        summary.Rankings = dict.OrderByDescending(k => k.Value)
+            .Select(kv =>
+            {
+                var characterName = kv.Key;
+                var attendancePercent = (kv.Value / (decimal)raids.Count * 100).ToString(
+                    "0.##",
+                    CultureInfo.InvariantCulture
+                );
+
+                return new RaidAttendanceRanking(characterName, attendancePercent);
+            })
+            .ToList();
+
+        return summary;
+    }
+
+    private string CharacterToPerson(string character)
+    {
+        var users = _userCharacters.FindById(CharacterService.BlobContainer);
+        var characterOwner = users.CharacterMap.FirstOrDefault(
+            cm => cm.Value.Any(c => c.StartsWith($"{character}-", StringComparison.CurrentCultureIgnoreCase))
+        );
+
+        return characterOwner.Key != 0 ? characterOwner.Key.MentionPerson() : character;
+    }
+
+    public string GetRaidIdOrDefault(string? raid = null)
+    {
+        var defaultRaidId = _raidIds.Last().Value;
+
+        if (string.IsNullOrWhiteSpace(raid))
+        {
+            return defaultRaidId;
+        }
+
+        var requestedRaid = raid.Trim().ToLowerInvariant();
+        return _raidIds.ContainsKey(requestedRaid) ? _raidIds[requestedRaid] : defaultRaidId;
+    }
+
+    public List<RaidAttendance> GetAttendanceFromWarcraftLogs(string zoneId, int page = 1)
+    {
+        var request = new RestRequest(
+            $"https://www.warcraftlogs.com/guild/attendance-table/{_guildId}/0/{zoneId}?page={page}",
+            Method.GET
+        );
+
+        var result = _restClient.Execute(request);
+
+        var doc = new HtmlDocument();
+        doc.LoadHtml(result.Content);
+
+        var lastPageStr = doc.DocumentNode
+            .SelectNodes("//*[contains(@class, \"page-item\") and position() = (last() - 1)]")
+            ?.FirstOrDefault()
+            ?.InnerText;
+        var lastPage = int.Parse(lastPageStr ?? "1");
+
+        var header = doc.DocumentNode.SelectNodes("//*[@id=\"attendance-table\"]/thead/th");
+        var characterRows =
+            doc.DocumentNode.SelectNodes("//*[@id=\"attendance-table\"]/tbody/tr")?.ToList() ?? new List<HtmlNode>();
+
+        var raids = header
+            .Skip(2)
+            .Select(node =>
+            {
+                var reportDate = node.NextSibling.NextSibling.InnerText.Split("new Date(").Last().Split(")").First();
+
+                var timestamp = long.Parse(reportDate);
+                var raidName = GetRaidName(zoneId);
+                var relativeLogUrl = node.ChildNodes[0].Attributes.First(att => att.Name == "href").Value;
+                var logUrl = $"https://www.warcraftlogs.com{relativeLogUrl}";
+
+                return new RaidAttendance($"{_guildId}-{zoneId}-{reportDate}", timestamp, raidName, zoneId, logUrl);
+            })
+            .ToList();
+
+        foreach (var characterRow in characterRows)
+        {
+            var rowValues = characterRow.SelectNodes(".//td");
+            if (rowValues == null)
+            {
+                _logger.LogWarning("Row values were null. Skipping row.");
+                continue;
+            }
+
+            var characterName = rowValues.Skip(0).FirstOrDefault()?.InnerText.Replace("\n", string.Empty);
+            var attendanceRecord = rowValues.Skip(2).ToList();
+
+            if (characterName == null)
+            {
+                _logger.LogWarning("Character name was null. Skipping row.");
+                continue;
+            }
+
+            for (var i = 0; i < attendanceRecord.Count; i++)
+            {
+                if (attendanceRecord[i].InnerText.Contains("1") || attendanceRecord[i].InnerText.Contains("2"))
                 {
-                    var previousRanking = prvSnapshot.Rankings?.FirstOrDefault(
-                        c => c.CharacterName == currentRanking.CharacterName
-                    );
-
-                    var currentPct = decimal.Parse(
-                        currentRanking.AttendancePercentage,
-                        NumberStyles.Any,
-                        CultureInfo.InvariantCulture
-                    );
-                    var previousPct = decimal.Parse(
-                        previousRanking?.AttendancePercentage ?? "0",
-                        NumberStyles.Any,
-                        CultureInfo.InvariantCulture
-                    );
-
-                    foreach (var threshold in thresholds)
-                    {
-                        var thresholdPct = threshold.Key;
-                        var rankName = threshold.Value;
-
-                        if (previousPct >= thresholdPct && currentPct < thresholdPct)
-                        {
-                            rankChanges.Add(
-                                $"{currentRanking.CharacterName} should be demoted from {rankName} ({currentRanking.AttendancePercentage}%)."
-                            );
-                        }
-                        else if (previousPct < thresholdPct && currentPct >= thresholdPct)
-                        {
-                            rankChanges.Add(
-                                $"{currentRanking.CharacterName} should be promoted to {rankName} ({currentRanking.AttendancePercentage}%)."
-                            );
-                        }
-                    }
+                    raids[i].Attendees.Add(characterName);
                 }
             }
-
-            await _attendanceSummaryRepo.AddOrEditAsync(tenRaidSnapshotSummary);
-
-            return rankChanges;
         }
 
-        private RaidAttendanceSummary GenerateAttendanceSummary(string zoneId, List<RaidAttendance> raids)
+        if (lastPage > page)
         {
-            var dict = new Dictionary<string, decimal>();
+            raids.AddRange(GetAttendanceFromWarcraftLogs(zoneId, page + 1));
+        }
 
-            foreach (var raid in raids)
+        return raids;
+    }
+
+    public string GetRaidName(string zoneId)
+    {
+        if (!_raidIds.ContainsValue(zoneId))
+            return "Unknown Zone";
+
+        return _raidIds.First(kv => kv.Value == zoneId).Key.ToTitleCase();
+    }
+
+    public async Task<List<IGrouping<string, RaidAttendance>>> GetRaidsWithMultipleReports(string zoneId)
+    {
+        var attendanceReports = (await _attendanceRepo.GetAllAsync()).Where(
+            att => att.ZoneId == zoneId && !att.Excluded
+        );
+
+        var raidGroupings = attendanceReports
+            .GroupBy(
+                r => Instant.FromUnixTimeMilliseconds(r.Timestamp).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            )
+            .ToList();
+
+        return raidGroupings.Where(r => r.Count() > 1).ToList();
+    }
+
+    public void PruneAttendanceForRaid(IGrouping<string, RaidAttendance> raidReports, string strategy)
+    {
+        if (strategy == "merge")
+        {
+            var recordToKeep = raidReports.First();
+            foreach (var recordToExclude in raidReports.Skip(1))
             {
-                var mappedAttendees = raid.Attendees
-                    .Select((character) => CharacterToPerson(character))
-                    .Distinct()
-                    .ToList();
+                recordToKeep.Attendees = recordToKeep.Attendees.Concat(recordToExclude.Attendees).Distinct().ToList();
 
-                foreach (var character in mappedAttendees)
-                {
-                    if (!dict.ContainsKey(character))
-                    {
-                        dict.Add(character, 0);
-                    }
-
-                    dict[character]++;
-                }
+                recordToExclude.Excluded = true;
+                _attendanceRepo.AddOrEdit(recordToExclude);
             }
 
-            var summary = new RaidAttendanceSummary($"wcl-zone-{zoneId}");
-
-            summary.Rankings = dict.OrderByDescending(k => k.Value)
-                .Select(kv =>
-                {
-                    var characterName = kv.Key;
-                    var attendancePercent = (kv.Value / (decimal)raids.Count * 100).ToString(
-                        "0.##",
-                        CultureInfo.InvariantCulture
-                    );
-
-                    return new RaidAttendanceRanking(characterName, attendancePercent);
-                })
-                .ToList();
-
-            return summary;
+            _attendanceRepo.AddOrEdit(recordToKeep);
         }
-
-        private string CharacterToPerson(string character)
+        else if (strategy.StartsWith("pick ") == true)
         {
-            var users = _userCharacters.FindById(CharacterService.BlobContainer);
-            var characterOwner = users.CharacterMap.FirstOrDefault(
-                cm => cm.Value.Any(c => c.StartsWith($"{character}-", StringComparison.CurrentCultureIgnoreCase))
-            );
+            var idx = int.Parse(strategy.Replace("pick ", "").Trim()) - 1;
+            var recordToKeep = raidReports.ElementAt(idx);
 
-            return characterOwner.Key != 0 ? characterOwner.Key.MentionPerson() : character;
-        }
-
-        [OnCommand("!attendance total")]
-        [Description("Lists current attendance standing.")]
-        public async Task HandleMessageReceived(IMessage message)
-        {
-            var zoneId = GetRaidIdOrDefault(message.Content.Split(" ").Skip(1).Join(" "));
-
-            var summary = await _attendanceSummaryRepo.FindByIdAsync($"wcl-zone-{zoneId}");
-
-            var characterList = string.Join(
-                "\n",
-                summary.Rankings.Select(ranking => $"{ranking.CharacterName}: {ranking.AttendancePercentage}%")
-            );
-
-            var truncated = false;
-            if (characterList.Length > 1700)
+            foreach (var recordToExclude in raidReports.Where(r => r.Id != recordToKeep.Id))
             {
-                characterList = characterList.Substring(0, characterList.Substring(0, 1500).LastIndexOf("\n"));
-                truncated = true;
+                recordToExclude.Excluded = true;
+                _attendanceRepo.AddOrEdit(recordToExclude);
             }
-
-            var zoneName = GetRaidName(zoneId);
-
-            var attendanceReport =
-                $"**Attendance for {zoneName}**\n"
-                + $"Updated daily at 12:00 UTC. Only raids logged to WarcraftLogs are included.\n\n{characterList}";
-
-            attendanceReport = !truncated
-                ? attendanceReport
-                : $"{attendanceReport}\n\nSome entries have been truncated.";
-
-            await message.Channel.SendMessageAsync(attendanceReport);
-        }
-
-        [OnCommand("!attendance")]
-        [Description("Lists attendance from last ten raids")]
-        public async Task ListLatestAttendance(IMessage message)
-        {
-            var zoneId = GetRaidIdOrDefault();
-            var zoneName = GetRaidName(zoneId);
-            var summary = GetSummary(zoneId);
-
-            var characterList = string.Join(
-                "\n",
-                summary.Rankings.Select(ranking => $"{ranking.CharacterName}: {ranking.AttendancePercentage}%")
-            );
-
-            var truncated = false;
-            if (characterList.Length > 1700)
-            {
-                characterList = characterList.Substring(0, characterList.Substring(0, 1500).LastIndexOf("\n"));
-                truncated = true;
-            }
-
-            var attendanceReport =
-                $"**Attendance for the last 10 raids in {zoneName}**\n"
-                + $"Updated daily at 12:00 UTC. Only raids logged to WarcraftLogs are included.\n\n{characterList}";
-
-            attendanceReport = !truncated
-                ? attendanceReport
-                : $"{attendanceReport}\n\nSome entries have been truncated.";
-
-            await message.Channel.SendMessageAsync(attendanceReport);
-        }
-
-        private string GetRaidIdOrDefault(string? raid = null)
-        {
-            var defaultRaidId = _raidIds.Last().Value;
-
-            if (string.IsNullOrWhiteSpace(raid))
-            {
-                return defaultRaidId;
-            }
-
-            var requestedRaid = raid.Trim().ToLowerInvariant();
-            return _raidIds.ContainsKey(requestedRaid) ? _raidIds[requestedRaid] : defaultRaidId;
-        }
-
-        public List<RaidAttendance> GetAttendanceFromWarcraftLogs(string zoneId, int page = 1)
-        {
-            var request = new RestRequest(
-                $"https://www.warcraftlogs.com/guild/attendance-table/{_guildId}/0/{zoneId}?page={page}",
-                Method.GET
-            );
-
-            var result = _restClient.Execute(request);
-
-            var doc = new HtmlDocument();
-            doc.LoadHtml(result.Content);
-
-            var lastPageStr = doc.DocumentNode
-                .SelectNodes("//*[contains(@class, \"page-item\") and position() = (last() - 1)]")
-                ?.FirstOrDefault()
-                ?.InnerText;
-            var lastPage = int.Parse(lastPageStr ?? "1");
-
-            var header = doc.DocumentNode.SelectNodes("//*[@id=\"attendance-table\"]/thead/th");
-            var characterRows =
-                doc.DocumentNode.SelectNodes("//*[@id=\"attendance-table\"]/tbody/tr")?.ToList()
-                ?? new List<HtmlNode>();
-
-            var raids = header
-                .Skip(2)
-                .Select(node =>
-                {
-                    var reportDate = node.NextSibling.NextSibling.InnerText
-                        .Split("new Date(")
-                        .Last()
-                        .Split(")")
-                        .First();
-
-                    var timestamp = long.Parse(reportDate);
-                    var raidName = GetRaidName(zoneId);
-                    var relativeLogUrl = node.ChildNodes[0].Attributes.First(att => att.Name == "href").Value;
-                    var logUrl = $"https://www.warcraftlogs.com{relativeLogUrl}";
-
-                    return new RaidAttendance($"{_guildId}-{zoneId}-{reportDate}", timestamp, raidName, zoneId, logUrl);
-                })
-                .ToList();
-
-            foreach (var characterRow in characterRows)
-            {
-                var rowValues = characterRow.SelectNodes(".//td");
-                if (rowValues == null)
-                {
-                    _logger.LogWarning("Row values were null. Skipping row.");
-                    continue;
-                }
-
-                var characterName = rowValues.Skip(0).FirstOrDefault()?.InnerText.Replace("\n", string.Empty);
-                var attendanceRecord = rowValues.Skip(2).ToList();
-
-                if (characterName == null)
-                {
-                    _logger.LogWarning("Character name was null. Skipping row.");
-                    continue;
-                }
-
-                for (var i = 0; i < attendanceRecord.Count; i++)
-                {
-                    if (attendanceRecord[i].InnerText.Contains("1") || attendanceRecord[i].InnerText.Contains("2"))
-                    {
-                        raids[i].Attendees.Add(characterName);
-                    }
-                }
-            }
-
-            if (lastPage > page)
-            {
-                raids.AddRange(GetAttendanceFromWarcraftLogs(zoneId, page + 1));
-            }
-
-            return raids;
-        }
-
-        private string GetRaidName(string zoneId)
-        {
-            if (!_raidIds.ContainsValue(zoneId))
-                return "Unknown Zone";
-
-            return _raidIds.First(kv => kv.Value == zoneId).Key.ToTitleCase();
         }
     }
 
-    public class RaidAttendanceSummary : IEntity
+    public async Task<RaidAttendanceSummary> GetRaidSummary(string zoneId)
     {
-        public RaidAttendanceSummary(string id)
-        {
-            this.Id = id;
-        }
-
-        public string Id { get; set; }
-        public List<RaidAttendanceRanking>? Rankings { get; set; }
+        return await _attendanceSummaryRepo.FindByIdAsync($"wcl-zone-{zoneId}");
     }
 
-    public class RaidAttendanceRanking
+    public string GetPruneState(IGrouping<string, RaidAttendance> raids)
     {
-        public RaidAttendanceRanking(string characterName, string attendancePercentage)
-        {
-            CharacterName = characterName;
-            AttendancePercentage = attendancePercentage;
-        }
+        return string.Join(
+            "\n",
+            raids.Select((r, idx) => $"[{idx + 1}] {raids.Key} - {r.LogUrl} - {r.Attendees.Count} attendees")
+        );
+    }
+}
 
-        public string CharacterName { get; set; }
-        public string AttendancePercentage { get; set; }
+public class RaidAttendanceSummary : IEntity
+{
+    public RaidAttendanceSummary(string id)
+    {
+        this.Id = id;
     }
 
-    public class RaidAttendance : IEntity
-    {
-        public RaidAttendance(string id, long timestamp, string zoneName, string zoneId, string logUrl)
-        {
-            Id = id;
-            Timestamp = timestamp;
-            ZoneId = zoneId;
-            ZoneName = zoneName;
-            LogUrl = logUrl;
-            Attendees = new List<string>();
-        }
+    public string Id { get; set; }
+    public List<RaidAttendanceRanking>? Rankings { get; set; }
+}
 
-        public string Id { get; set; }
-        public bool Excluded { get; set; }
-        public long Timestamp { get; set; }
-        public string ZoneName { get; set; }
-        public string ZoneId { get; set; }
-        public List<string> Attendees { get; set; }
-        public string LogUrl { get; set; }
+public class RaidAttendanceRanking
+{
+    public RaidAttendanceRanking(string characterName, string attendancePercentage)
+    {
+        CharacterName = characterName;
+        AttendancePercentage = attendancePercentage;
     }
+
+    public string CharacterName { get; set; }
+    public string AttendancePercentage { get; set; }
+}
+
+public class RaidAttendance : IEntity
+{
+    public RaidAttendance(string id, long timestamp, string zoneName, string zoneId, string logUrl)
+    {
+        Id = id;
+        Timestamp = timestamp;
+        ZoneId = zoneId;
+        ZoneName = zoneName;
+        LogUrl = logUrl;
+        Attendees = new List<string>();
+    }
+
+    public string Id { get; set; }
+    public bool Excluded { get; set; }
+    public long Timestamp { get; set; }
+    public string ZoneName { get; set; }
+    public string ZoneId { get; set; }
+    public List<string> Attendees { get; set; }
+    public string LogUrl { get; set; }
 }

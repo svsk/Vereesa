@@ -38,23 +38,6 @@ namespace Vereesa.Core.Discord
         /// <returns>The first message sent by a person with the prompted role in the selected channel.
         /// Null if no one in the responsible role responds before the timeout.</returns>
         public Task<IMessage> Prompt(
-            WellknownRole role,
-            string promptMessage,
-            IMessageChannel channel,
-            int timeoutMs = 15000
-        ) => Prompt((ulong)role, promptMessage, channel, timeoutMs);
-
-        /// <summary>
-        /// Prompts a role for a response. Potentially a long lasting request. This should always be put in an
-        /// async event handler.
-        /// </summary>
-        /// <param name="role">The role responsible for responding to the prompt.</param>
-        /// <param name="promptMessage">The message sent to the prompted role.</param>
-        /// <param name="channel">The channel in which to prompt the role.</param>
-        /// <param name="timeoutMs">Duration in milliseconds to wait for a response.</param>
-        /// <returns>The first message sent by a person with the prompted role in the selected channel.
-        /// Null if no one in the responsible role responds before the timeout.</returns>
-        public Task<IMessage> Prompt(
             ulong roleId,
             string promptMessage,
             IMessageChannel channel,

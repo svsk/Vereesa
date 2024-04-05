@@ -76,7 +76,7 @@ namespace Vereesa.Neon.Services
             var emoteImage = new Image(stream);
 
             var response = await _messaging.Prompt(
-                WellknownRole.Officer,
+                WellknownRoles.Officer,
                 "Should this be an emoji? (answer `yes` to confirm)",
                 message.Channel,
                 60000
