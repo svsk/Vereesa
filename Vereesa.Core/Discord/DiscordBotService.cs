@@ -18,21 +18,21 @@ namespace Vereesa.Core.Discord
     /// <summary>
     /// Inheriting this class causes a singleton instance of it to automatically start in VereesaClient.cs
     /// </summary>
-    public class DiscordBotService<T>
-        where T : IBotService
+    public class DiscordBotModule<T>
+        where T : IBotModule
     {
         private T _service;
 
         private readonly IJobScheduler _jobScheduler;
         private readonly DiscordSocketClient _discord;
-        private readonly ILogger<DiscordBotService<T>> _logger;
+        private readonly ILogger<DiscordBotModule<T>> _logger;
         private bool _ready = false;
 
-        public DiscordBotService(
+        public DiscordBotModule(
             T service,
             IJobScheduler jobScheduler,
             DiscordSocketClient discord,
-            ILogger<DiscordBotService<T>> logger
+            ILogger<DiscordBotModule<T>> logger
         )
         {
             _jobScheduler = jobScheduler;

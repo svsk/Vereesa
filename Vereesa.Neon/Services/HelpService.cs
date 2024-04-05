@@ -7,14 +7,14 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class HelpService : IBotService
+    public class HelpService : IBotModule
     {
         [OnCommand("!help")]
         [Description("Prints helpful information about commands.")]
         [AsyncHandler]
         public async Task HandleMessage(IMessage message)
         {
-            var services = BotServices.GetBotServices();
+            var services = BotServices.GetBotModules();
             var helpMessage = "";
 
             foreach (var service in services)

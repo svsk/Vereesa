@@ -11,7 +11,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class AuctionHouseService : IBotService
+    public class AuctionHouseService : IBotModule
     {
         private ILogger<AuctionHouseService> _logger;
         private RestClient _restClient;

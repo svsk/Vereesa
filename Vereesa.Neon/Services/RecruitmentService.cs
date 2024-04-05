@@ -9,7 +9,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services;
 
-public class RecruitmentService : IBotService
+public class RecruitmentService : IBotModule
 {
     private readonly IMessagingClient _messaging;
     private readonly OpenAISettings _settings;

@@ -8,7 +8,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class FlagService : IBotService
+    public class FlagService : IBotModule
     {
         private readonly IRepository<Statistics> _statRepository;
 

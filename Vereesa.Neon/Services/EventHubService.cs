@@ -4,7 +4,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class EventHubService : IBotService
+    public class EventHubService : IBotModule
     {
         private ILogger<EventHubService> _logger;
         private List<EventHubEventListener> _eventListeners;

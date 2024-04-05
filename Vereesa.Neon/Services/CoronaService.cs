@@ -12,7 +12,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class CoronaService : IBotService
+    public class CoronaService : IBotModule
     {
         private IRepository<Statistics> _statRepository;
         private ILogger<CoronaService> _logger;

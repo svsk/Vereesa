@@ -8,7 +8,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class BronjahmService : IBotService
+    public class BronjahmService : IBotModule
     {
         private readonly IMessagingClient _messaging;
         private readonly IJobScheduler _scheduler;

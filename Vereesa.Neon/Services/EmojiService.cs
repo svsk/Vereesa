@@ -7,7 +7,7 @@ using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
-    public class EmojiService : IBotService
+    public class EmojiService : IBotModule
     {
         private readonly IMessagingClient _messaging;
         private readonly IEmojiClient _emoji;

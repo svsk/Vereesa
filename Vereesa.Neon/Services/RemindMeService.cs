@@ -10,7 +10,7 @@ using System.ComponentModel;
 
 namespace Vereesa.Neon.Services
 {
-    public class RemindMeService : IBotService
+    public class RemindMeService : IBotModule
     {
         private readonly IMessagingClient _messaging;
         private readonly IRepository<Reminder> _reminderRepository;

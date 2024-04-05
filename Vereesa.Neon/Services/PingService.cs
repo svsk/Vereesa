@@ -7,7 +7,7 @@ using Discord.Interactions;
 
 namespace Vereesa.Neon.Services
 {
-    public class PingService : IBotService
+    public class PingService : IBotModule
     {
         private readonly IMessagingClient _messagingClient;
 

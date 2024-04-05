@@ -10,24 +10,24 @@ namespace Vereesa.Core.Extensions
 {
     public static class BotServices
     {
-        // Find all types that implement the interface IBotService
-        public static IList<Type> GetBotServices() =>
+        // Find all types that implement the interface IBotModule
+        public static IList<Type> GetBotModules() =>
             AppDomain.CurrentDomain
                 .GetAssemblies()
                 .Where(a => !a.IsDynamic)
                 .SelectMany(a => a.GetTypes())
-                .Where(t => t.IsClass && !t.IsAbstract && t.GetInterfaces().Contains(typeof(IBotService)))
+                .Where(t => t.IsClass && !t.IsAbstract && t.GetInterfaces().Contains(typeof(IBotModule)))
                 .ToList();
 
         public static IServiceCollection AddBotServices(this IServiceCollection services)
         {
-            foreach (var serviceType in GetBotServices())
+            foreach (var moduleType in GetBotModules())
             {
-                var botServiceType = typeof(DiscordBotService<>).MakeGenericType(serviceType);
+                var botModuleType = typeof(DiscordBotModule<>).MakeGenericType(moduleType);
 
                 // Add the type as singleton
-                services.AddSingleton(serviceType);
-                services.AddSingleton(botServiceType);
+                services.AddSingleton(moduleType);
+                services.AddSingleton(botModuleType);
             }
 
             return services;
@@ -52,17 +52,17 @@ namespace Vereesa.Core.Extensions
             // Clear all existing commands before the BotServices register their current ones.
             ClearCommandsAsync(discord).GetAwaiter().GetResult();
 
-            foreach (var serviceType in GetBotServices())
+            foreach (var moduleType in GetBotModules())
             {
                 try
                 {
                     // Resolve all services using DiscordBotService<T>
-                    var botServiceType = typeof(DiscordBotService<>).MakeGenericType(serviceType);
-                    serviceProvider.GetRequiredService(botServiceType);
+                    var botModuleType = typeof(DiscordBotModule<>).MakeGenericType(moduleType);
+                    serviceProvider.GetRequiredService(botModuleType);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Failed to resolve service {serviceType.Name}: {ex.Message}");
+                    Console.WriteLine($"Failed to resolve service {moduleType.Name}: {ex.Message}");
                 }
             }
         }

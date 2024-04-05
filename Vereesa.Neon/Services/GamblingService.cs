@@ -10,7 +10,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class GamblingService : IBotService
+    public class GamblingService : IBotModule
     {
         private readonly IMessagingClient _messaging;
         private readonly GamblingSettings _settings;

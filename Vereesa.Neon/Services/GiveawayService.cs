@@ -12,7 +12,7 @@ using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
-    public class GiveawayService : IBotService
+    public class GiveawayService : IBotModule
     {
         private Random _rng;
         private IJobScheduler _jobScheduler;

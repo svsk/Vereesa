@@ -14,7 +14,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class SignupsService : IBotService
+    public class SignupsService : IBotModule
     {
         private ILogger<SignupsService> _logger;
         private SignupsSettings _settings;

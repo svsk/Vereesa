@@ -6,7 +6,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class MovieSuggestionService : IBotService
+    public class MovieSuggestionService : IBotModule
     {
         [OnMessage]
         public async Task HandleMessageReceivedAsync(IMessage message)

@@ -9,7 +9,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class PersonalityService : IBotService
+    public class PersonalityService : IBotModule
     {
         private readonly IRepository<Personality> _personalityRepo;
         private readonly ILogger<PersonalityService> _logger;

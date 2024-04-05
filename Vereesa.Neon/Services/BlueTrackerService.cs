@@ -2,5 +2,5 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class BlueTrackerService : IBotService { }
+    public class BlueTrackerService : IBotModule { }
 }

@@ -6,7 +6,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class NeonApiService : IBotService
+    public class NeonApiService : IBotModule
     {
         public async Task<IEnumerable<Application>> GetApplicationsAsync()
         {

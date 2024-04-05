@@ -12,7 +12,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class GameTrackerService : IBotService
+    public class GameTrackerService : IBotModule
     {
         private IMessagingClient _messaging;
         private IRepository<GameTrackMember> _trackingRepo;

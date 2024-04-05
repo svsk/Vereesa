@@ -23,7 +23,7 @@ namespace Vereesa.Neon.Services
         public double RemainingDuration { get; set; }
     }
 
-    public class EventHostService : IBotService
+    public class EventHostService : IBotModule
     {
         private static IEmote _joinEmote = new Emoji("✅");
         private static IEmote _declineEmote = new Emoji("❌");

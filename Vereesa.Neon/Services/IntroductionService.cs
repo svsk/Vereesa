@@ -5,7 +5,7 @@ using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Neon.Services;
 
-public class IntroductionService : IBotService
+public class IntroductionService : IBotModule
 {
     private readonly IMessagingClient _messaging;
 

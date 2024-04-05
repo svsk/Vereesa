@@ -70,7 +70,7 @@ using Vereesa.Core;
 
 namespace MyBot;
 
-public class HelloWorldService : IBotService
+public class HelloWorldService : IBotModule
 {
     [SlashCommand("ping", "Pings the bot")]
     public async Task HandlePing(IDiscordInteraction interaction)

@@ -8,7 +8,7 @@ using Vereesa.Neon.Data.Interfaces;
 
 namespace Vereesa.Neon.Services
 {
-    public class CharacterService : IBotService
+    public class CharacterService : IBotModule
     {
         private IMessagingClient _messaging;
         private IRepository<UsersCharacters> _userCharactersRepository;

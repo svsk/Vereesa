@@ -9,7 +9,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class ChannelRuleService : IBotService
+    public class ChannelRuleService : IBotModule
     {
         private DiscordSocketClient _discord;
         private List<ChannelRuleset> _rulesets;

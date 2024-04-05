@@ -1,3 +1,3 @@
 namespace Vereesa.Core;
 
-public interface IBotService { }
+public interface IBotModule { }

@@ -6,7 +6,7 @@ using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Neon.Services
 {
-    public class RoleGiverService : IBotService
+    public class RoleGiverService : IBotModule
     {
         //Todo: move this to config or json storage
         private List<string> _allowedRoles = new List<string>

@@ -6,7 +6,7 @@ using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.TestBot;
 
-public class TestService : IBotService
+public class TestService : IBotModule
 {
     public TestService(ILogger<TestService> logger)
     {

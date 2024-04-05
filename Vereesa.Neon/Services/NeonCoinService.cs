@@ -5,7 +5,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class NeonCoinService : IBotService
+    public class NeonCoinService : IBotModule
     {
         private static Dictionary<ulong, int> _wallets = Load();
         private readonly Random _rng;

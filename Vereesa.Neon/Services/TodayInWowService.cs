@@ -12,7 +12,7 @@ using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services;
 
-public class TodayInWoWService : IBotService
+public class TodayInWoWService : IBotModule
 {
     private readonly IWowheadClient _wowhead;
     private readonly IRepository<ElementalStormSubscription> _subscriptionRepository;

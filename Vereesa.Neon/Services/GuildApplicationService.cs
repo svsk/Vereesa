@@ -11,7 +11,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class GuildApplicationService : IBotService
+    public class GuildApplicationService : IBotModule
     {
         private NeonApiService _neonApiService;
         private readonly IMessagingClient _messaging;

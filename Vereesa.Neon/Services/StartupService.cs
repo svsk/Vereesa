@@ -4,7 +4,7 @@ using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Neon.Services
 {
-    public class StartupService : IBotService
+    public class StartupService : IBotModule
     {
         private readonly ILogger<StartupService> _logger;
 

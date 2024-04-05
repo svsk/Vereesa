@@ -12,7 +12,7 @@ using Vereesa.Neon.Data.Interfaces;
 
 namespace Vereesa.Neon.Services
 {
-    public class AttendanceService : IBotService
+    public class AttendanceService : IBotModule
     {
         private readonly ILogger<AttendanceService> _logger;
         private IMessagingClient _messagingClient;

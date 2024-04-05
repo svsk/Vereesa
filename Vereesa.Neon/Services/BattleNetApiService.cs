@@ -8,7 +8,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class BattleNetApiService : IBotService
+    public class BattleNetApiService : IBotModule
     {
         private ILogger<BattleNetApiService> _logger;
         private BattleNetApiSettings _settings;

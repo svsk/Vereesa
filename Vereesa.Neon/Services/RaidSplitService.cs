@@ -8,7 +8,7 @@ using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
-    public class RaidSplitService : IBotService
+    public class RaidSplitService : IBotModule
     {
         private enum RaidRole
         {

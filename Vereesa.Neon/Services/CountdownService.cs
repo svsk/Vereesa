@@ -5,7 +5,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services;
 
-public class CountdownService : IBotService
+public class CountdownService : IBotModule
 {
     private static bool _started = false;
     private readonly IEmojiClient _emoji;

@@ -5,7 +5,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class ConversionEngine : IBotService
+    public class ConversionEngine : IBotModule
     {
         private const string Explaination = "";
 

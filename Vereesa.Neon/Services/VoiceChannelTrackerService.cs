@@ -8,7 +8,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class VoiceChannelTrackerService : IBotService
+    public class VoiceChannelTrackerService : IBotModule
     {
         private readonly IMessagingClient _messaging;
         private readonly ILogger<VoiceChannelTrackerService> _logger;

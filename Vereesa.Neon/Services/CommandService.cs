@@ -10,7 +10,7 @@ using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class CommandService : IBotService
+    public class CommandService : IBotModule
     {
         private IRepository<Command> _commandRepo;
 
