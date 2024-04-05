@@ -32,7 +32,7 @@ namespace Vereesa.Core.Tests.ServicesTests
             _battleNetApiService = new BattleNetApiService(_battleNetApiSettings, logger.Object);
         }
 
-        [Fact]
+        [Fact(Skip = "Integration test")]
         public void GetCharacterData_GettingCharacterData_CharacterDataReturned()
         {
             //Arrange
@@ -47,7 +47,7 @@ namespace Vereesa.Core.Tests.ServicesTests
             Assert.True(result != null);
         }
 
-        [Fact]
+        [Fact(Skip = "Integration test")]
         public void GetCharacterHeartOfAzerothLevel_GettingCharacterHeartOfAzerothLevel_HeartOfAzerothLevelIsAbove0()
         {
             //Arrange
@@ -63,7 +63,7 @@ namespace Vereesa.Core.Tests.ServicesTests
             Assert.True(hoaLevel > 0); //This may no longer be the case after BfA
         }
 
-        [Fact]
+        [Fact(Skip = "Integration test")]
         public void GetCharacterThumbnail_GettingCharacterThumbnail_ThumbnailExistsAndIsImageJpeg()
         {
             //Arrange
@@ -85,7 +85,7 @@ namespace Vereesa.Core.Tests.ServicesTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Integration test")]
         public void Something()
         {
             _battleNetApiService.GetAuctionPrice("stuff");

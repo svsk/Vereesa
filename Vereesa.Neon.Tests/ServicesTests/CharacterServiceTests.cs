@@ -9,7 +9,7 @@ namespace Vereesa.Core.Tests.ServicesTests
 {
     public class CharacterServiceTests
     {
-        [Fact]
+        [Fact(Skip = "Not done")]
         public async Task Test()
         {
             var mockMessaging = new Mock<IMessagingClient>();

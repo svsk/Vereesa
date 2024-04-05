@@ -11,8 +11,11 @@ namespace Vereesa.Core.Tests
         public void GetCreatedDateUtc_CalculatingCreatedDateUtc_CreatedDateUtcCalculatesCorrectly()
         {
             //Arrange
-            var app = new ApplicationListItem();
-            DateTime.TryParse("9/5/2018 0:12:14", out var parsedTime);
+            var dateTimeString = "9/5/2018 0:12:14";
+
+            var formatProvider = new System.Globalization.CultureInfo("en-US");
+            var styles = System.Globalization.DateTimeStyles.None;
+            DateTime.TryParse(dateTimeString, formatProvider, styles, out var parsedTime);
 
             //Act
             var createdDate = parsedTime.ToUtc("Europe/Berlin");
