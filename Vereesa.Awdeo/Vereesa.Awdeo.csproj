@@ -5,15 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ContentWithTargetPath Include="Binaries\ffmpeg.exe">
+    <ContentWithTargetPath Include="Binaries\**\ffmpeg.exe">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         <TargetPath>ffmpeg.exe</TargetPath>
     </ContentWithTargetPath>
-    <ContentWithTargetPath Include="Binaries\opus.dll">
+    <ContentWithTargetPath Include="Binaries\**\opus.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         <TargetPath>opus.dll</TargetPath>
     </ContentWithTargetPath>
-    <ContentWithTargetPath Include="Binaries\libsodium.dll">
+    <ContentWithTargetPath Include="Binaries\**\libsodium.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         <TargetPath>libsodium.dll</TargetPath>
     </ContentWithTargetPath>
