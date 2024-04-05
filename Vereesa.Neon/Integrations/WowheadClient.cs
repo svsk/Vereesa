@@ -42,10 +42,10 @@ namespace Vereesa.Neon.Integrations
 
                     var type = stormClass switch
                     {
-                        "water" => ElementalStormType.Water,
-                        "earth" => ElementalStormType.Earth,
-                        "fire" => ElementalStormType.Fire,
-                        "air" => ElementalStormType.Air,
+                        "water" => ElementalStormType.Snowstorm,
+                        "earth" => ElementalStormType.Sandstorm,
+                        "fire" => ElementalStormType.Firestorm,
+                        "air" => ElementalStormType.Thunderstorm,
                         _ => ElementalStormType.Unknown,
                     };
 

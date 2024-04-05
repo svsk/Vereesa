@@ -55,10 +55,10 @@ public class TodayInWoWService : IBotService
         IDiscordInteraction interaction,
         [Description("The type of storm to subscribe to")]
         [
-            Choice("Air", (int)ElementalStormType.Air),
-            Choice("Earth", (int)ElementalStormType.Earth),
-            Choice("Fire", (int)ElementalStormType.Fire),
-            Choice("Water", (int)ElementalStormType.Water)
+            Choice("Thunderstorms", (int)ElementalStormType.Thunderstorm),
+            Choice("Sandstorms", (int)ElementalStormType.Sandstorm),
+            Choice("Firestorms", (int)ElementalStormType.Firestorm),
+            Choice("Snowstorms", (int)ElementalStormType.Snowstorm)
         ]
             long type,
         [Description("The zone to subscribe to")]
@@ -80,7 +80,7 @@ public class TodayInWoWService : IBotService
         if (existingSubscription != null)
         {
             await interaction.FollowupAsync(
-                $"🤔 You are already subscribed to {stormType} Storms in {WoWZoneHelper.GetName(wowZone)}.",
+                $"🤔 You are already subscribed to {stormType}s in {WoWZoneHelper.GetName(wowZone)}.",
                 ephemeral: true
             );
             return;
@@ -89,7 +89,7 @@ public class TodayInWoWService : IBotService
         await AddSubscription(interaction.User.Id, stormType, wowZone);
 
         await interaction.FollowupAsync(
-            $"🪄 You now will be notified about {stormType} Storms in {WoWZoneHelper.GetName(wowZone)}.",
+            $"🪄 You now will be notified about {stormType}s in {WoWZoneHelper.GetName(wowZone)}.",
             ephemeral: true
         );
     }
@@ -99,10 +99,10 @@ public class TodayInWoWService : IBotService
         IDiscordInteraction interaction,
         [Description("The type of storm to unsubscribe from")]
         [
-            Choice("Air", (int)ElementalStormType.Air),
-            Choice("Earth", (int)ElementalStormType.Earth),
-            Choice("Fire", (int)ElementalStormType.Fire),
-            Choice("Water", (int)ElementalStormType.Water)
+            Choice("Thunderstorms", (int)ElementalStormType.Thunderstorm),
+            Choice("Sandstorms", (int)ElementalStormType.Sandstorm),
+            Choice("Firestorms", (int)ElementalStormType.Firestorm),
+            Choice("Snowstorms", (int)ElementalStormType.Snowstorm)
         ]
             long type,
         [Description("The zone to unsubscribe from")]
@@ -125,7 +125,7 @@ public class TodayInWoWService : IBotService
         if (subscription == null)
         {
             await interaction.FollowupAsync(
-                $"😅 You are not subscribed to {stormType} Storms in {zoneName} ",
+                $"😅 You are not subscribed to {stormType}s in {zoneName} ",
                 ephemeral: true
             );
             return;
@@ -134,7 +134,7 @@ public class TodayInWoWService : IBotService
         await RemoveSubscription(subscription);
 
         await interaction.FollowupAsync(
-            $"✨ You will no longer be notified about {stormType} Storms in {zoneName}.",
+            $"✨ You will no longer be notified about {stormType}s in {zoneName}.",
             ephemeral: true
         );
     }
@@ -219,7 +219,7 @@ public class TodayInWoWService : IBotService
         await _subscriptionRepository.SaveAsync();
 
         _logger.LogWarning(
-            "User {UserId} subscribed to {StormType} Storms in {Zone}",
+            "User {UserId} subscribed to {StormType}s in {Zone}",
             userId,
             stormType,
             WoWZoneHelper.GetName(wowZone)
@@ -232,7 +232,7 @@ public class TodayInWoWService : IBotService
         await _subscriptionRepository.SaveAsync();
 
         _logger.LogWarning(
-            "User {UserId} unsubscribed from {StormType} Storms in {Zone}",
+            "User {UserId} unsubscribed from {StormType}s in {Zone}",
             subscription.UserId,
             subscription.Type,
             WoWZoneHelper.GetName(subscription.Zone)

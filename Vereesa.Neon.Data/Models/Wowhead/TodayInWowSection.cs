@@ -5,30 +5,6 @@ using System.Text.Json.Serialization;
 
 namespace Vereesa.Neon.Data.Models.Wowhead;
 
-public class ElementalStorm
-{
-    public ElementalStormType? Type { get; set; }
-    public WoWZone? ZoneId { get; set; }
-    public string Zone => ZoneId != null ? WoWZoneHelper.GetName(ZoneId.Value) : null;
-    public string Status { get; set; }
-    public DateTimeOffset Time { get; set; }
-    public DateTimeOffset EndingAt => Status == "Active" ? Time : Time.AddHours(2);
-    public DateTimeOffset StartingAt => Status == "Active" ? Time.AddHours(-2) : Time;
-    public string IconUrl =>
-        Type == null
-            ? null
-            : $"https://wow.zamimg.com/images/wow/TextureAtlas/live/elementalstorm-lesser-{Type.ToString().ToLowerInvariant()}.webp";
-}
-
-public enum ElementalStormType
-{
-    Water,
-    Earth,
-    Fire,
-    Air,
-    Unknown,
-}
-
 public class TodayInWowSection
 {
     public string Id { get; set; }
