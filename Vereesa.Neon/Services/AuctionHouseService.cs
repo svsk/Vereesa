@@ -1,17 +1,13 @@
-using System.ComponentModel;
 using Discord;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NodaTime;
 using RestSharp;
 using Vereesa.Core.Extensions;
-using Vereesa.Neon.Extensions;
-using Vereesa.Core.Infrastructure;
-using Vereesa.Core;
+using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
-    public class AuctionHouseService : IBotModule
+    public class AuctionHouseService
     {
         private ILogger<AuctionHouseService> _logger;
         private RestClient _restClient;
@@ -22,75 +18,7 @@ namespace Vereesa.Neon.Services
             _restClient = new RestClient("https://theunderminejournal.com/api/");
         }
 
-        [OnCommand("!ah")]
-        [WithArgument("itemName", 0)]
-        [Description("Checks price of an item on the Auction House. Uses the Undermine Journal as backing data.")]
-        [AsyncHandler]
-        public async Task HandleMessageReceivedAsync(IMessage message, string itemName)
-        {
-            Embed embed = null;
-            var itemStats = GetPriceInformation(itemName);
-
-            if (itemStats.item != null)
-            {
-                var item = itemStats.item.Stats.First();
-
-                // Build the embed
-                var builder = new EmbedBuilder();
-                builder.WithTitle(item.Name);
-                builder.WithThumbnailUrl(
-                    $"https://theunderminejournal.com/icon/large/{item.Icon.Replace(" ", "")}.jpg"
-                );
-                builder.Color = item.QualityColor;
-
-                builder.AddField("__Current Price__", $"{item.GoldPrice}g", true);
-                builder.AddField(
-                    "__Current Quantity__",
-                    item.Quantity.ToString("#,0", StringExtensions.GetThousandSeparatorFormat()),
-                    true
-                );
-
-                var auctions = itemStats.item.Auctions.AuctionList;
-                var topAuctions = auctions
-                    .OrderBy(auc => auc.BuyoutPrice / auc.Quantity)
-                    .Take(5)
-                    .Select(auc =>
-                    {
-                        return $"{auc.Quantity} @ {((auc.BuyoutPrice / auc.Quantity) / 10000).ToString("#,0.00", StringExtensions.GetThousandSeparatorFormat())}g each";
-                    });
-
-                builder.AddField("__Top Auctions__", string.Join("\r\n", topAuctions), false);
-
-                var externalSites = new string[]
-                {
-                    $"[Undermine Journal](https://theunderminejournal.com/#eu/karazhan/item/{item.Id})",
-                    $"[Wowhead](https://www.wowhead.com/item=168487/{item.Id})",
-                    $"[Wowuction.com](https://www.wowuction.com/eu/karazhan/Items/Stats/{item.Id})"
-                };
-
-                builder.AddField("__External sites__", string.Join(" | ", externalSites), false);
-
-                builder.Footer = new EmbedFooterBuilder();
-
-                var lastRefreshTime = Instant.FromDateTimeUtc(item.LastSeen).AsServerTime().ToPrettyTime();
-
-                var requestTime = DateTimeExtensions.NowInCentralEuropeanTime().ToString("HH:mm");
-
-                var footerText = new string[]
-                {
-                    $"Requested by {message.Author.Username} today at {requestTime}",
-                    $"Auction data last refreshed at {lastRefreshTime}"
-                };
-
-                builder.Footer.Text = string.Join(" | ", footerText);
-
-                embed = builder.Build();
-            }
-
-            await message.Channel.SendMessageAsync(itemStats.message, embed: embed);
-        }
-
-        private (string message, UndermineResult item) GetPriceInformation(string itemName)
+        public (string message, UndermineResult item) GetPriceInformation(string itemName)
         {
             try
             {
@@ -155,7 +83,7 @@ namespace Vereesa.Neon.Services
             }
         }
 
-        private class UndermineItem
+        public class UndermineItem
         {
             [JsonProperty("id")]
             public long Id { get; set; }
@@ -184,19 +112,19 @@ namespace Vereesa.Neon.Services
                 {
                     switch (Quality)
                     {
-                        case 0: // Poor
-                            return new Color(157, 157, 157);
+                        case 0:
+                            return VereesaColors.Poor;
                         default:
-                        case 1: // Common
-                            return new Color(254, 254, 254);
-                        case 2: // Uncommon
-                            return new Color(30, 254, 0);
-                        case 3: // Rare
-                            return new Color(0, 112, 221);
-                        case 4: // Epic
-                            return new Color(163, 53, 238);
-                        case 5: // Legendary
-                            return new Color(254, 128, 0);
+                        case 1:
+                            return VereesaColors.Common;
+                        case 2:
+                            return VereesaColors.Uncommon;
+                        case 3:
+                            return VereesaColors.Rare;
+                        case 4:
+                            return VereesaColors.Epic;
+                        case 5:
+                            return VereesaColors.Legendary;
                     }
                 }
             }
@@ -211,7 +139,7 @@ namespace Vereesa.Neon.Services
 
         private class CouldNotGetPriceException : Exception { }
 
-        private class UndermineResult
+        public class UndermineResult
         {
             [JsonProperty("items")]
             public List<UndermineItemSearchResult> Items { get; set; }
@@ -226,7 +154,7 @@ namespace Vereesa.Neon.Services
             public List<UndermineAuction> AuctionList { get; set; }
         }
 
-        private class UndermineAuction
+        public class UndermineAuction
         {
             [JsonProperty("id")]
             public long Id { get; set; }
@@ -238,7 +166,7 @@ namespace Vereesa.Neon.Services
             public decimal BuyoutPrice { get; set; }
         }
 
-        private class UndermineItemSearchResult
+        public class UndermineItemSearchResult
         {
             [JsonProperty("id")]
             public long Id { get; set; }
