@@ -32,9 +32,14 @@ public class AttendanceModule : IBotModule
     private async Task TriggerPeriodicAttendanceUpdateAsync()
     {
         var rankChanges = await _attendanceService.UpdateAttendanceAsync(false);
+        if (rankChanges?.Any() != true)
+        {
+            return;
+        }
 
         var rankChangeMessage =
             $"{WellknownRoles.Officer.MentionRole()} Based on attendance from the **last 10 raids**, the following rank changes should be made:\n";
+
         rankChangeMessage += rankChanges.Join("\n");
 
         await _messagingClient.SendMessageToChannelByIdAsync(WellknownChannels.OfficerChat, rankChangeMessage);
