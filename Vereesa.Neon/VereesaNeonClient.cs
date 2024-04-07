@@ -86,6 +86,7 @@ namespace Vereesa.Neon
                         .AddTransient<AttendanceService>()
                         .AddTransient<AuctionHouseService>()
                         .AddTransient<BattleNetApiService>()
+                        .AddTransient<FlagService>()
                         .AddScoped<IWarcraftLogsApi, WarcraftLogsApi>()
                         .AddScoped<ISpreadsheetClient, GoogleSheetsClient>()
                         .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()

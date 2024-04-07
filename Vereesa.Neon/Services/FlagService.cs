@@ -1,14 +1,11 @@
 using Vereesa.Core.Extensions;
 using Vereesa.Neon.Data.Interfaces;
 using Vereesa.Neon.Data.Models.Statistics;
-using Vereesa.Core.Infrastructure;
-using System.ComponentModel;
-using Discord;
 using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
-    public class FlagService : IBotModule
+    public class FlagService
     {
         private readonly IRepository<Statistics> _statRepository;
 
@@ -19,16 +16,7 @@ namespace Vereesa.Neon.Services
             _statRepository = statRepository;
         }
 
-        [OnCommand("!flag set")]
-        [WithArgument("countryName", 0)]
-        [WithArgument("flagEmoji", 1)]
-        [Authorize("Guild Master")]
-        [Description("Sets a flag for the specified country.")]
-        [CommandUsage("`!flag set <flag emoji> <country name>`")]
-        public async Task EvaluateMessageAsync(IMessage message, string flagEmoji, string countryName) =>
-            await message.Channel.SendMessageAsync(SetFlag(flagEmoji, countryName));
-
-        private string SetFlag(string flagEmoji, string countryName)
+        public string SetFlag(string flagEmoji, string countryName)
         {
             if (string.IsNullOrWhiteSpace(flagEmoji) || string.IsNullOrWhiteSpace(countryName))
             {
