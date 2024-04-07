@@ -103,6 +103,7 @@ namespace Vereesa.Neon
                             IRepository<ElementalStormSubscription>,
                             AzureStorageRepository<ElementalStormSubscription>
                         >()
+                        .AddScoped<IRepository<GrandHuntSubscription>, AzureStorageRepository<GrandHuntSubscription>>()
                         .AddScoped<IWowheadClient, WowheadClient>()
                         .AddLogging(config =>
                         {

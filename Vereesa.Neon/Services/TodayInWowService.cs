@@ -16,20 +16,94 @@ public class TodayInWoWService : IBotModule
 {
     private readonly IWowheadClient _wowhead;
     private readonly IRepository<ElementalStormSubscription> _subscriptionRepository;
+    private readonly IRepository<GrandHuntSubscription> _huntSubscriptionRepository;
     private readonly IMessagingClient _messagingClient;
     private readonly ILogger<TodayInWoWService> _logger;
 
     public TodayInWoWService(
         IWowheadClient wowhead,
         IRepository<ElementalStormSubscription> subscriptionRepository,
+        IRepository<GrandHuntSubscription> huntSubscriptionRepository,
         IMessagingClient messagingClient,
         ILogger<TodayInWoWService> logger
     )
     {
         _wowhead = wowhead;
         _subscriptionRepository = subscriptionRepository;
+        _huntSubscriptionRepository = huntSubscriptionRepository;
         _messagingClient = messagingClient;
         _logger = logger;
+    }
+
+    [SlashCommand("subscribe-to-hunt", "Subscribes to a Grand Hunt in a specific zone.")]
+    public async Task SubscribeToHunt(
+        IDiscordInteraction interaction,
+        [Description("The zone to subscribe to.")]
+        [
+            Choice("The Waking Shores", (int)WoWZone.TheWakingShores),
+            Choice("Ohn'ahran Plains", (int)WoWZone.OhnAhranPlains),
+            Choice("The Azure Span", (int)WoWZone.TheAzureSpan),
+            Choice("Thaldraszus", (int)WoWZone.Thaldraszus)
+        ]
+            long zone
+    )
+    {
+        var wowZone = (WoWZone)zone;
+
+        await interaction.DeferAsync(ephemeral: true);
+
+        var existingSubscription = await GetHuntSubscription(interaction.User.Id, wowZone);
+        if (existingSubscription != null)
+        {
+            await interaction.FollowupAsync(
+                $"🤔 You are already subscribed to Grand Hunts in {WoWZoneHelper.GetName(wowZone)}.",
+                ephemeral: true
+            );
+            return;
+        }
+
+        await AddHuntSubscription(interaction.User.Id, wowZone);
+
+        await interaction.FollowupAsync(
+            $"🪄 You will now be notified about Grand Hunts in {WoWZoneHelper.GetName(wowZone)}.",
+            ephemeral: true
+        );
+    }
+
+    [SlashCommand("unsubscribe-from-hunt", "Unsubscribes from Grand Hunts in a specific zone.")]
+    public async Task UnsubscribeFromHunt(
+        IDiscordInteraction interaction,
+        [Description("The zone to unsubscribe from.")]
+        [
+            Choice("The Waking Shores", (int)WoWZone.TheWakingShores),
+            Choice("Ohn'ahran Plains", (int)WoWZone.OhnAhranPlains),
+            Choice("The Azure Span", (int)WoWZone.TheAzureSpan),
+            Choice("Thaldraszus", (int)WoWZone.Thaldraszus)
+        ]
+            long zone
+    )
+    {
+        var wowZone = (WoWZone)zone;
+
+        await interaction.DeferAsync(ephemeral: true);
+
+        var subscription = await GetHuntSubscription(interaction.User.Id, wowZone);
+        if (subscription == null)
+        {
+            await interaction.FollowupAsync(
+                $"😅 You are not subscribed to Grand Hunts in {WoWZoneHelper.GetName(wowZone)} ",
+                ephemeral: true
+            );
+            return;
+        }
+
+        await _huntSubscriptionRepository.DeleteAsync(subscription);
+        await _huntSubscriptionRepository.SaveAsync();
+
+        await interaction.FollowupAsync(
+            $"✨ You will no longer be notified about Grand Hunts in {WoWZoneHelper.GetName(wowZone)}.",
+            ephemeral: true
+        );
     }
 
     [SlashCommand("elemental-storm", "Show current elemental storms")]
@@ -89,7 +163,7 @@ public class TodayInWoWService : IBotModule
         await AddSubscription(interaction.User.Id, stormType, wowZone);
 
         await interaction.FollowupAsync(
-            $"🪄 You now will be notified about {stormType}s in {WoWZoneHelper.GetName(wowZone)}.",
+            $"🪄 You will now be notified about {stormType}s in {WoWZoneHelper.GetName(wowZone)}.",
             ephemeral: true
         );
     }
@@ -142,6 +216,52 @@ public class TodayInWoWService : IBotModule
     [OnInterval(Minutes = 10)]
     public async Task CheckForElementalStorms()
     {
+        await NotifyStormSubscribers();
+        await NotifyHuntSubscribers();
+    }
+
+    private async Task NotifyHuntSubscribers()
+    {
+        var currentGrandHunts = (await _wowhead.GetCurrentGrandHunts())?.ToList();
+
+        if (currentGrandHunts == null || !currentGrandHunts.Any())
+        {
+            return;
+        }
+
+        var subscriptions = await _huntSubscriptionRepository.GetAllAsync();
+
+        foreach (var grandHunt in currentGrandHunts)
+        {
+            foreach (var subscription in subscriptions)
+            {
+                var subscriptionIsForCurrentHunt = subscription.Zone == grandHunt.ZoneId;
+
+                if (!subscriptionIsForCurrentHunt)
+                {
+                    continue;
+                }
+
+                var recentlyNotified =
+                    subscription.LastNotifiedAt.HasValue && subscription.LastNotifiedAt.Value >= grandHunt.Time;
+
+                if (recentlyNotified)
+                {
+                    continue;
+                }
+
+                var embed = CreateHuntEmbed(grandHunt).Build();
+
+                await _messagingClient.SendMessageToUserByIdAsync(subscription.UserId, "", embed: embed);
+
+                subscription.LastNotifiedAt = grandHunt.Time;
+                await _huntSubscriptionRepository.AddOrEditAsync(subscription);
+            }
+        }
+    }
+
+    private async Task NotifyStormSubscribers()
+    {
         var currentElementalStorms = (await _wowhead.GetCurrentElementalStorms())
             ?.Where(storm => storm.Status == "Active")
             .ToList();
@@ -183,6 +303,18 @@ public class TodayInWoWService : IBotModule
         }
     }
 
+    private EmbedBuilder CreateHuntEmbed(GrandHunt grandHunt)
+    {
+        var builder = new EmbedBuilder()
+            .WithTitle("Current Grand Hunt")
+            .AddField("Zone", grandHunt.Zone ?? "Unknown", true)
+            .WithColor(VereesaColors.VereesaPurple)
+            .WithThumbnailUrl("https://wow.zamimg.com/images/wow/icons/large/inv_misc_coinbag10.jpg")
+            .WithFooter($"Started at {grandHunt.StartedAt:HH:mm} (UTC)\nEnding at {grandHunt.EndingAt:HH:mm} (UTC)");
+
+        return builder;
+    }
+
     private EmbedBuilder CreateStormEmbed(ElementalStorm elementalStorm)
     {
         var startingOrStarted = elementalStorm.StartingAt > DateTimeOffset.UtcNow ? "Starting" : "Started";
@@ -203,6 +335,21 @@ public class TodayInWoWService : IBotModule
         }
 
         return builder;
+    }
+
+    private async Task AddHuntSubscription(ulong userId, WoWZone wowZone)
+    {
+        var subscription = new GrandHuntSubscription
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserId = userId,
+            Zone = wowZone
+        };
+
+        await _huntSubscriptionRepository.AddAsync(subscription);
+        await _huntSubscriptionRepository.SaveAsync();
+
+        _logger.LogWarning("User {UserId} subscribed to Grand Hunts in {Zone}", userId, WoWZoneHelper.GetName(wowZone));
     }
 
     private async Task AddSubscription(ulong userId, ElementalStormType stormType, WoWZone wowZone)
@@ -247,6 +394,13 @@ public class TodayInWoWService : IBotModule
     {
         return (await _subscriptionRepository.GetAllAsync()).FirstOrDefault(
             x => x.UserId == userId && x.Type == stormType && x.Zone == wowZone
+        );
+    }
+
+    private async Task<GrandHuntSubscription?> GetHuntSubscription(ulong userId, WoWZone wowZone)
+    {
+        return (await _huntSubscriptionRepository.GetAllAsync()).FirstOrDefault(
+            x => x.UserId == userId && x.Zone == wowZone
         );
     }
 }
