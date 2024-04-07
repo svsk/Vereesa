@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Discord;
 using Microsoft.Extensions.Logging;
 using NodaTime;
@@ -7,6 +6,8 @@ using Vereesa.Neon.Extensions;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Core;
 using Vereesa.Neon.Services;
+using Discord.Interactions;
+using System.ComponentModel;
 
 namespace Vereesa.Neon.Modules
 {
@@ -19,12 +20,15 @@ namespace Vereesa.Neon.Modules
             _service = service;
         }
 
-        [OnCommand("!ah")]
-        [WithArgument("itemName", 0)]
-        [Description("Checks price of an item on the Auction House. Uses the Undermine Journal as backing data.")]
+        [SlashCommand("price", "Request the price of a single item. Uses the Undermine Journal as backing data.")]
         [AsyncHandler]
-        public async Task HandleMessageReceivedAsync(IMessage message, string itemName)
+        public async Task HandleMessageReceivedAsync(
+            IDiscordInteraction interaction,
+            [Description("Name of the item")] string itemName
+        )
         {
+            await interaction.DeferAsync();
+
             Embed embed = null;
             var itemStats = _service.GetPriceInformation(itemName);
 
@@ -75,7 +79,7 @@ namespace Vereesa.Neon.Modules
 
                 var footerText = new string[]
                 {
-                    $"Requested by {message.Author.Username} today at {requestTime}",
+                    $"Requested by {interaction.User.Username} today at {requestTime}",
                     $"Auction data last refreshed at {lastRefreshTime}"
                 };
 
@@ -84,7 +88,7 @@ namespace Vereesa.Neon.Modules
                 embed = builder.Build();
             }
 
-            await message.Channel.SendMessageAsync(itemStats.message, embed: embed);
+            await interaction.RespondAsync(itemStats.message, embed: embed);
         }
     }
 }
