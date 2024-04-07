@@ -40,5 +40,19 @@ namespace Vereesa.Neon.Tests.IntegrationTests
             // Assert
             Assert.NotNull(result);
         }
+
+        [Fact]
+        public async Task GetCurrentGrandHunt_GettingCurrentGrandHuntFromWowhead_ReceivedCorrectly()
+        {
+            // Arrange
+            var httpClient = new HttpClient();
+            var target = new WowheadClient(httpClient);
+
+            // Act
+            var result = await target.GetCurrentGrandHunts();
+
+            // Assert
+            Assert.NotNull(result);
+        }
     }
 }

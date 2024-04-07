@@ -69,6 +69,36 @@ namespace Vereesa.Neon.Integrations
             return activeStorms.Any() ? activeStorms : upcomingStorms.Take(1).ToList();
         }
 
+        public async Task<List<GrandHunt>?> GetCurrentGrandHunts()
+        {
+            var todayInWow = await GetTodayInWow();
+
+            var eventsInEu = todayInWow.FirstOrDefault(grp => grp.Id == "events-and-rares" && grp.RegionId == "EU");
+            var grandHuntLines = eventsInEu?.Groups
+                .Where(grp => grp != null)
+                .FirstOrDefault(grp => grp.Id == "grand-hunt")
+                ?.Content.Lines;
+
+            if (grandHuntLines == null)
+            {
+                return null;
+            }
+
+            return grandHuntLines
+                .Where(line => line != null)
+                .Select(line =>
+                {
+                    WoWZoneHelper.TryParseWoWZone(line.Name, out var zone);
+
+                    return new GrandHunt
+                    {
+                        ZoneId = zone,
+                        Time = DateTimeOffset.FromUnixTimeSeconds(line.EndingUt ?? 0),
+                    };
+                })
+                .ToList();
+        }
+
         public async Task<TodayInWowSection[]> GetTodayInWow()
         {
             try
