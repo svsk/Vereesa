@@ -48,4 +48,34 @@ public class TimeZoneService
         var timezone = TimeZoneInfo.FindSystemTimeZoneById(userTimezone.TimeZoneId);
         return TimeZoneInfo.ConvertTime(value, timezone);
     }
+
+    public async Task<string> GetUserTimeZone(ulong userId, string fallback = null)
+    {
+        var userTimezone = await GetUserTimezoneSettingsAsync(userId);
+        return userTimezone?.TimeZoneId ?? fallback;
+    }
+
+    public async Task<Dictionary<ulong, string>> GetTimeZonesForUserIds(
+        IEnumerable<ulong> userIds,
+        string fallback = null
+    )
+    {
+        if (userIds?.Any() != true)
+        {
+            return new();
+        }
+
+        var stringIds = userIds.Select(x => x.ToString()).ToList();
+
+        var userTimezones = await _repository.GetAllAsync();
+
+        return userIds.ToDictionary(
+            userId => userId,
+            userId =>
+            {
+                var userTimezone = userTimezones.FirstOrDefault(y => y.UserId == userId.ToString());
+                return userTimezone?.TimeZoneId ?? fallback;
+            }
+        );
+    }
 }

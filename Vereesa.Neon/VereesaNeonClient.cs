@@ -88,6 +88,7 @@ namespace Vereesa.Neon
                         .AddTransient<BattleNetApiService>()
                         .AddTransient<FlagService>()
                         .AddTimeZoneService()
+                        .AddTodayInWoWService()
                         .AddScoped<IWarcraftLogsApi, WarcraftLogsApi>()
                         .AddScoped<ISpreadsheetClient, GoogleSheetsClient>()
                         .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
@@ -100,12 +101,6 @@ namespace Vereesa.Neon
                         .AddScoped<IRepository<RaidAttendanceSummary>, AzureStorageRepository<RaidAttendanceSummary>>()
                         .AddScoped<IRepository<UsersCharacters>, AzureStorageRepository<UsersCharacters>>()
                         .AddScoped<IRepository<Personality>, AzureStorageRepository<Personality>>()
-                        .AddScoped<
-                            IRepository<ElementalStormSubscription>,
-                            AzureStorageRepository<ElementalStormSubscription>
-                        >()
-                        .AddScoped<IRepository<GrandHuntSubscription>, AzureStorageRepository<GrandHuntSubscription>>()
-                        .AddScoped<IWowheadClient, WowheadClient>()
                         .AddLogging(config =>
                         {
                             config.AddConsole();

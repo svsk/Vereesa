@@ -194,5 +194,16 @@ namespace Vereesa.Core.Discord
 
             return await user.SendMessageAsync(message, embed: embed);
         }
+
+        public async Task<IMessage> SendMessageToUserByIdAsync(ulong userId, string message, Embed[] embeds)
+        {
+            var user = Discord.GetUser(userId);
+            if (user == null)
+            {
+                throw new Exception($"User with id {userId} not found.");
+            }
+
+            return await user.SendMessageAsync(text: message, embeds: embeds);
+        }
     }
 }
