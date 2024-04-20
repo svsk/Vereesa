@@ -87,7 +87,14 @@ public class TodayInWoWService
 
     public async Task AddStormSubscription(ulong userId, ElementalStormType stormType, WoWZone wowZone)
     {
-        var subscription = new ElementalStormSubscription
+        var subscription = await GetStormSubscription(userId, stormType, wowZone);
+
+        if (subscription != null)
+        {
+            throw new AlreadySubscribedException();
+        }
+
+        subscription = new ElementalStormSubscription
         {
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
