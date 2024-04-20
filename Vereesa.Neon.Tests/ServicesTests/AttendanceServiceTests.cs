@@ -4,6 +4,8 @@ using Moq;
 using Vereesa.Neon.Services;
 using Vereesa.Neon.Data.Interfaces;
 using Xunit;
+using Vereesa.Neon.Data.Models.Attendance;
+using Vereesa.Neon.Integrations;
 
 namespace Vereesa.Neon.Tests.ServicesTests
 {
@@ -13,21 +15,23 @@ namespace Vereesa.Neon.Tests.ServicesTests
         public async Task UpdateAttendance_ClockHitsUtcNoon_AttendanceUpdatedCorrectly()
         {
             // Arrange
-            var repository = new Mock<IRepository<RaidAttendance>>();
-            var raidAttendanceSummary = new Mock<IRepository<RaidAttendanceSummary>>();
+            var attendanceRepo = new Mock<IRepository<RaidAttendance>>();
+            var attendanceSummaryRepo = new Mock<IRepository<RaidAttendanceSummary>>();
             var usersCharacters = new Mock<IRepository<UsersCharacters>>();
+            var warcraftLogsScraper = new Mock<IWarcraftLogsScraper>();
             var logger = new Mock<ILogger<AttendanceService>>();
 
             var target = new AttendanceService(
-                repository.Object,
-                raidAttendanceSummary.Object,
+                attendanceRepo.Object,
+                attendanceSummaryRepo.Object,
                 usersCharacters.Object,
+                warcraftLogsScraper.Object,
                 logger.Object
             );
 
             var addedRaids = 0;
 
-            repository
+            attendanceRepo
                 .Setup(r => r.AddOrEditAsync(It.IsAny<RaidAttendance>()))
                 .Callback(() =>
                 {

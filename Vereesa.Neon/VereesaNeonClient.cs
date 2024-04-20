@@ -17,6 +17,7 @@ using Vereesa.Neon.Data.Repositories;
 using Vereesa.Core.Discord;
 using Vereesa.Core;
 using Vereesa.Neon.Data.Models.Wowhead;
+using Vereesa.Neon.Data.Models.Attendance;
 
 namespace Vereesa.Neon
 {
@@ -90,6 +91,7 @@ namespace Vereesa.Neon
                         .AddTimeZoneService()
                         .AddTodayInWoWService()
                         .AddScoped<IWarcraftLogsApi, WarcraftLogsApi>()
+                        .AddScoped<IWarcraftLogsScraper, WarcraftLogsScraper>()
                         .AddScoped<ISpreadsheetClient, GoogleSheetsClient>()
                         .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
                         .AddScoped<IRepository<Giveaway>, AzureStorageRepository<Giveaway>>()

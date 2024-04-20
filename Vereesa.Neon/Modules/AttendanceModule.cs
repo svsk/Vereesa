@@ -1,31 +1,30 @@
 using Vereesa.Core;
 using System.ComponentModel;
 using Discord;
-using Microsoft.Extensions.Logging;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Services;
 using Vereesa.Neon.Helpers;
+using Vereesa.Neon.Integrations;
 
 namespace Vereesa.Neon.Modules;
 
 public class AttendanceModule : IBotModule
 {
-    private readonly ILogger<AttendanceService> _logger;
-    private IMessagingClient _messagingClient;
-    private AttendanceService _attendanceService;
+    private readonly IMessagingClient _messagingClient;
+    private readonly AttendanceService _attendanceService;
+    private readonly WarcraftLogsScraper _warcraftLogsScraper;
 
     public AttendanceModule(
         IMessagingClient messagingClient,
         AttendanceService attendanceService,
-        IJobScheduler jobScheduler,
-        ILogger<AttendanceService> logger
+        WarcraftLogsScraper warcraftLogsScraper,
+        IJobScheduler jobScheduler
     )
     {
-        _logger = logger;
         _messagingClient = messagingClient;
-
         _attendanceService = attendanceService;
+        _warcraftLogsScraper = warcraftLogsScraper;
         jobScheduler.EveryDayAtUtcNoon += TriggerPeriodicAttendanceUpdateAsync;
     }
 
@@ -62,7 +61,7 @@ public class AttendanceModule : IBotModule
     [AsyncHandler]
     public async Task PruneAttendance(IMessage message)
     {
-        var raidIds = _attendanceService.GetRaidIds();
+        var raidIds = _warcraftLogsScraper.GetRaidIds();
 
         var zoneId = (
             await _messagingClient.Prompt(
@@ -108,8 +107,14 @@ public class AttendanceModule : IBotModule
     [Description("Lists current attendance standing.")]
     public async Task HandleMessageReceived(IMessage message)
     {
-        var zoneId = _attendanceService.GetRaidIdOrDefault(message.Content.Split(" ").Skip(1).Join(" "));
+        var zoneId = _warcraftLogsScraper.GetRaidIdOrDefault(message.Content.Split(" ").Skip(1).Join(" "));
         var summary = await _attendanceService.GetRaidSummary(zoneId);
+
+        if (summary.Rankings == null)
+        {
+            await message.Channel.SendMessageAsync("No attendance data found.");
+            return;
+        }
 
         var characterList = string.Join(
             "\n",
@@ -123,7 +128,7 @@ public class AttendanceModule : IBotModule
             truncated = true;
         }
 
-        var zoneName = _attendanceService.GetRaidName(zoneId);
+        var zoneName = _warcraftLogsScraper.GetRaidName(zoneId);
 
         var attendanceReport =
             $"**Attendance for {zoneName}**\n"
@@ -138,9 +143,15 @@ public class AttendanceModule : IBotModule
     [Description("Lists attendance from last ten raids")]
     public async Task ListLatestAttendance(IMessage message)
     {
-        var zoneId = _attendanceService.GetRaidIdOrDefault();
-        var zoneName = _attendanceService.GetRaidName(zoneId);
+        var zoneId = _warcraftLogsScraper.GetRaidIdOrDefault();
+        var zoneName = _warcraftLogsScraper.GetRaidName(zoneId);
         var summary = _attendanceService.GetSummary(zoneId);
+
+        if (summary.Rankings == null)
+        {
+            await message.Channel.SendMessageAsync("No attendance data found.");
+            return;
+        }
 
         var characterList = string.Join(
             "\n",
