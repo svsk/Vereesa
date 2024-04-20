@@ -1,12 +1,7 @@
 using System.Threading.Tasks;
-using Discord;
-using Discord.WebSocket;
 using Xunit;
-using Moq;
-using Vereesa.Neon.Integrations;
-using Vereesa.Neon.Services;
 
-namespace Vereesa.Core.Tests.ServicesTests
+namespace Vereesa.Neon.Tests.ServicesTests
 {
     public class RaidSplitServiceTests
     {

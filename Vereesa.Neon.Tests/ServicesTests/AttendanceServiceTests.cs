@@ -5,7 +5,7 @@ using Vereesa.Neon.Services;
 using Vereesa.Neon.Data.Interfaces;
 using Xunit;
 
-namespace Vereesa.Core.Tests
+namespace Vereesa.Neon.Tests.ServicesTests
 {
     public class AttendanceServiceTests
     {

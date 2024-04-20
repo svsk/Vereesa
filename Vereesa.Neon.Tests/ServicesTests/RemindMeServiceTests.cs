@@ -10,7 +10,7 @@ using Vereesa.Neon.Data.Interfaces;
 using Vereesa.Neon.Data.Models.Reminders;
 using Xunit;
 
-namespace Vereesa.Core.Tests.ServicesTests
+namespace Vereesa.Neon.Tests.ServicesTests
 {
     public class RemindMeServiceTests
     {

@@ -4,8 +4,9 @@ using Discord;
 using Xunit;
 using Moq;
 using Vereesa.Neon.Services;
+using Vereesa.Core;
 
-namespace Vereesa.Core.Tests.ServicesTests
+namespace Vereesa.Neon.Tests.ServicesTests
 {
     public class CharacterServiceTests
     {

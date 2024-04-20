@@ -1,10 +1,4 @@
-using Discord;
-using Discord.WebSocket;
-using Xunit;
-using Vereesa.Neon.Configuration;
-using Vereesa.Neon.Services;
-
-namespace Vereesa.Core.Tests.ServicesTests
+namespace Vereesa.Neon.Tests.ServicesTests
 {
     public class GuildApplicationServiceTests
     {

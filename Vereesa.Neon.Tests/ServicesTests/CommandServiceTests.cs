@@ -1,7 +1,7 @@
 using Xunit;
 using Vereesa.Neon.Services;
 
-namespace Vereesa.Core.Tests.ServicesTests
+namespace Vereesa.Neon.Tests.ServicesTests
 {
     public class CommandServiceTests
     {

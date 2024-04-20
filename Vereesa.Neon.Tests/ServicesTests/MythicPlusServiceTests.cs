@@ -6,7 +6,7 @@
 // using Vereesa.Neon.Integrations.Interfaces;
 // using Vereesa.Neon.Services;
 
-// namespace Vereesa.Core.Tests.ServicesTests
+// namespace Vereesa.Neon.Tests.ServicesTests
 // {
 //
 // 	public class MythicPlusServiceTests

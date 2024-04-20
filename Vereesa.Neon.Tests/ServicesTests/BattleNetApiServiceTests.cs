@@ -6,9 +6,8 @@ using Xunit;
 using Moq;
 using Vereesa.Neon.Configuration;
 using Vereesa.Neon.Services;
-using Discord.WebSocket;
 
-namespace Vereesa.Core.Tests.ServicesTests
+namespace Vereesa.Neon.Tests.ServicesTests
 {
     public class BattleNetApiServiceTests
     {
