@@ -6,6 +6,7 @@ using Vereesa.Neon.Data.Interfaces;
 using Xunit;
 using Vereesa.Neon.Data.Models.Attendance;
 using Vereesa.Neon.Integrations;
+using System.Collections.Generic;
 
 namespace Vereesa.Neon.Tests.ServicesTests
 {
@@ -20,6 +21,11 @@ namespace Vereesa.Neon.Tests.ServicesTests
             var usersCharacters = new Mock<IRepository<UsersCharacters>>();
             var warcraftLogsScraper = new Mock<IWarcraftLogsScraper>();
             var logger = new Mock<ILogger<AttendanceService>>();
+
+            // Setup scraper to return attendance from GetAttendanceFromWarcraftLogs
+            warcraftLogsScraper
+                .Setup(s => s.GetAttendanceFromWarcraftLogs(It.IsAny<string>(), It.IsAny<int>()))
+                .Returns(new List<RaidAttendance> { new("1", 0, "ZoneName", "ZoneId", "LogUrl") });
 
             var target = new AttendanceService(
                 attendanceRepo.Object,
