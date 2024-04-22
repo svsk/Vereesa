@@ -88,6 +88,7 @@ namespace Vereesa.Neon
                         .AddTransient<AuctionHouseService>()
                         .AddTransient<BattleNetApiService>()
                         .AddTransient<FlagService>()
+                        .AddSingleton<NeonCoinService>()
                         .AddTimeZoneService()
                         .AddTodayInWoWService()
                         .AddScoped<IWarcraftLogsApi, WarcraftLogsApi>()
