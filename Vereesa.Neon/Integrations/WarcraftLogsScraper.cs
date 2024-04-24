@@ -10,6 +10,8 @@ public interface IWarcraftLogsScraper
 {
     List<RaidAttendance> GetAttendanceFromWarcraftLogs(string zoneId, int page);
     string GetRaidIdOrDefault(string? raid = null);
+    Dictionary<string, string> GetRaidIds();
+    string GetRaidName(string zoneId);
 }
 
 public class WarcraftLogsScraper : IWarcraftLogsScraper

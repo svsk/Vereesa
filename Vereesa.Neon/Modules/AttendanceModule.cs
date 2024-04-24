@@ -13,12 +13,12 @@ public class AttendanceModule : IBotModule
 {
     private readonly IMessagingClient _messagingClient;
     private readonly AttendanceService _attendanceService;
-    private readonly WarcraftLogsScraper _warcraftLogsScraper;
+    private readonly IWarcraftLogsScraper _warcraftLogsScraper;
 
     public AttendanceModule(
         IMessagingClient messagingClient,
         AttendanceService attendanceService,
-        WarcraftLogsScraper warcraftLogsScraper,
+        IWarcraftLogsScraper warcraftLogsScraper,
         IJobScheduler jobScheduler
     )
     {
