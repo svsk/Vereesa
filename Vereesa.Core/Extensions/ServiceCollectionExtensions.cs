@@ -37,11 +37,7 @@ namespace Vereesa.Core.Extensions
         {
             foreach (var guild in discord.Guilds)
             {
-                var existingCommands = await guild.GetApplicationCommandsAsync();
-                foreach (var existingCommand in existingCommands)
-                {
-                    await existingCommand.DeleteAsync();
-                }
+                await guild.DeleteApplicationCommandsAsync();
             }
         }
 
@@ -49,8 +45,11 @@ namespace Vereesa.Core.Extensions
         {
             var discord = serviceProvider.GetRequiredService<DiscordSocketClient>();
 
-            // Clear all existing commands before the BotServices register their current ones.
-            ClearCommandsAsync(discord).GetAwaiter().GetResult();
+            discord.Ready += async () =>
+            {
+                // Clear all existing commands before the BotServices register their current ones.
+                await ClearCommandsAsync(discord);
+            };
 
             foreach (var moduleType in GetBotModules())
             {
