@@ -58,6 +58,11 @@ namespace Vereesa.Neon.Services
         [AsyncHandler]
         public async Task Respond(IMessage message)
         {
+            if (message.Author.IsBot)
+            {
+                return;
+            }
+
             var displayName = message.Author.GetPreferredDisplayName();
             var messageWithUsername = $"{displayName}: {EscapeSelfMentions(message.Content)}";
 
