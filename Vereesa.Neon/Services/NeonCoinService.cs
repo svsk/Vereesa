@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Vereesa.Neon.Exceptions;
 
 namespace Vereesa.Neon.Services;
 
@@ -6,6 +7,8 @@ public class NeonCoinService
 {
     private static Dictionary<ulong, int> _wallets = Load();
     private readonly Random _rng;
+    private DateTimeOffset _lastCoinGeneration = DateTimeOffset.MinValue;
+    private TimeSpan _coinGenerationCooldown = TimeSpan.FromMinutes(60);
 
     public NeonCoinService(Random rng)
     {
@@ -58,10 +61,34 @@ public class NeonCoinService
 
     public NeonCoin GenerateCoin(ulong userId)
     {
+        if (_lastCoinGeneration.Add(_coinGenerationCooldown) > DateTimeOffset.Now)
+        {
+            throw new OperationThrottledException(_coinGenerationCooldown);
+        }
+
         EnsureUserHasWallet(userId);
         _wallets[userId] = _wallets[userId] + 1;
         Save(_wallets);
+
+        _lastCoinGeneration = DateTimeOffset.Now;
+
         return new NeonCoin { UserId = userId };
+    }
+
+    public void TipCoin(ulong fromUser, ulong toUser)
+    {
+        EnsureUserHasWallet(fromUser);
+        EnsureUserHasWallet(toUser);
+
+        if (_wallets[fromUser] < 1)
+        {
+            throw new InsufficientFundsException();
+        }
+
+        _wallets[fromUser] = _wallets[fromUser] - 1;
+        _wallets[toUser] = _wallets[toUser] + 1;
+
+        Save(_wallets);
     }
 }
 
