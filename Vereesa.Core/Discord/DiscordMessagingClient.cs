@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using Vereesa.Core.Extensions;
-using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Core.Discord
 {
@@ -204,6 +203,56 @@ namespace Vereesa.Core.Discord
             }
 
             return await user.SendMessageAsync(text: message, embeds: embeds);
+        }
+
+        public async Task<IRole> CreateRole(ulong guildId, string roleName)
+        {
+            return await Discord.GetGuild(guildId).CreateRoleAsync(roleName);
+        }
+
+        public async Task<IReadOnlyCollection<IUser>> GetRoleUsers(ulong roleId)
+        {
+            await Task.CompletedTask;
+            var role = Discord.GetRole(roleId);
+            return role.Members.OfType<IUser>().ToList().AsReadOnly();
+        }
+
+        public async Task RemoveRoleAsync(ulong guildId, ulong roleId, ulong userId)
+        {
+            var guild = Discord.GetGuild(guildId);
+            var user = guild.GetUser(userId);
+            var role = guild.GetRole(roleId);
+
+            if (user == null)
+            {
+                throw new Exception($"User with id {userId} not found in guild with id {guildId}.");
+            }
+
+            if (role == null)
+            {
+                throw new Exception($"Role with id {roleId} not found in guild with id {guildId}.");
+            }
+
+            await user.RemoveRoleAsync(role);
+        }
+
+        public async Task AddRoleAsync(ulong guildId, ulong roleId, ulong userId)
+        {
+            var guild = Discord.GetGuild(guildId);
+            var user = guild.GetUser(userId);
+            var role = guild.GetRole(roleId);
+
+            if (user == null)
+            {
+                throw new Exception($"User with id {userId} not found in guild with id {guildId}.");
+            }
+
+            if (role == null)
+            {
+                throw new Exception($"Role with id {roleId} not found in guild with id {guildId}.");
+            }
+
+            await user.AddRoleAsync(role);
         }
     }
 }
