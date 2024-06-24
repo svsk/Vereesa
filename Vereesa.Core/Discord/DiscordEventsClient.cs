@@ -84,4 +84,11 @@ public class DiscordEventsClient : IEventsClient
                 throw new Exception($"Unknown event status: {status}");
         }
     }
+
+    public async Task<List<ulong>> GetGuildEventParticipants(ulong guildId, ulong eventId)
+    {
+        var guildEvent = await _discord.GetGuild(guildId).GetEventAsync(eventId);
+        var users = await guildEvent.GetUsersAsync().ToListAsync();
+        return users.SelectMany(u => u.Select(u => u.Id)).ToList();
+    }
 }
