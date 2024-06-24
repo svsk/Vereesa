@@ -126,6 +126,8 @@ namespace Vereesa.Core.Discord
                     }
                 };
             }
+
+            _logger.LogInformation("Slash commands registered for {Service}.", _service.GetType().Name);
         }
 
         private ApplicationCommandOptionType InterpretType(Type parameterType)
