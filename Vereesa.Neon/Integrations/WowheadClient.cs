@@ -107,8 +107,8 @@ namespace Vereesa.Neon.Integrations
 
                 var html = await result.Content.ReadAsStringAsync();
 
-                var start = html.IndexOf("new WH.Wow.TodayInWow(");
-                var end = html.IndexOf(");", start);
+                var start = html.IndexOf("id=\"data.wow.todayInWow\">");
+                var end = html.IndexOf("</", start);
                 var arrayStart = html.IndexOf("[", start);
                 var json = html.Substring(arrayStart, end - arrayStart);
 
