@@ -35,10 +35,12 @@ namespace Vereesa.Core.Extensions
 
         private static async Task ClearCommandsAsync(DiscordSocketClient discord)
         {
+#if !DEBUG
             foreach (var guild in discord.Guilds)
             {
                 await guild.DeleteApplicationCommandsAsync();
             }
+#endif
         }
 
         public static void UseBotServices(this IServiceProvider serviceProvider)

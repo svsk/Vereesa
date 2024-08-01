@@ -59,6 +59,12 @@ namespace Vereesa.Core.Discord
                     .Select(m => new { Attributes = m.GetCustomAttribute<SlashCommandAttribute>(), Method = m })
                     .ToList();
 
+#if DEBUG
+                slashCommandMethods = slashCommandMethods
+                    .Where(m => m.Method.GetCustomAttribute<ForDebuggingAttribute>() != null)
+                    .ToList();
+#endif
+
                 foreach (var command in slashCommandMethods)
                 {
                     var builder = new SlashCommandBuilder()
