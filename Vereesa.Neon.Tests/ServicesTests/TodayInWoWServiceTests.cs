@@ -21,9 +21,10 @@ public class TodayInWoWServiceTests
         var wowhead = new Mock<IWowheadClient>();
         var huntSubRepo = new InMemoryRepository<GrandHuntSubscription>();
         var stormSubRepo = new InMemoryRepository<ElementalStormSubscription>();
+        var echoesRepo = new InMemoryRepository<RadiantEchoesSubscription>();
         var logger = new Mock<ILogger<TodayInWoWService>>();
 
-        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, logger.Object);
+        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, echoesRepo, logger.Object);
 
         // Act
         await target.AddHuntSubscription(1, WoWZone.TheWakingShores);
@@ -40,9 +41,10 @@ public class TodayInWoWServiceTests
         var wowhead = new Mock<IWowheadClient>();
         var huntSubRepo = new InMemoryRepository<GrandHuntSubscription>();
         var stormSubRepo = new InMemoryRepository<ElementalStormSubscription>();
+        var echoesRepo = new InMemoryRepository<RadiantEchoesSubscription>();
         var logger = new Mock<ILogger<TodayInWoWService>>();
 
-        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, logger.Object);
+        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, echoesRepo, logger.Object);
 
         await target.AddStormSubscription(1, ElementalStormType.Snowstorm, WoWZone.TheWakingShores);
 
@@ -59,9 +61,10 @@ public class TodayInWoWServiceTests
         var wowhead = new Mock<IWowheadClient>();
         var huntSubRepo = new InMemoryRepository<GrandHuntSubscription>();
         var stormSubRepo = new InMemoryRepository<ElementalStormSubscription>();
+        var echoesRepo = new InMemoryRepository<RadiantEchoesSubscription>();
         var logger = new Mock<ILogger<TodayInWoWService>>();
 
-        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, logger.Object);
+        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, echoesRepo, logger.Object);
 
         await target.AddHuntSubscription(1, WoWZone.TheWakingShores);
 
@@ -78,9 +81,10 @@ public class TodayInWoWServiceTests
         var wowhead = new Mock<IWowheadClient>();
         var huntSubRepo = new InMemoryRepository<GrandHuntSubscription>();
         var stormSubRepo = new InMemoryRepository<ElementalStormSubscription>();
+        var echoesRepo = new InMemoryRepository<RadiantEchoesSubscription>();
         var logger = new Mock<ILogger<TodayInWoWService>>();
 
-        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, logger.Object);
+        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, echoesRepo, logger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotSubscribedException>(
@@ -95,9 +99,10 @@ public class TodayInWoWServiceTests
         var wowhead = new Mock<IWowheadClient>();
         var huntSubRepo = new InMemoryRepository<GrandHuntSubscription>();
         var stormSubRepo = new InMemoryRepository<ElementalStormSubscription>();
+        var echoesRepo = new InMemoryRepository<RadiantEchoesSubscription>();
         var logger = new Mock<ILogger<TodayInWoWService>>();
 
-        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, logger.Object);
+        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, echoesRepo, logger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotSubscribedException>(
@@ -112,9 +117,10 @@ public class TodayInWoWServiceTests
         var wowhead = new Mock<IWowheadClient>();
         var huntSubRepo = new InMemoryRepository<GrandHuntSubscription>();
         var stormSubRepo = new InMemoryRepository<ElementalStormSubscription>();
+        var echoesRepo = new InMemoryRepository<RadiantEchoesSubscription>();
         var logger = new Mock<ILogger<TodayInWoWService>>();
 
-        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, logger.Object);
+        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, echoesRepo, logger.Object);
 
         await target.AddStormSubscription(1, ElementalStormType.Snowstorm, WoWZone.TheWakingShores);
 
@@ -133,9 +139,10 @@ public class TodayInWoWServiceTests
         var wowhead = new Mock<IWowheadClient>();
         var huntSubRepo = new InMemoryRepository<GrandHuntSubscription>();
         var stormSubRepo = new InMemoryRepository<ElementalStormSubscription>();
+        var echoesRepo = new InMemoryRepository<RadiantEchoesSubscription>();
         var logger = new Mock<ILogger<TodayInWoWService>>();
 
-        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, logger.Object);
+        var target = new TodayInWoWService(wowhead.Object, stormSubRepo, huntSubRepo, echoesRepo, logger.Object);
 
         await target.AddHuntSubscription(1, WoWZone.TheWakingShores);
 

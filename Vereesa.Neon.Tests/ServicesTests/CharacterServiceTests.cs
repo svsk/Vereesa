@@ -31,7 +31,8 @@ namespace Vereesa.Neon.Tests.ServicesTests
                             null,
                             null,
                             null,
-                            MessageFlags.None
+                            MessageFlags.None,
+                            null
                         )
                 )
                 .Callback<string, bool, Embed, RequestOptions>(

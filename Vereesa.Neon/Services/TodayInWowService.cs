@@ -20,6 +20,10 @@ public static class TodayInWoWServiceExtensions
             AzureStorageRepository<ElementalStormSubscription>
         >();
         services.AddTransient<IRepository<GrandHuntSubscription>, AzureStorageRepository<GrandHuntSubscription>>();
+        services.AddTransient<
+            IRepository<RadiantEchoesSubscription>,
+            AzureStorageRepository<RadiantEchoesSubscription>
+        >();
         services.AddTransient<IWowheadClient, WowheadClient>();
 
         return services;
@@ -31,18 +35,23 @@ public class TodayInWoWService
     private readonly IWowheadClient _wowhead;
     private readonly IRepository<ElementalStormSubscription> _subscriptionRepository;
     private readonly IRepository<GrandHuntSubscription> _huntSubscriptionRepository;
+    private readonly IRepository<RadiantEchoesSubscription> _radiantEchoesSubscriptionRepository;
     private readonly ILogger<TodayInWoWService> _logger;
+
+    private TimeSpan _warnThreshold = TimeSpan.FromMinutes(10);
 
     public TodayInWoWService(
         IWowheadClient wowhead,
         IRepository<ElementalStormSubscription> subscriptionRepository,
         IRepository<GrandHuntSubscription> huntSubscriptionRepository,
+        IRepository<RadiantEchoesSubscription> radiantEchoesSubscriptionRepository,
         ILogger<TodayInWoWService> logger
     )
     {
         _wowhead = wowhead;
         _subscriptionRepository = subscriptionRepository;
         _huntSubscriptionRepository = huntSubscriptionRepository;
+        _radiantEchoesSubscriptionRepository = radiantEchoesSubscriptionRepository;
         _logger = logger;
     }
 
@@ -263,5 +272,115 @@ public class TodayInWoWService
     {
         subscription.LastNotifiedAt = lastNotifiedAt;
         await _huntSubscriptionRepository.AddOrEditAsync(subscription);
+    }
+
+    public async Task AddRadiantEchoesSubscription(ulong userId, WoWZone wowZone)
+    {
+        var subscription = await GetRadiantEchoesSubscription(userId, wowZone);
+        if (subscription != null)
+        {
+            throw new AlreadySubscribedException();
+        }
+
+        subscription = new RadiantEchoesSubscription
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserId = userId,
+            Zone = wowZone
+        };
+
+        await _radiantEchoesSubscriptionRepository.AddAsync(subscription);
+        await _radiantEchoesSubscriptionRepository.SaveAsync();
+
+        _logger.LogWarning(
+            "User {UserId} subscribed to Radiant Echoes in {Zone}",
+            userId,
+            WoWZoneHelper.GetName(wowZone)
+        );
+    }
+
+    private async Task<RadiantEchoesSubscription?> GetRadiantEchoesSubscription(ulong userId, WoWZone wowZone)
+    {
+        return (await _radiantEchoesSubscriptionRepository.GetAllAsync()).FirstOrDefault(
+            x => x.UserId == userId && x.Zone == wowZone
+        );
+    }
+
+    public async Task RemoveRadiantEchoesSubscription(ulong userId, WoWZone wowZone)
+    {
+        var subscription = await GetRadiantEchoesSubscription(userId, wowZone);
+        if (subscription == null)
+        {
+            throw new NotSubscribedException();
+        }
+
+        await _radiantEchoesSubscriptionRepository.DeleteAsync(subscription);
+        await _radiantEchoesSubscriptionRepository.SaveAsync();
+
+        _logger.LogWarning(
+            "User {UserId} unsubscribed from Radiant Echoes in {Zone}",
+            userId,
+            WoWZoneHelper.GetName(wowZone)
+        );
+    }
+
+    /// <summary>
+    /// Represents a match between a subscription and an ongoing Radiant Echoes event.
+    /// </summary>
+    public record RadiantEchoesSubscriptionMatch(
+        RadiantEchoesSubscription Subscription,
+        RadiantEchoesEvent EchoesEvent
+    );
+
+    public async Task<List<RadiantEchoesSubscriptionMatch>> GetDueRadiantEchoesSubscriptions()
+    {
+        var currentRadiantEchoesEvents = (await _wowhead.GetCurrentRadiantEchoesEvents())?.ToList();
+
+        if (currentRadiantEchoesEvents == null || !currentRadiantEchoesEvents.Any())
+        {
+            return new();
+        }
+
+        var subscriptions = await _radiantEchoesSubscriptionRepository.GetAllAsync();
+
+        var dueSubscriptions = new List<RadiantEchoesSubscriptionMatch>();
+
+        foreach (var radiantEchoes in currentRadiantEchoesEvents)
+        {
+            foreach (var subscription in subscriptions)
+            {
+                var subscriptionIsForCurrentEvent = subscription.Zone == radiantEchoes.ZoneId;
+
+                if (!subscriptionIsForCurrentEvent)
+                {
+                    continue;
+                }
+
+                var warnAt = radiantEchoes.StartedAt - _warnThreshold;
+
+                var recentlyNotified =
+                    subscription.LastNotifiedAt.HasValue && subscription.LastNotifiedAt.Value >= warnAt;
+
+                var eventIsLessThanThresholdAway = radiantEchoes.StartedAt <= DateTimeOffset.Now + _warnThreshold;
+
+                if (recentlyNotified || !eventIsLessThanThresholdAway)
+                {
+                    continue;
+                }
+
+                dueSubscriptions.Add(new(subscription, radiantEchoes));
+            }
+        }
+
+        return dueSubscriptions;
+    }
+
+    public async Task SetRadiantEchoesSubscriptionNotified(
+        RadiantEchoesSubscription subscription,
+        DateTimeOffset lastNotifiedAt
+    )
+    {
+        subscription.LastNotifiedAt = lastNotifiedAt;
+        await _radiantEchoesSubscriptionRepository.AddOrEditAsync(subscription);
     }
 }

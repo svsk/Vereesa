@@ -17,6 +17,15 @@ public enum WoWZone
 
     [Display(Name = "Thaldraszus")]
     Thaldraszus = 13647,
+
+    [Display(Name = "Dragonblight")]
+    Dragonblight = 65,
+
+    [Display(Name = "Searing Gorge")]
+    SearingGorge = 51,
+
+    [Display(Name = "Dustwallow Marsh")]
+    DustwallowMarsh = 15,
 }
 
 public static class WoWZoneHelper

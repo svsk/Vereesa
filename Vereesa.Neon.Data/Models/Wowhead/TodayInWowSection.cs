@@ -24,6 +24,9 @@ public class TodayInWowSectionGroup
 
 public class TodayInWowSectionGroupContent
 {
+    public long Duration { get; set; }
+    public long[] Upcoming { get; set; }
+    public string[] UpcomingLabels { get; set; }
     public string Icons { get; set; }
     public List<TodayInWowSectionGroupContentLine> Lines { get; set; }
 }

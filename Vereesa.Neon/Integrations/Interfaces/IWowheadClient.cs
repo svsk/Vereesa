@@ -6,6 +6,7 @@ namespace Vereesa.Neon.Integrations.Interfaces
     {
         Task<List<ElementalStorm>?> GetCurrentElementalStorms();
         Task<List<GrandHunt>?> GetCurrentGrandHunts();
+        Task<List<RadiantEchoesEvent>?> GetCurrentRadiantEchoesEvents();
         Task<TodayInWowSection[]> GetTodayInWow();
     }
 }

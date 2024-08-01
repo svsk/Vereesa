@@ -99,6 +99,52 @@ namespace Vereesa.Neon.Integrations
                 .ToList();
         }
 
+        public async Task<List<RadiantEchoesEvent>?> GetCurrentRadiantEchoesEvents()
+        {
+            var todayInWow = await GetTodayInWow();
+
+            var eventsInEu = todayInWow.FirstOrDefault(grp => grp.Id == "events-and-rares" && grp.RegionId == "EU");
+            var radiantEchoesTimer = eventsInEu?.Groups
+                .Where(grp => grp != null)
+                .FirstOrDefault(grp => grp.Id == "radiant-echoes")
+                ?.Content;
+
+            if (radiantEchoesTimer == null)
+            {
+                return null;
+            }
+
+            var trackedEchoes = radiantEchoesTimer.Upcoming
+                .Select(
+                    (unixStartTime, idx) =>
+                    {
+                        var label = radiantEchoesTimer.UpcomingLabels[idx];
+
+                        if (!WoWZoneHelper.TryParseWoWZone(label, out var zone))
+                        {
+                            return null;
+                        }
+
+                        var unixEndTime = radiantEchoesTimer.Upcoming.ElementAtOrDefault(idx + 1);
+
+                        var startTime = DateTimeOffset.FromUnixTimeSeconds(unixStartTime);
+                        var endTime =
+                            unixEndTime > 0 ? DateTimeOffset.FromUnixTimeSeconds(unixEndTime) : (DateTimeOffset?)null;
+
+                        return new RadiantEchoesEvent
+                        {
+                            ZoneId = zone,
+                            StartedAt = startTime,
+                            EndingAt = endTime
+                        };
+                    }
+                )
+                .OfType<RadiantEchoesEvent>()
+                .ToList();
+
+            return trackedEchoes;
+        }
+
         public async Task<TodayInWowSection[]> GetTodayInWow()
         {
             try

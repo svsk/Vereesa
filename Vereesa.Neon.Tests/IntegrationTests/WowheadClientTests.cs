@@ -54,5 +54,19 @@ namespace Vereesa.Neon.Tests.IntegrationTests
             // Assert
             Assert.NotNull(result);
         }
+
+        [Fact]
+        public async Task GetRadiantEchoesEvents_GettingCurrentRadiantEchoesEventsFromWowhead_ReceivedCorrectly()
+        {
+            // Arrange
+            var httpClient = new HttpClient();
+            var target = new WowheadClient(httpClient);
+
+            // Act
+            var result = await target.GetCurrentRadiantEchoesEvents();
+
+            // Assert
+            Assert.NotNull(result);
+        }
     }
 }
