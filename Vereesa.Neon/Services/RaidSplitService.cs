@@ -60,9 +60,9 @@ namespace Vereesa.Neon.Services
             ]
             [Optional]
                 string? roles,
-            [Description("Ideal group size. If left empty, the raid will be split evenly between number of teams.")]
+            [Description("Ideal team size. If left empty, the raid will be split evenly between number of teams.")]
             [Optional]
-                long idealGroupSize
+                long idealTeamSize
         )
         {
             // Convert longs to ints
@@ -72,9 +72,9 @@ namespace Vereesa.Neon.Services
                 return;
             }
 
-            if (idealGroupSize < 0 || idealGroupSize > 40)
+            if (idealTeamSize < 0 || idealTeamSize > 40)
             {
-                await interaction.RespondAsync("Please enter a group size between 1 and 40.");
+                await interaction.RespondAsync("Please enter a team size between 1 and 40.");
                 return;
             }
 
@@ -82,12 +82,12 @@ namespace Vereesa.Neon.Services
 
             try
             {
-                var groups = await PerformSplit((int)numberOfTeams, roles ?? RaidSplitTeamType.All);
+                var teams = await PerformSplit((int)numberOfTeams, roles ?? RaidSplitTeamType.All);
 
                 var embed = GenerateEmbed(
-                    groups,
+                    teams,
                     (int)numberOfTeams,
-                    idealGroupSize == 0 ? 40 : (int)idealGroupSize,
+                    idealTeamSize == 0 ? 40 : (int)idealTeamSize,
                     interaction.User
                 );
 
@@ -101,23 +101,23 @@ namespace Vereesa.Neon.Services
 
         [OnCommand("!raid split")]
         [AsyncHandler]
-        [WithArgument("requestedNumberOfGroups", 0)]
+        [WithArgument("requestedNumberOfTeams", 0)]
         [WithArgument("roles", 1)]
-        public async Task SplitRaidEvenlyAsync(IMessage message, string requestedNumberOfGroups, string rolesInput)
+        public async Task SplitRaidEvenlyAsync(IMessage message, string requestedNumberOfTeams, string rolesInput)
         {
-            int requestedGroupSize = 40;
+            int requestedTeamSize = 40;
 
-            if (requestedNumberOfGroups.Contains("x"))
+            if (requestedNumberOfTeams.Contains("x"))
             {
-                var groupSizeSplit = requestedNumberOfGroups.Split("x");
-                requestedNumberOfGroups = groupSizeSplit[0].Trim();
-                int.TryParse(groupSizeSplit[1], out requestedGroupSize);
+                var teamSizeSplit = requestedNumberOfTeams.Split("x");
+                requestedNumberOfTeams = teamSizeSplit[0].Trim();
+                int.TryParse(teamSizeSplit[1], out requestedTeamSize);
             }
 
-            if (!int.TryParse(requestedNumberOfGroups, out var numberOfGroups))
+            if (!int.TryParse(requestedNumberOfTeams, out var numberOfTeams))
             {
                 await message.Channel.SendMessageAsync(
-                    "Please enter a desired number of groups to split the raid into."
+                    "Please enter a desired number of teams to split the raid into."
                 );
 
                 return;
@@ -125,8 +125,8 @@ namespace Vereesa.Neon.Services
 
             try
             {
-                var groups = await PerformSplit(numberOfGroups, rolesInput);
-                var embed = GenerateEmbed(groups, numberOfGroups, requestedGroupSize, message.Author);
+                var teams = await PerformSplit(numberOfTeams, rolesInput);
+                var embed = GenerateEmbed(teams, numberOfTeams, requestedTeamSize, message.Author);
                 // Return the embed as a new message to the source channel.
                 await message.Channel.SendMessageAsync(embed: embed);
             }
@@ -136,33 +136,33 @@ namespace Vereesa.Neon.Services
             }
         }
 
-        private async Task<List<ValidReportCharacter>[]> PerformSplit(int numberOfGroups, string teamRoles)
+        private async Task<List<ValidReportCharacter>[]> PerformSplit(int numberOfTeams, string teamRoles)
         {
             var includedRoles = GetIncludedRoles(teamRoles);
 
             // Fetches members from WarcraftLogs
             var raidMembers = await GetLastRaidMembersAsync();
 
-            var roleGroups = raidMembers
+            var groupedByRole = raidMembers
                 .GroupBy(m => MapSpec(m.ClassName, m.Specs.First()))
                 .Where(grp => includedRoles.Contains(grp.Key))
                 .ToList();
 
-            var groups = new int[numberOfGroups]
+            var teams = new int[numberOfTeams]
                 .Select(c => new List<ValidReportCharacter>())
                 .ToArray();
 
-            foreach (var role in roleGroups)
+            foreach (var role in groupedByRole)
             {
                 for (var i = 0; i < role.Count(); i++)
                 {
-                    groups[i % numberOfGroups].Add(role.ElementAt(i));
+                    teams[i % numberOfTeams].Add(role.ElementAt(i));
                 }
 
-                groups = groups.OrderBy(g => g.Count).ToArray();
+                teams = teams.OrderBy(g => g.Count).ToArray();
             }
 
-            return groups;
+            return teams;
         }
 
         private record ValidReportCharacter(string Name, string ClassName, List<Specialization> Specs);
@@ -193,34 +193,34 @@ namespace Vereesa.Neon.Services
         }
 
         private Embed GenerateEmbed(
-            List<ValidReportCharacter>[] groups,
-            int numberOfGroups,
-            int requestedGroupSize,
+            List<ValidReportCharacter>[] teams,
+            int numberOfTeams,
+            int requestedTeamSize,
             IUser requester
         )
         {
             var embed = new EmbedBuilder().WithTitle("Raid Split Result").WithColor(VereesaColors.VereesaPurple);
 
             var export = "";
-            var grpNum = 1;
-            foreach (var group in groups)
+            var teamNum = 1;
+            foreach (var team in teams)
             {
-                var groupMembers = string.Join(
+                var teamMembers = string.Join(
                     "\n",
-                    group.Take(requestedGroupSize).Select(p => $"{GroupIcon(p.ClassName, p.Specs.First())} {p.Name}")
+                    team.Take(requestedTeamSize).Select(p => $"{RoleIcon(p.ClassName, p.Specs.First())} {p.Name}")
                 );
 
-                embed.AddField($"**Group {grpNum}**", groupMembers, true);
+                embed.AddField($"**Team {teamNum}**", teamMembers, true);
 
-                if (grpNum > 1)
+                if (teamNum > 1)
                 {
                     export += "\n\n";
                 }
 
-                export += $"**Group {grpNum}**\n";
-                export += groupMembers;
+                export += $"**Team {teamNum}**\n";
+                export += teamMembers;
 
-                grpNum++;
+                teamNum++;
             }
 
             var exportLink =
@@ -229,7 +229,7 @@ namespace Vereesa.Neon.Services
             embed
                 .AddField(
                     "Summary",
-                    $"I have split the raid into `{numberOfGroups}` groups of max `{requestedGroupSize}` members.\n"
+                    $"I have split the raid into `{numberOfTeams}` teams of max `{requestedTeamSize}` members.\n"
                         + "You can also do `!raid split 2x2 melee-dps`, `!raid split 2 healer`, or `!raid split 3x3 ranged`. "
                         + "Try it out!\n\n"
                 )
@@ -283,7 +283,7 @@ namespace Vereesa.Neon.Services
             }
         }
 
-        private string GroupIcon(string className, Specialization specialization)
+        private string RoleIcon(string className, Specialization specialization)
         {
             switch (MapSpec(className, specialization))
             {
