@@ -1,7 +1,7 @@
-using Vereesa.Neon.Integrations.Interfaces;
-using Vereesa.Neon.Data.Models.Wowhead;
 using System.Text.Json;
 using Vereesa.Neon.Data.Models;
+using Vereesa.Neon.Data.Models.Wowhead;
+using Vereesa.Neon.Integrations.Interfaces;
 
 namespace Vereesa.Neon.Integrations
 {
@@ -18,9 +18,17 @@ namespace Vereesa.Neon.Integrations
         {
             var todayInWow = await GetTodayInWow();
 
-            var eventsInEu = todayInWow.FirstOrDefault(grp => grp.Id == "events-and-rares" && grp.RegionId == "EU");
-            var elementalStormLines = eventsInEu?.Groups
-                .Where(grp => grp != null)
+            var dragonflightEvents = todayInWow.FirstOrDefault(grp =>
+                grp.Name == "Dragonflight" && grp.RegionId == "EU"
+            );
+
+            if (dragonflightEvents == null)
+            {
+                return null;
+            }
+
+            var elementalStormLines = dragonflightEvents
+                ?.Groups.Where(grp => grp != null)
                 .FirstOrDefault(grp => grp.Id == "elemental-storms")
                 ?.Content.Lines;
 
@@ -33,8 +41,8 @@ namespace Vereesa.Neon.Integrations
                 .Where(line => line != null)
                 .Select(line =>
                 {
-                    var stormClass = line.Class
-                        ?.Replace("elemental-storm-", string.Empty)
+                    var stormClass = line
+                        .Class?.Replace("elemental-storm-", string.Empty)
                         .Replace("elemental-storm", string.Empty);
 
                     var name = line.Name;
@@ -73,9 +81,17 @@ namespace Vereesa.Neon.Integrations
         {
             var todayInWow = await GetTodayInWow();
 
-            var eventsInEu = todayInWow.FirstOrDefault(grp => grp.Id == "events-and-rares" && grp.RegionId == "EU");
-            var grandHuntLines = eventsInEu?.Groups
-                .Where(grp => grp != null)
+            var dragonflightEvents = todayInWow.FirstOrDefault(grp =>
+                grp.Name == "Dragonflight" && grp.RegionId == "EU"
+            );
+
+            if (dragonflightEvents == null)
+            {
+                return null;
+            }
+
+            var grandHuntLines = dragonflightEvents
+                .Groups?.Where(grp => grp != null)
                 .FirstOrDefault(grp => grp.Id == "grand-hunt")
                 ?.Content.Lines;
 
@@ -104,8 +120,8 @@ namespace Vereesa.Neon.Integrations
             var todayInWow = await GetTodayInWow();
 
             var eventsInEu = todayInWow.FirstOrDefault(grp => grp.Id == "events-and-rares" && grp.RegionId == "EU");
-            var radiantEchoesTimer = eventsInEu?.Groups
-                .Where(grp => grp != null)
+            var radiantEchoesTimer = eventsInEu
+                ?.Groups.Where(grp => grp != null)
                 .FirstOrDefault(grp => grp.Id == "radiant-echoes")
                 ?.Content;
 
@@ -114,8 +130,8 @@ namespace Vereesa.Neon.Integrations
                 return null;
             }
 
-            var trackedEchoes = radiantEchoesTimer.Upcoming
-                .Select(
+            var trackedEchoes = radiantEchoesTimer
+                .Upcoming.Select(
                     (unixStartTime, idx) =>
                     {
                         var label = radiantEchoesTimer.UpcomingLabels[idx];
@@ -135,7 +151,7 @@ namespace Vereesa.Neon.Integrations
                         {
                             ZoneId = zone,
                             StartedAt = startTime,
-                            EndingAt = endTime
+                            EndingAt = endTime,
                         };
                     }
                 )

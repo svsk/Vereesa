@@ -11,6 +11,7 @@ using Vereesa.Neon.Services;
 
 namespace Vereesa.Neon.Modules;
 
+[Obsolete("Radiant echoes are no longer active.")]
 public class RadiantEchoesModule : IBotModule
 {
     private readonly TodayInWoWService _todayInWoWService;
@@ -53,12 +54,8 @@ public class RadiantEchoesModule : IBotModule
             await _messagingClient.SendMessageToUserByIdAsync(userId, "", embeds: embeds);
 
             _ = Task.WhenAll(
-                userSubscriptions.Select(
-                    sub =>
-                        _todayInWoWService.SetRadiantEchoesSubscriptionNotified(
-                            sub.Subscription,
-                            sub.EchoesEvent.StartedAt
-                        )
+                userSubscriptions.Select(sub =>
+                    _todayInWoWService.SetRadiantEchoesSubscriptionNotified(sub.Subscription, sub.EchoesEvent.StartedAt)
                 )
             );
         }

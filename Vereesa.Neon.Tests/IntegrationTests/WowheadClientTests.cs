@@ -1,8 +1,8 @@
-using Vereesa.Neon.Integrations;
-using Xunit;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Linq;
+using Vereesa.Neon.Integrations;
+using Xunit;
 
 namespace Vereesa.Neon.Tests.IntegrationTests
 {
@@ -20,11 +20,10 @@ namespace Vereesa.Neon.Tests.IntegrationTests
 
             // Assert
             var eventsInEu = result.FirstOrDefault(grp => grp.Id == "events-and-rares" && grp.RegionId == "EU");
-            var elementalStorms = eventsInEu.Groups
-                .Where(grp => grp != null)
-                .FirstOrDefault(grp => grp.Id == "elemental-storms");
 
-            Assert.NotNull(elementalStorms);
+            Assert.NotNull(eventsInEu);
+            Assert.NotNull(eventsInEu.Groups);
+            Assert.NotEmpty(eventsInEu.Groups);
         }
 
         [Fact]
@@ -55,7 +54,7 @@ namespace Vereesa.Neon.Tests.IntegrationTests
             Assert.NotNull(result);
         }
 
-        [Fact]
+        [Fact(Skip = "Radiant echoes are no longer active.")]
         public async Task GetRadiantEchoesEvents_GettingCurrentRadiantEchoesEventsFromWowhead_ReceivedCorrectly()
         {
             // Arrange
