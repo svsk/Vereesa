@@ -218,6 +218,7 @@ namespace Vereesa.Neon.Services
                 case "Feral":
                 case "Havoc":
                 case "Unholy":
+                case "Survival":
                     return RaidRole.MeleeDps;
                 case "Frost":
                     return className == "Mage" ? RaidRole.RangedDps : RaidRole.MeleeDps;
