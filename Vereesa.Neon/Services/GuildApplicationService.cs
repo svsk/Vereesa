@@ -1,13 +1,14 @@
 using System.Diagnostics;
+using System.Reactive;
 using Discord;
 using Microsoft.Extensions.Logging;
+using Vereesa.Core;
+using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Configuration;
-using Vereesa.Neon.Extensions;
-using Vereesa.Neon.Helpers;
 using Vereesa.Neon.Data.Models.BattleNet;
 using Vereesa.Neon.Data.Models.NeonApi;
-using Vereesa.Core.Infrastructure;
-using Vereesa.Core;
+using Vereesa.Neon.Extensions;
+using Vereesa.Neon.Helpers;
 
 namespace Vereesa.Neon.Services
 {
@@ -18,11 +19,11 @@ namespace Vereesa.Neon.Services
         private ILogger<GuildApplicationService> _logger;
         private BattleNetApiService _battleNetApi;
         private GuildApplicationSettings _settings;
-        private Dictionary<string, ApplicationListItem> _cachedApplications;
+        private Dictionary<string, ApplicationListItem>? _cachedApplications;
 
         //Dictionary where the key is an application's ID and the value is a list containing numbers representing hour
         //thresholds for when reminders were sent to nofity officers of an overdue application.
-        private Dictionary<string, List<int>> _notificationCache;
+        private Dictionary<string, List<int>>? _notificationCache;
 
         /// This service is fully async
         public GuildApplicationService(
@@ -38,6 +39,20 @@ namespace Vereesa.Neon.Services
             _battleNetApi = battleNetApi;
             _settings = settings;
             _neonApiService = neonApiService;
+        }
+
+        private string _applicationsTimeZone
+        {
+            get
+            {
+                if (_settings.SourceTimeZone == null)
+                {
+                    _logger.LogWarning("No source timezone set for applications. Defaulting to UTC.");
+                    return "UTC";
+                }
+
+                return _settings.SourceTimeZone;
+            }
         }
 
         [OnReady]
@@ -59,6 +74,10 @@ namespace Vereesa.Neon.Services
                         await CheckForNewApplications(applications);
                         await CheckForOverdueApplications(applications);
                     }
+                    else
+                    {
+                        _logger.LogError("Failed to get applications.");
+                    }
                 },
                 60000 * 2,
                 true,
@@ -71,10 +90,22 @@ namespace Vereesa.Neon.Services
         {
             if (message.Content == "!debug applications")
             {
+                if (_cachedApplications?.Any() != true)
+                {
+                    await message.Channel.SendMessageAsync("No applications cached yet.");
+                    return;
+                }
+
                 try
                 {
-                    var applicationEmbed = (await GetApplicationEmbedAsync(_cachedApplications.Last().Key)).Build();
-                    await message.Channel.SendMessageAsync(null, embed: applicationEmbed);
+                    var key = _cachedApplications.Keys.Last();
+                    var embed = await GetApplicationEmbedAsync(key);
+                    if (embed == null)
+                    {
+                        throw new Exception("Application embed is null. Application probably not found.");
+                    }
+
+                    await message.Channel.SendMessageAsync(null, embed: embed.Build());
                 }
                 catch (Exception ex)
                 {
@@ -85,8 +116,14 @@ namespace Vereesa.Neon.Services
 
         private async Task CheckForOverdueApplications(IEnumerable<ApplicationListItem> applications)
         {
-            var isFirstRun = _notificationCache == null;
-            _notificationCache = isFirstRun ? new Dictionary<string, List<int>>() : _notificationCache;
+            var isFirstRun = false;
+
+            if (_notificationCache == null)
+            {
+                isFirstRun = true;
+                _notificationCache = new Dictionary<string, List<int>>();
+            }
+
             var notificationHourThresholds = new int[] { 36, 48 }; //Config?
 
             foreach (var application in applications)
@@ -97,8 +134,7 @@ namespace Vereesa.Neon.Services
                         ? _notificationCache[application.Id]
                         : new List<int>();
 
-                    var timeSinceAppSubmission =
-                        DateTime.UtcNow - application.Timestamp.ToUtc(_settings.SourceTimeZone);
+                    var timeSinceAppSubmission = DateTime.UtcNow - application.Timestamp.ToUtc(_applicationsTimeZone);
                     var hoursPending = (int)Math.Floor(timeSinceAppSubmission.TotalHours);
                     var shouldNotify = false;
                     var previousNotificationTimes = _notificationCache[application.Id];
@@ -124,14 +160,28 @@ namespace Vereesa.Neon.Services
         {
             _logger.LogInformation($"Application {applicationId} has now been pending for {hoursPending} hours.");
 
-            Application application = await _neonApiService.GetApplicationByIdAsync(applicationId);
-
-            var playerName = application.GetFirstAnswerByEitherQuestionPart("your name", "full name");
-
             var notificationChannel = GetNotificationChannel();
+            if (notificationChannel == null)
+            {
+                _logger.LogWarning("Notification channel not found.");
+                return;
+            }
 
-            await notificationChannel?.SendMessageAsync(
-                $"<@&{_settings.NotificationRoleId}> {playerName}'s application has now been pending for more than {hoursPending} hours. Please review it and respond as soon as possible."
+            Application? application = await _neonApiService.GetApplicationByIdAsync(applicationId);
+            if (application == null)
+            {
+                _logger.LogWarning($"Application {applicationId} not found.");
+                await notificationChannel.SendMessageAsync($"Application {applicationId} not found.");
+                return;
+            }
+
+            string playerName = application.GetFirstAnswerByEitherQuestionPart("your name", "full name") ?? "A player";
+
+            string notificationRole =
+                _settings.NotificationRoleId != null ? $"<@&{_settings.NotificationRoleId}> " : string.Empty;
+
+            await notificationChannel.SendMessageAsync(
+                $"{notificationRole}{playerName}'s application has now been pending for more than {hoursPending} hours. Please review it and respond as soon as possible."
             );
         }
 
@@ -162,9 +212,11 @@ namespace Vereesa.Neon.Services
 
         private async Task CheckForNewApplications(IEnumerable<ApplicationListItem> applications)
         {
-            var isFirstRun = _cachedApplications == null;
-            if (isFirstRun)
+            var isFirstRun = false;
+
+            if (_cachedApplications == null)
             {
+                isFirstRun = true;
                 _cachedApplications = new Dictionary<string, ApplicationListItem>();
             }
 
@@ -184,14 +236,11 @@ namespace Vereesa.Neon.Services
                     {
                         //status changed
                         var appMessage = await RetrieveApplicationMessageAsync(application.Id);
-                        if (appMessage != null)
+                        var embed = await GetApplicationEmbedAsync(application.Id);
+
+                        if (appMessage != null && embed != null)
                         {
-                            await appMessage.ModifyAsync(
-                                async (msg) =>
-                                {
-                                    msg.Embed = (await GetApplicationEmbedAsync(application.Id)).Build();
-                                }
-                            );
+                            await appMessage.ModifyAsync((msg) => msg.Embed = embed.Build());
                         }
                     }
                 }
@@ -203,12 +252,13 @@ namespace Vereesa.Neon.Services
         private async Task AnnounceNewApplication(string applicationId)
         {
             var notificationChannel = GetNotificationChannel();
-            if (notificationChannel != null)
+            var embed = await GetApplicationEmbedAsync(applicationId);
+
+            if (notificationChannel != null && embed != null)
             {
                 try
                 {
-                    //await notificationChannel.SendMessageAsync(string.Format(_settings.MessageToSendOnNewLine, fields));
-                    var applicationEmbed = (await GetApplicationEmbedAsync(applicationId)).Build();
+                    var applicationEmbed = embed.Build();
                     await notificationChannel.SendMessageAsync(string.Empty, false, applicationEmbed);
                 }
                 catch (Exception ex)
@@ -236,16 +286,27 @@ namespace Vereesa.Neon.Services
             }
         }
 
-        private IMessageChannel GetNotificationChannel()
+        private IMessageChannel? GetNotificationChannel()
         {
-            return _messaging.GetChannelById(_settings.NotificationMessageChannelId) as IMessageChannel;
+            var channel = _messaging.GetChannelById(_settings.NotificationMessageChannelId) as IMessageChannel;
+            if (channel == null)
+            {
+                _logger.LogWarning("Guild applications notification channel not found.");
+            }
+
+            return channel;
         }
 
-        private async Task<IUserMessage> RetrieveApplicationMessageAsync(string applicationId)
+        private async Task<IUserMessage?> RetrieveApplicationMessageAsync(string applicationId)
         {
-            var channel = GetNotificationChannel();
-            IAsyncEnumerable<IMessage> messages = channel.GetMessagesAsync(100).Flatten();
-            IUserMessage applicationEmbedMessage = null;
+            var sourceChannel = GetNotificationChannel();
+            if (sourceChannel == null)
+            {
+                return null;
+            }
+
+            IAsyncEnumerable<IMessage> messages = sourceChannel.GetMessagesAsync(100).Flatten();
+            IUserMessage? applicationEmbedMessage = null;
 
             await messages.ForEachAsync(
                 (msg) =>
@@ -261,9 +322,16 @@ namespace Vereesa.Neon.Services
             return applicationEmbedMessage;
         }
 
-        private async Task<EmbedBuilder> GetApplicationEmbedAsync(string applicationId)
+        private async Task<EmbedBuilder?> GetApplicationEmbedAsync(string applicationId)
         {
             var application = await _neonApiService.GetApplicationByIdAsync(applicationId);
+
+            if (application == null)
+            {
+                _logger.LogWarning("Failed to create application embed. Application not found.");
+                return null;
+            }
+
             var armoryProfileUrl = application.GetFirstAnswerByQuestionPart("wow-armory profile");
             var charAndRealm = ParseArmoryLink(armoryProfileUrl);
 
@@ -283,8 +351,10 @@ namespace Vereesa.Neon.Services
 
         private EmbedBuilder CreateApplicationEmbed(RecruitmentInterviewSummary application)
         {
-            var character = (BattleNetCharacterResponse)
-                _battleNetApi.GetCharacterData(application.CharacterRealm, application.CharacterName, "eu");
+            if (application.CharacterName == null || application.CharacterRealm == null)
+            {
+                throw new Exception("Unable to build application without CharacterName and CharacterRealm.");
+            }
 
             var avatar = _battleNetApi.GetCharacterThumbnail(
                 "eu",
