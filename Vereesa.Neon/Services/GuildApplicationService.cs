@@ -1,11 +1,9 @@
 using System.Diagnostics;
-using System.Reactive;
 using Discord;
 using Microsoft.Extensions.Logging;
 using Vereesa.Core;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Configuration;
-using Vereesa.Neon.Data.Models.BattleNet;
 using Vereesa.Neon.Data.Models.NeonApi;
 using Vereesa.Neon.Extensions;
 using Vereesa.Neon.Helpers;

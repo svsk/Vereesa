@@ -17,5 +17,5 @@ public enum VereesaEventStatus
     Scheduled = 1,
     Active,
     Completed,
-    Cancelled
+    Cancelled,
 }

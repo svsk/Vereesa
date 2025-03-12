@@ -4,6 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 [Route("[controller]")]
 public class HealthController : ControllerBase
 {
-	[HttpGet("ping")]
-	public string Ping() => "pong";
+    [HttpGet("ping")]
+    public string Ping() => "pong";
 }
