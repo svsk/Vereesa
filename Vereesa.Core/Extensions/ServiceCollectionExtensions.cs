@@ -12,11 +12,12 @@ namespace Vereesa.Core.Extensions
     {
         // Find all types that implement the interface IBotModule
         public static IList<Type> GetBotModules() =>
-            AppDomain.CurrentDomain
-                .GetAssemblies()
+            AppDomain
+                .CurrentDomain.GetAssemblies()
                 .Where(a => !a.IsDynamic)
                 .SelectMany(a => a.GetTypes())
                 .Where(t => t.IsClass && !t.IsAbstract && t.GetInterfaces().Contains(typeof(IBotModule)))
+                .Where(t => t.GetCustomAttributes(typeof(ObsoleteAttribute), false).Length == 0)
                 .ToList();
 
         public static IServiceCollection AddBotServices(this IServiceCollection services)
@@ -41,6 +42,9 @@ namespace Vereesa.Core.Extensions
                 await guild.DeleteApplicationCommandsAsync();
             }
 #endif
+
+            // Suppresses
+            await Task.CompletedTask;
         }
 
         public static void UseBotServices(this IServiceProvider serviceProvider)
