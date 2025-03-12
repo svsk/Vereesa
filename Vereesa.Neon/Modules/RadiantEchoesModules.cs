@@ -29,7 +29,6 @@ public class RadiantEchoesModule : IBotModule
     }
 
     [OnInterval(Minutes = 10)]
-    [ForDebugging]
     public async Task ProcessSubscriptions()
     {
         await Task.WhenAll(ProcessEchoSubscription());
@@ -97,7 +96,6 @@ public class RadiantEchoesModule : IBotModule
     }
 
     [SlashCommand("subscribe-to-echoes", "Subscribe to Radiant Echoes")]
-    [ForDebugging]
     public async Task SubscribeToRadiantEchoes(
         IDiscordInteraction interaction,
         [Description("The zone to subscribe to")]
@@ -132,7 +130,6 @@ public class RadiantEchoesModule : IBotModule
     }
 
     [SlashCommand("unsubscribe-from-echoes", "Unsubscribes from Radiant Echoes in a specific zone.")]
-    [ForDebugging]
     public async Task UnsubscribeFromHunt(
         IDiscordInteraction interaction,
         [Description("The zone to unsubscribe from.")]
