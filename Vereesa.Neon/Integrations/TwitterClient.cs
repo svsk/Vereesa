@@ -31,7 +31,7 @@
 // 		private async Task<string> GetTokenAsync()
 // 		{
 // 			var restClient = new RestClient("https://api.twitter.com");
-// 			var request = new RestRequest("/oauth2/token", Method.POST);
+// 			var request = new RestRequest("/oauth2/token", Method.Post);
 
 // 			request.AddHeader("Authorization", $"Basic {GetEncodedCredentials()}");
 // 			request.AddParameter("grant_type", "client_credentials");
@@ -61,7 +61,7 @@
 // 			var token = await GetTokenAsync();
 
 // 			var client = new RestClient("https://api.twitter.com");
-// 			var request = new RestRequest("/1.1/statuses/user_timeline.json", Method.GET);
+// 			var request = new RestRequest("/1.1/statuses/user_timeline.json", Method.Get);
 // 			request.AddQueryParameter("screen_name", twitterUser);
 // 			request.AddQueryParameter("count", "3");
 // 			request.AddQueryParameter("tweet_mode", "extended");

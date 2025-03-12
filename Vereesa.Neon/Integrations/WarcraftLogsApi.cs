@@ -27,13 +27,21 @@ namespace Vereesa.Neon.Integrations
             var restClient = new RestClient();
             var request = new RestRequest(
                 "https://www.warcraftlogs.com:443/v1/reports/guild/Neon/Karazhan/EU",
-                Method.GET
+                Method.Get
             );
+
             request.AddQueryParameter("api_key", GetApiKey());
 
-            var response = await restClient.ExecuteAsync<List<Report>>(request);
+            var response = await restClient.ExecuteAsync(request);
 
-            return response.Data;
+            if (response.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                throw new Exception("Failed to fetch raid reports from WarcraftLogs.");
+            }
+
+            return response?.Content != null
+                ? JsonConvert.DeserializeObject<List<Report>>(response.Content) ?? new()
+                : new();
         }
 
         public async Task<List<ReportCharacter>> GetRaidComposition(string id, long windowStart, long windowEnd)
@@ -41,14 +49,15 @@ namespace Vereesa.Neon.Integrations
             var restClient = new RestClient();
             var request = new RestRequest(
                 $"https://www.warcraftlogs.com:443/v1/report/tables/summary/{id}/",
-                Method.GET
+                Method.Get
             );
+
             request.AddQueryParameter("api_key", GetApiKey());
             request.AddQueryParameter("start", windowStart.ToString());
             request.AddQueryParameter("end", windowEnd.ToString());
 
             var response = await restClient.ExecuteAsync<ReportySummary>(request);
-            var comp = response.Data.Composition;
+            var comp = response.Data?.Composition;
 
             if (comp == null)
             {

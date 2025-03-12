@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using Discord;
-using RestSharp;
-using Vereesa.Core.Infrastructure;
-using Vereesa.Core;
 using Discord.Interactions;
+using RestSharp;
+using Vereesa.Core;
+using Vereesa.Core.Infrastructure;
 
 namespace Vereesa.Neon.Services
 {
@@ -60,11 +60,11 @@ namespace Vereesa.Neon.Services
         public async Task GetIp(IMessage message)
         {
             var client = new RestClient();
-            var response = await client.ExecuteAsync(new RestRequest("https://ip.seeip.org/", Method.GET));
+            var response = await client.ExecuteAsync(new RestRequest("https://ip.seeip.org/", Method.Get));
 
             if (response.StatusCode != System.Net.HttpStatusCode.OK)
             {
-                response = await client.ExecuteAsync(new RestRequest("https://api.ipify.org/?format=text", Method.GET));
+                response = await client.ExecuteAsync(new RestRequest("https://api.ipify.org/?format=text", Method.Get));
             }
 
             if (response.StatusCode != System.Net.HttpStatusCode.OK)

@@ -18,7 +18,7 @@ public static class Extensions
                 MessageCacheSize = 1000,
                 AlwaysDownloadUsers = true,
                 GatewayIntents = GatewayIntents.All,
-                UseInteractionSnowflakeDate = false
+                UseInteractionSnowflakeDate = false,
             }
         );
 
@@ -40,22 +40,20 @@ public static class Extensions
         LogLevel logLevel = LogLevel.Warning
     )
     {
-        builder.AddServices(
-            services =>
-                services.AddLogging(conf =>
+        builder.AddServices(services =>
+            services.AddLogging(conf =>
+            {
+                var discord =
+                    services.FirstOrDefault(s => s.ServiceType == typeof(DiscordSocketClient))?.ImplementationInstance
+                    as DiscordSocketClient;
+
+                if (discord == null)
                 {
-                    var discord =
-                        services
-                            .FirstOrDefault(s => s.ServiceType == typeof(DiscordSocketClient))
-                            ?.ImplementationInstance as DiscordSocketClient;
+                    throw new Exception("AddDiscord before adding Discord channel logging.");
+                }
 
-                    if (discord == null)
-                    {
-                        throw new Exception("AddDiscord before adding Discord channel logging.");
-                    }
-
-                    conf.AddProvider(new DiscordChannelLoggerProvider(discord, logChannelId, logLevel));
-                })
+                conf.AddProvider(new DiscordChannelLoggerProvider(discord, logChannelId, logLevel));
+            })
         );
 
         return builder;

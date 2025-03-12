@@ -183,7 +183,7 @@ namespace Vereesa.Neon.Services
             var realmName = charAndRealm.Split("-").Last().Trim().Replace(" ", "-").Replace("'", string.Empty);
 
             var restClient = new RestClient("https://worldofwarcraft.com");
-            var request = new RestRequest($"/en-gb/character/eu/{realmName}/{characterName}", Method.GET);
+            var request = new RestRequest($"/en-gb/character/eu/{realmName}/{characterName}", Method.Get);
 
             var validationResult = restClient.Execute(request);
 

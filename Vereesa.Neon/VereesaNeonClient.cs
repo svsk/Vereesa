@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Vereesa.Core;
+using Vereesa.Core.Discord;
 using Vereesa.Neon.Configuration;
-using Vereesa.Neon.Integrations;
-using Vereesa.Neon.Integrations.Interfaces;
-using Vereesa.Neon.Services;
 using Vereesa.Neon.Data.Configuration;
 using Vereesa.Neon.Data.Interfaces;
+using Vereesa.Neon.Data.Models.Attendance;
 using Vereesa.Neon.Data.Models.Commands;
 using Vereesa.Neon.Data.Models.Gambling;
 using Vereesa.Neon.Data.Models.GameTracking;
@@ -14,10 +14,9 @@ using Vereesa.Neon.Data.Models.Giveaways;
 using Vereesa.Neon.Data.Models.Reminders;
 using Vereesa.Neon.Data.Models.Statistics;
 using Vereesa.Neon.Data.Repositories;
-using Vereesa.Core.Discord;
-using Vereesa.Core;
-using Vereesa.Neon.Data.Models.Wowhead;
-using Vereesa.Neon.Data.Models.Attendance;
+using Vereesa.Neon.Integrations;
+using Vereesa.Neon.Integrations.Interfaces;
+using Vereesa.Neon.Services;
 
 namespace Vereesa.Neon
 {

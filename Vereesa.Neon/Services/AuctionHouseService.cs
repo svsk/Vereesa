@@ -44,7 +44,7 @@ namespace Vereesa.Neon.Services
 
         private UndermineResult GetUndermineItemDetails(long itemId)
         {
-            var request = new RestRequest("/item.php", Method.GET);
+            var request = new RestRequest("/item.php", Method.Get);
             request.AddQueryParameter("house", "177"); // Karazhan AH ID
             request.AddQueryParameter("item", itemId.ToString());
 
@@ -66,7 +66,7 @@ namespace Vereesa.Neon.Services
 
         private UndermineItemSearchResult GetUndermineItem(string itemName)
         {
-            var request = new RestRequest("/search.php", Method.GET);
+            var request = new RestRequest("/search.php", Method.Get);
             request.AddQueryParameter("locale", "enus");
             request.AddQueryParameter("house", "177"); // Karazhan AH ID
             request.AddQueryParameter("search", itemName, true);

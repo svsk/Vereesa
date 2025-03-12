@@ -26,7 +26,7 @@ public class WarcraftLogsScraper : IWarcraftLogsScraper
         { "castle nathria", "26" },
         { "sanctum of domination", "28" },
         { "sepulcher of the first ones", "29" },
-        { "vault of the incarnates", "31" }
+        { "vault of the incarnates", "31" },
     };
 
     public WarcraftLogsScraper(ILogger<WarcraftLogsScraper> logger)
@@ -62,7 +62,7 @@ public class WarcraftLogsScraper : IWarcraftLogsScraper
     {
         var request = new RestRequest(
             $"https://www.warcraftlogs.com/guild/attendance-table/{_guildId}/0/{zoneId}?page={page}",
-            Method.GET
+            Method.Get
         );
 
         var result = _restClient.Execute(request);
@@ -70,8 +70,8 @@ public class WarcraftLogsScraper : IWarcraftLogsScraper
         var doc = new HtmlDocument();
         doc.LoadHtml(result.Content);
 
-        var lastPageStr = doc.DocumentNode
-            .SelectNodes("//*[contains(@class, \"page-item\") and position() = (last() - 1)]")
+        var lastPageStr = doc
+            .DocumentNode.SelectNodes("//*[contains(@class, \"page-item\") and position() = (last() - 1)]")
             ?.FirstOrDefault()
             ?.InnerText;
         var lastPage = int.Parse(lastPageStr ?? "1");

@@ -3,9 +3,9 @@ using Discord;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 using RestSharp;
+using Vereesa.Core;
 using Vereesa.Core.Infrastructure;
 using Vereesa.Neon.Data.Interfaces;
-using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
@@ -87,7 +87,7 @@ namespace Vereesa.Neon.Services
             }
 
             var client = new RestClient();
-            var request = new RestRequest(uri, Method.GET);
+            var request = new RestRequest(uri, Method.Get);
 
             try
             {
@@ -96,12 +96,12 @@ namespace Vereesa.Neon.Services
                 var doc = new HtmlDocument();
                 doc.LoadHtml(result.Content);
 
-                var summaryTable = doc.DocumentNode
-                    .SelectNodes("//*[contains(@class, \"info-table\")]")
+                var summaryTable = doc
+                    .DocumentNode.SelectNodes("//*[contains(@class, \"info-table\")]")
                     ?.FirstOrDefault();
 
-                var statStrings = summaryTable?.InnerText
-                    .Replace("\n", "")
+                var statStrings = summaryTable
+                    ?.InnerText.Replace("\n", "")
                     .Replace("\\n", "")
                     .Replace("  ", "")
                     .Split("?");

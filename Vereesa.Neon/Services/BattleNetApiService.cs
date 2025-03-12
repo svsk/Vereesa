@@ -4,7 +4,6 @@ using RestSharp;
 using RestSharp.Authenticators;
 using Vereesa.Neon.Configuration;
 using Vereesa.Neon.Data.Models.BattleNet;
-using Vereesa.Core;
 
 namespace Vereesa.Neon.Services
 {
@@ -26,9 +25,15 @@ namespace Vereesa.Neon.Services
             if (_regionTokens.ContainsKey(region) && _regionTokens[region].expiryDateTime > DateTime.Now)
                 return _regionTokens[region].token;
 
-            var client = new RestClient($"https://{region}.battle.net");
-            client.Authenticator = new HttpBasicAuthenticator(_settings.ClientId, _settings.ClientSecret);
-            var request = new RestRequest("oauth/token", Method.POST);
+            var client = new RestClient(
+                $"https://{region}.battle.net",
+                opt =>
+                {
+                    opt.Authenticator = new HttpBasicAuthenticator(_settings.ClientId, _settings.ClientSecret);
+                }
+            );
+
+            var request = new RestRequest("oauth/token", Method.Post);
             request.AddParameter("grant_type", "client_credentials");
 
             var response = client.Execute(request);
@@ -49,7 +54,7 @@ namespace Vereesa.Neon.Services
 
         public void GetAuctionPrice(string itemName)
         {
-            // var auctionFiles = ExecuteApiRequest<AuctionFileResponse>("eu", "/wow/auction/data/karazhan", Method.GET);
+            // var auctionFiles = ExecuteApiRequest<AuctionFileResponse>("eu", "/wow/auction/data/karazhan", Method.Get);
         }
 
         private T ExecuteApiRequest<T>(string region, string endpoint, Method method)
@@ -83,7 +88,7 @@ namespace Vereesa.Neon.Services
                 var response = ExecuteApiRequest<BattleNetMediaResponse>(
                     region,
                     $"/profile/wow/character/{realm.ToLowerInvariant()}/{characterName.ToLowerInvariant()}/character-media",
-                    Method.GET
+                    Method.Get
                 );
                 return response.AvatarUrl;
             }
@@ -103,7 +108,7 @@ namespace Vereesa.Neon.Services
 
             try
             {
-                return ExecuteApiRequest<BattleNetCharacterResponse>(region, endpoint, Method.GET);
+                return ExecuteApiRequest<BattleNetCharacterResponse>(region, endpoint, Method.Get);
             }
             catch (Exception ex)
             {
@@ -115,8 +120,8 @@ namespace Vereesa.Neon.Services
         public int GetCharacterHeartOfAzerothLevel(BattleNetCharacterResponse character)
         {
             return (int)(
-                character?.EquippedItems
-                    .FirstOrDefault(i => i.Slot.Name == "Neck" && i.Name == "Heart of Azeroth")
+                character
+                    ?.EquippedItems.FirstOrDefault(i => i.Slot.Name == "Neck" && i.Name == "Heart of Azeroth")
                     ?.AzeriteDetails.Level.Value ?? 0
             );
         }
