@@ -39,9 +39,21 @@ namespace Vereesa.Core.Discord
             _service = service;
             _discord = discord;
             _logger = logger;
-            _discord.Ready += RegisterSlashCommandsToGuild;
+            _discord.Ready += HandleReady;
             BindCommands();
             BindIntervalHandlers();
+        }
+
+        private async Task HandleReady()
+        {
+            try
+            {
+                await RegisterSlashCommandsToGuild();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to register slash commands for {ServiceType}.", _service.GetType().Name);
+            }
         }
 
         private async Task RegisterSlashCommandsToGuild()
@@ -52,7 +64,11 @@ namespace Vereesa.Core.Discord
 
             foreach (var guild in _discord.Guilds)
             {
-                var methods = _service.GetType().GetMethods();
+                var serviceType = _service.GetType();
+
+                _logger.LogDebug("Registering slash commands for {Service} in {Guild}.", serviceType.Name, guild.Name);
+
+                var methods = serviceType.GetMethods();
 
                 var slashCommandMethods = methods
                     .Where(m => m.GetCustomAttribute<SlashCommandAttribute>() != null)
@@ -86,7 +102,7 @@ namespace Vereesa.Core.Discord
                                     var choice = new ApplicationCommandOptionChoiceProperties
                                     {
                                         Name = c.Name,
-                                        Value = c.Value
+                                        Value = c.Value,
                                     };
 
                                     return choice;
@@ -114,8 +130,8 @@ namespace Vereesa.Core.Discord
                         var methodParameters = method.GetParameters().Skip(1);
                         foreach (var parameter in methodParameters)
                         {
-                            var option = interaction.Data.Options.FirstOrDefault(
-                                o => o.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase)
+                            var option = interaction.Data.Options.FirstOrDefault(o =>
+                                o.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase)
                             );
 
                             if (option != null)
@@ -131,9 +147,13 @@ namespace Vereesa.Core.Discord
                         await ExecuteHandlersAsync(new() { method }, invocationParameters.ToArray());
                     }
                 };
-            }
 
-            _logger.LogInformation("Slash commands registered for {Service}.", _service.GetType().Name);
+                _logger.LogInformation(
+                    "{Amount} slash commands registered for {Service}.",
+                    commandMethods.Count,
+                    _service.GetType().Name
+                );
+            }
         }
 
         private ApplicationCommandOptionType InterpretType(Type parameterType)
@@ -426,6 +446,25 @@ namespace Vereesa.Core.Discord
                         method.Name,
                         method.DeclaringType.Name
                     );
+
+                    if (invocationParameters.FirstOrDefault() is IDiscordInteraction interaction)
+                    {
+                        try
+                        {
+                            if (interaction.HasResponded)
+                            {
+                                await interaction.FollowupAsync("❗ Something went wrong. Please try again.");
+                            }
+                            else
+                            {
+                                await interaction.RespondAsync("❗ Something went wrong. Please try again.");
+                            }
+                        }
+                        catch (Exception respondError)
+                        {
+                            _logger.LogError(respondError, "Also failed to notify user of error.");
+                        }
+                    }
                 }
             }
 
