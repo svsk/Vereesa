@@ -1,10 +1,14 @@
-using Discord;
-using Vereesa.Core.Infrastructure;
-using Vereesa.Neon.Integrations;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Web;
-using Vereesa.Neon.Extensions;
+using Discord;
+using Discord.Interactions;
 using Vereesa.Core;
+using Vereesa.Core.Infrastructure;
+using Vereesa.Neon.Exceptions;
+using Vereesa.Neon.Extensions;
 using Vereesa.Neon.Helpers;
+using Vereesa.Neon.Integrations;
 
 namespace Vereesa.Neon.Services
 {
@@ -16,7 +20,19 @@ namespace Vereesa.Neon.Services
             Healer,
             RangedDps,
             MeleeDps,
-            Unknown
+            Unknown,
+        }
+
+        private static class RaidSplitTeamType
+        {
+            public const string All = "all";
+            public const string DPS = "dps";
+            public const string Melee = "melee";
+            public const string MeleeDPS = "melee-dps";
+            public const string Ranged = "ranged";
+            public const string RangedDPS = "ranged-dps";
+            public const string Healers = "healer";
+            public const string Tanks = "tank";
         }
 
         private IWarcraftLogsApi _warcraftLogs;
@@ -26,13 +42,70 @@ namespace Vereesa.Neon.Services
             _warcraftLogs = warcraftLogs;
         }
 
+        [AsyncHandler]
+        [SlashCommand("raid-split", "Split the raid up into teams")]
+        public async Task ManageRaid(
+            IDiscordInteraction interaction,
+            [Description("Number of teams you want to split the raid into.")] long numberOfTeams,
+            [Description("Roles you want to include in the split. If left empty, everyone will be included.")]
+            [
+                Choice("Everyone", RaidSplitTeamType.All),
+                Choice("All Ranged", RaidSplitTeamType.Ranged),
+                Choice("All Melee", RaidSplitTeamType.Melee),
+                Choice("All DPS", RaidSplitTeamType.DPS),
+                Choice("Melee DPS", RaidSplitTeamType.MeleeDPS),
+                Choice("Ranged DPS", RaidSplitTeamType.RangedDPS),
+                Choice("Healers", RaidSplitTeamType.Healers),
+                Choice("Tanks", RaidSplitTeamType.Tanks)
+            ]
+            [Optional]
+                string? roles,
+            [Description("Ideal group size. If left empty, the raid will be split evenly between number of teams.")]
+            [Optional]
+                long idealGroupSize
+        )
+        {
+            // Convert longs to ints
+            if (numberOfTeams < 1 || numberOfTeams > 40)
+            {
+                await interaction.RespondAsync("Please enter a number of teams between 1 and 40.");
+                return;
+            }
+
+            if (idealGroupSize < 0 || idealGroupSize > 40)
+            {
+                await interaction.RespondAsync("Please enter a group size between 1 and 40.");
+                return;
+            }
+
+            await interaction.DeferAsync();
+
+            try
+            {
+                var groups = await PerformSplit((int)numberOfTeams, roles ?? RaidSplitTeamType.All);
+
+                var embed = GenerateEmbed(
+                    groups,
+                    (int)numberOfTeams,
+                    idealGroupSize == 0 ? 40 : (int)idealGroupSize,
+                    interaction.User
+                );
+
+                await interaction.FollowupAsync(embed: embed);
+            }
+            catch (NotFoundException ex)
+            {
+                await interaction.FollowupAsync(ex.Message);
+            }
+        }
+
         [OnCommand("!raid split")]
         [AsyncHandler]
         [WithArgument("requestedNumberOfGroups", 0)]
         [WithArgument("roles", 1)]
         public async Task SplitRaidEvenlyAsync(IMessage message, string requestedNumberOfGroups, string rolesInput)
         {
-            var requestedGroupSize = 40;
+            int requestedGroupSize = 40;
 
             if (requestedNumberOfGroups.Contains("x"))
             {
@@ -50,15 +123,33 @@ namespace Vereesa.Neon.Services
                 return;
             }
 
-            var includedRoles = GetIncludedRoles(rolesInput);
+            try
+            {
+                var groups = await PerformSplit(numberOfGroups, rolesInput);
+                var embed = GenerateEmbed(groups, numberOfGroups, requestedGroupSize, message.Author);
+                // Return the embed as a new message to the source channel.
+                await message.Channel.SendMessageAsync(embed: embed);
+            }
+            catch (NotFoundException ex)
+            {
+                await message.Channel.SendMessageAsync(ex.Message);
+            }
+        }
+
+        private async Task<List<ValidReportCharacter>[]> PerformSplit(int numberOfGroups, string teamRoles)
+        {
+            var includedRoles = GetIncludedRoles(teamRoles);
+
+            // Fetches members from WarcraftLogs
             var raidMembers = await GetLastRaidMembersAsync();
+
             var roleGroups = raidMembers
-                .OrderBy(m => m.Guid)
-                .GroupBy(m => MapSpec(m.Type, m.Specs.First()))
-                .Where(grp => includedRoles.Contains(grp.Key));
+                .GroupBy(m => MapSpec(m.ClassName, m.Specs.First()))
+                .Where(grp => includedRoles.Contains(grp.Key))
+                .ToList();
 
             var groups = new int[numberOfGroups]
-                .Select(c => new List<ReportCharacter>())
+                .Select(c => new List<ValidReportCharacter>())
                 .ToArray();
 
             foreach (var role in roleGroups)
@@ -71,22 +162,38 @@ namespace Vereesa.Neon.Services
                 groups = groups.OrderBy(g => g.Count).ToArray();
             }
 
-            var embed = GenerateEmbed(groups, numberOfGroups, requestedGroupSize, message.Author);
-            await message.Channel.SendMessageAsync(embed: embed);
+            return groups;
         }
 
-        private async Task<List<ReportCharacter>> GetLastRaidMembersAsync()
+        private record ValidReportCharacter(string Name, string ClassName, List<Specialization> Specs);
+
+        private async Task<List<ValidReportCharacter>> GetLastRaidMembersAsync()
         {
-            var lastRaid = (await _warcraftLogs.GetRaidReports()).First();
+            var lastRaid = (await _warcraftLogs.GetRaidReports()).FirstOrDefault();
+            if (lastRaid?.Id == null)
+            {
+                throw new NotFoundException("Failed to retrieve any raids from WarcraftLogs.");
+            }
+
             var totalRaidDuration = lastRaid.End - lastRaid.Start;
             var windowStart = totalRaidDuration - (totalRaidDuration * 0.5); // last half
             var windowEnd = totalRaidDuration;
 
-            return await _warcraftLogs.GetRaidComposition(lastRaid.Id, (long)windowStart, windowEnd);
+            var raidComposition = await _warcraftLogs.GetRaidComposition(lastRaid.Id, (long)windowStart, windowEnd);
+
+            return raidComposition
+                .OrderBy(m => m.Guid)
+                .Select(character =>
+                    character.Name != null && character.Type != null && character.Specs?.Count > 0
+                        ? new ValidReportCharacter(character.Name, character.Type, character.Specs)
+                        : null
+                )
+                .OfType<ValidReportCharacter>()
+                .ToList();
         }
 
         private Embed GenerateEmbed(
-            List<ReportCharacter>[] groups,
+            List<ValidReportCharacter>[] groups,
             int numberOfGroups,
             int requestedGroupSize,
             IUser requester
@@ -100,7 +207,7 @@ namespace Vereesa.Neon.Services
             {
                 var groupMembers = string.Join(
                     "\n",
-                    group.Take(requestedGroupSize).Select(p => $"{GroupIcon(p.Type, p.Specs.First())} {p.Name}")
+                    group.Take(requestedGroupSize).Select(p => $"{GroupIcon(p.ClassName, p.Specs.First())} {p.Name}")
                 );
 
                 embed.AddField($"**Group {grpNum}**", groupMembers, true);
@@ -150,27 +257,28 @@ namespace Vereesa.Neon.Services
         {
             switch (rolesInput.ToLowerInvariant())
             {
-                case "dps":
+                case RaidSplitTeamType.DPS:
                     return new HashSet<RaidRole> { RaidRole.MeleeDps, RaidRole.RangedDps };
-                case "melee":
+                case RaidSplitTeamType.Melee:
                     return new HashSet<RaidRole> { RaidRole.MeleeDps, RaidRole.Tank };
-                case "melee-dps":
+                case RaidSplitTeamType.MeleeDPS:
                     return new HashSet<RaidRole> { RaidRole.MeleeDps };
-                case "ranged":
+                case RaidSplitTeamType.Ranged:
                     return new HashSet<RaidRole> { RaidRole.Healer, RaidRole.RangedDps };
-                case "ranged-dps":
+                case RaidSplitTeamType.RangedDPS:
                     return new HashSet<RaidRole> { RaidRole.RangedDps };
-                case "healer":
+                case RaidSplitTeamType.Healers:
                     return new HashSet<RaidRole> { RaidRole.Healer };
-                case "tank":
+                case RaidSplitTeamType.Tanks:
                     return new HashSet<RaidRole> { RaidRole.Tank };
+                case RaidSplitTeamType.All:
                 default:
                     return new HashSet<RaidRole>
                     {
                         RaidRole.Healer,
                         RaidRole.Tank,
                         RaidRole.RangedDps,
-                        RaidRole.MeleeDps
+                        RaidRole.MeleeDps,
                     };
             }
         }
