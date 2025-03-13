@@ -236,8 +236,8 @@ public class TodayInWoWModule : IBotModule
             await _messagingClient.SendMessageToUserByIdAsync(userId, "", embeds: embeds);
 
             _ = Task.WhenAll(
-                userSubscriptions.Select(
-                    sub => _todayInWoWService.SetSubscriptionNotified(sub.Subscription, sub.Storm.StartingAt)
+                userSubscriptions.Select(sub =>
+                    _todayInWoWService.SetSubscriptionNotified(sub.Subscription, sub.Storm.StartingAt)
                 )
             );
         }
@@ -262,8 +262,8 @@ public class TodayInWoWModule : IBotModule
             await _messagingClient.SendMessageToUserByIdAsync(userId, "", embeds: embeds);
 
             _ = Task.WhenAll(
-                userSubscriptions.Select(
-                    sub => _todayInWoWService.SetHuntSubscriptionNotified(sub.Subscription, sub.Hunt.StartedAt)
+                userSubscriptions.Select(sub =>
+                    _todayInWoWService.SetHuntSubscriptionNotified(sub.Subscription, sub.Hunt.StartedAt)
                 )
             );
         }

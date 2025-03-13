@@ -170,6 +170,7 @@ namespace Vereesa.Neon.Services
         private async Task<List<ValidReportCharacter>> GetLastRaidMembersAsync()
         {
             var lastRaid = (await _warcraftLogs.GetRaidReports()).FirstOrDefault();
+
             if (lastRaid?.Id == null)
             {
                 throw new NotFoundException("Failed to retrieve any raids from WarcraftLogs.");

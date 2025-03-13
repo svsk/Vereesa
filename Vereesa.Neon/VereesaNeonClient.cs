@@ -14,6 +14,7 @@ using Vereesa.Neon.Data.Models.Giveaways;
 using Vereesa.Neon.Data.Models.Reminders;
 using Vereesa.Neon.Data.Models.Statistics;
 using Vereesa.Neon.Data.Repositories;
+using Vereesa.Neon.Helpers;
 using Vereesa.Neon.Integrations;
 using Vereesa.Neon.Integrations.Interfaces;
 using Vereesa.Neon.Services;
@@ -94,6 +95,7 @@ namespace Vereesa.Neon
                         .AddScoped<IWarcraftLogsApi, WarcraftLogsApi>()
                         .AddScoped<IWarcraftLogsScraper, WarcraftLogsScraper>()
                         .AddScoped<ISpreadsheetClient, GoogleSheetsClient>()
+                        .AddSingleton<ISimpleStore>(new SimpleStore(WellknownPaths.AppData))
                         .AddScoped<IRepository<GameTrackMember>, AzureStorageRepository<GameTrackMember>>()
                         .AddScoped<IRepository<Giveaway>, AzureStorageRepository<Giveaway>>()
                         .AddScoped<IRepository<GamblingStandings>, AzureStorageRepository<GamblingStandings>>()
