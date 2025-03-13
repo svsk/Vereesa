@@ -144,6 +144,19 @@ namespace Vereesa.Core.Discord
                             }
                         }
 
+                        if (!UserCanExecute(interaction.User, method))
+                        {
+                            _logger.LogWarning(
+                                "User {User} tried to execute {Command} but was not authorized.",
+                                interaction.User.Id,
+                                interaction.CommandName
+                            );
+
+                            await interaction.RespondAsync("❌ You are not authorized to do that.", ephemeral: true);
+
+                            continue;
+                        }
+
                         await ExecuteHandlersAsync(new() { method }, invocationParameters.ToArray());
                     }
                 };
