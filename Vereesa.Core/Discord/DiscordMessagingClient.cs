@@ -123,14 +123,13 @@ namespace Vereesa.Core.Discord
 
         public List<IRole> GetRolesByName(string roleName, bool ignoreCase)
         {
-            return Discord.Guilds
-                .SelectMany(g => g.Roles)
-                .Where(
-                    r =>
-                        r.Name.Equals(
-                            roleName,
-                            ignoreCase ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture
-                        )
+            return Discord
+                .Guilds.SelectMany(g => g.Roles)
+                .Where(r =>
+                    r.Name.Equals(
+                        roleName,
+                        ignoreCase ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture
+                    )
                 )
                 .OfType<IRole>()
                 .ToList();
@@ -162,11 +161,6 @@ namespace Vereesa.Core.Discord
         public IChannel GetChannelById(ulong channelId)
         {
             return Discord.GetChannel(channelId);
-        }
-
-        public IMessageChannel GetChannelById(object notificationMessageChannelId)
-        {
-            throw new NotImplementedException();
         }
 
         public string EscapeSelfMentions(string message)
