@@ -111,7 +111,7 @@ public class WarcraftLogsWatcherModule : IBotModule
         }
 
         // Reports that were started 15 minutes before, or after the event started are considered relevant.
-        var reports = await GetRelevantReports(DateTimeOffset.Now.AddDays(-5));
+        var reports = await GetRelevantReports(DateTimeOffset.Now.AddMinutes(-15));
 
         var reportsWeDidNotKnowAbout = reports.Where(report => !IsKnownReport(report)).ToList();
 
@@ -158,6 +158,12 @@ public class WarcraftLogsWatcherModule : IBotModule
     private async Task<VereesaEvent?> GetOngoingGuildEvent()
     {
         var events = await _events.GetGuildEvents(WellknownGuilds.Neon);
+
+        foreach (var ev in events)
+        {
+            _logger.LogInformation(ev.StartTime.ToString());
+        }
+
         return events.FirstOrDefault(e => e.Status == VereesaEventStatus.Active);
     }
 }
