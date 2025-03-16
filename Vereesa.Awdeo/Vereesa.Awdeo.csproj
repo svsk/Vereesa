@@ -26,7 +26,7 @@
   <ItemGroup>
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.55.0.2440" />
     <PackageReference Include="mediatoolkit" Version="1.1.0.1" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.3" />
     <PackageReference Include="VideoLibrary" Version="3.1.4" />
     <PackageReference Include="RestSharp" Version="112.1.0" />
   </ItemGroup>
