@@ -1,22 +1,22 @@
 using Azure;
-using Azure.AI.OpenAI;
 using Discord;
 using Microsoft.Extensions.Logging;
-using Vereesa.Neon.Configuration;
+using OpenAI;
+using OpenAI.Chat;
+using Vereesa.Core;
 using Vereesa.Core.Extensions;
 using Vereesa.Core.Infrastructure;
-using Vereesa.Core;
+using Vereesa.Neon.Configuration;
 
 namespace Vereesa.Neon.Services
 {
     public class OpenAIService : IBotModule
     {
         private readonly IMessagingClient _messaging;
-        private readonly OpenAIClient _client;
+        private readonly ChatClient _client;
         private int _historySkip = 0;
         private readonly ILogger<OpenAIService> _logger;
-        private static ChatMessage _directives = new ChatMessage(
-            ChatRole.System,
+        private static ChatMessage _directives = new SystemChatMessage(
             string.Join(
                 " ",
                 new string[]
@@ -35,7 +35,7 @@ namespace Vereesa.Neon.Services
                     "Their messages to you will be formatted with their nicknames first, then a colon followed by their message.",
                     "Your messages should not be prepended with any name, but feel free to addreess people by their names if it makes sense.",
                     "You can also refer to people by just the first syllable in their name, when you want to appear more casual.",
-                    "Do not start your messages with \"Vereesa:\"."
+                    "Do not start your messages with \"Vereesa:\".",
                 }
             )
         );
@@ -45,11 +45,11 @@ namespace Vereesa.Neon.Services
         public OpenAIService(IMessagingClient messaging, OpenAISettings settings, ILogger<OpenAIService> logger)
         {
             _messaging = messaging;
-            _client = new OpenAIClient(settings.ApiKey);
+            _client = new OpenAIClient(settings.ApiKey).GetChatClient("gpt-3.5-turbo");
             _logger = logger;
         }
 
-        private string EscapeSelfMentions(string message)
+        private string EscapeSelfMentions(string? message)
         {
             return _messaging.EscapeSelfMentions(message);
         }
@@ -66,23 +66,22 @@ namespace Vereesa.Neon.Services
             var displayName = message.Author.GetPreferredDisplayName();
             var messageWithUsername = $"{displayName}: {EscapeSelfMentions(message.Content)}";
 
-            _messageHistory.Add(new ChatMessage(ChatRole.User, messageWithUsername));
+            _messageHistory.Add(new UserChatMessage(messageWithUsername));
 
-            var options = new ChatCompletionsOptions { Temperature = 0f };
-            options.Messages.Add(_directives);
+            var options = new ChatCompletionOptions { Temperature = 0f };
 
-            foreach (var msg in _messageHistory.Skip(_historySkip).ToList())
-                options.Messages.Add(msg);
+            var messages = new List<ChatMessage> { _directives };
+            messages.AddRange(_messageHistory.Skip(_historySkip));
 
             try
             {
-                var response = await _client.GetChatCompletionsAsync("gpt-3.5-turbo", options);
-                var responseContent = EscapeSelfMentions(response.Value.Choices.FirstOrDefault()?.Message?.Content);
+                var response = await _client.CompleteChatAsync(messages, options);
+                var responseContent = EscapeSelfMentions(response.Value.Content.FirstOrDefault()?.Text);
 
-                _messageHistory.Add(new ChatMessage(ChatRole.Assistant, responseContent));
+                _messageHistory.Add(new AssistantChatMessage(responseContent));
 
                 await message.Channel.SendMessageAsync(
-                    response.Value.Choices.FirstOrDefault()?.Message?.Content,
+                    response.Value.Content.FirstOrDefault()?.Text,
                     messageReference: new MessageReference(message.Id)
                 );
             }

@@ -24,10 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.55.0.2440" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.69.0.3707" />
     <PackageReference Include="mediatoolkit" Version="1.1.0.1" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.3" />
-    <PackageReference Include="VideoLibrary" Version="3.1.4" />
+    <PackageReference Include="VideoLibrary" Version="3.2.8" />
     <PackageReference Include="RestSharp" Version="112.1.0" />
   </ItemGroup>
 

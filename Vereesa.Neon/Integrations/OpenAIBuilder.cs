@@ -1,5 +1,6 @@
 using System.Text.Json;
-using Azure.AI.OpenAI;
+using OpenAI;
+using OpenAI.Chat;
 
 namespace Vereesa.Neon.Integrations;
 
@@ -35,7 +36,7 @@ public class OpenAIClientBuilder
 
 public class BuiltOpenAIClient
 {
-    private readonly OpenAIClient _client;
+    private readonly ChatClient _client;
     private readonly List<string> _instructions;
     private readonly bool _shouldRememberHistory;
     private readonly string _apiKey;
@@ -43,7 +44,7 @@ public class BuiltOpenAIClient
 
     public BuiltOpenAIClient(OpenAIClient client, List<string> instructions, bool shouldRememberHistory, string apiKey)
     {
-        _client = client;
+        _client = client.GetChatClient("gpt-3.5-turbo");
         _instructions = instructions;
         _shouldRememberHistory = shouldRememberHistory;
         _apiKey = apiKey;
@@ -51,42 +52,24 @@ public class BuiltOpenAIClient
 
     public async Task<string?> Query(string query)
     {
-        var options = new ChatCompletionsOptions { Temperature = 0f };
-        options.Messages.Add(new ChatMessage(ChatRole.System, string.Join(" ", _instructions)));
-        foreach (var msg in _chatHistory)
-            options.Messages.Add(msg);
+        var options = new ChatCompletionOptions { Temperature = 0f };
 
-        options.Messages.Add(new ChatMessage(ChatRole.User, query));
+        var messages = new List<ChatMessage> { new SystemChatMessage(string.Join(" ", _instructions)) };
+        messages.AddRange(_chatHistory);
 
-        var result = await _client.GetChatCompletionsAsync("gpt-3.5-turbo", options);
-        var resultMessage = result.Value.Choices.FirstOrDefault()?.Message?.Content;
+        messages.Add(new UserChatMessage(query));
+
+        var result = await _client.CompleteChatAsync(messages, options);
+        var resultMessage = result.Value.Content.FirstOrDefault()?.Text;
 
         if (_shouldRememberHistory)
         {
-            _chatHistory.Add(new ChatMessage(ChatRole.User, query));
-            _chatHistory.Add(new ChatMessage(ChatRole.Assistant, resultMessage));
+            _chatHistory.Add(new UserChatMessage(query));
+            _chatHistory.Add(new AssistantChatMessage(resultMessage));
         }
 
         return resultMessage;
     }
-
-    // public async Task QueryAsImage(string query, string path)
-    // {
-    //     using (var client = new HttpClient())
-    //     {
-    //         client.DefaultRequestHeaders.Clear();
-    //         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-    //         var Message = await client.PostAsync(
-    //             "https://api.openai.com/v1/images/generations",
-    //             new StringContent(JsonConvert.SerializeObject(input), Encoding.UTF8, "application/json")
-    //         );
-    //         if (Message.IsSuccessStatusCode)
-    //         {
-    //             var content = await Message.Content.ReadAsStringAsync();
-    //             resp = JsonConvert.DeserializeObject<ResponseModel>(content);
-    //         }
-    //     }
-    // }
 
     public async Task<T?> QueryAs<T>(string query)
     {
