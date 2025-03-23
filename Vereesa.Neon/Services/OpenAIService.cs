@@ -45,7 +45,7 @@ namespace Vereesa.Neon.Services
         public OpenAIService(IMessagingClient messaging, OpenAISettings settings, ILogger<OpenAIService> logger)
         {
             _messaging = messaging;
-            _client = new OpenAIClient(settings.ApiKey).GetChatClient("gpt-3.5-turbo");
+            _client = new OpenAIClient(settings.ApiKey).GetChatClient("gpt-4o-mini");
             _logger = logger;
         }
 

@@ -44,7 +44,7 @@ public class BuiltOpenAIClient
 
     public BuiltOpenAIClient(OpenAIClient client, List<string> instructions, bool shouldRememberHistory, string apiKey)
     {
-        _client = client.GetChatClient("gpt-3.5-turbo");
+        _client = client.GetChatClient("gpt-4o-mini");
         _instructions = instructions;
         _shouldRememberHistory = shouldRememberHistory;
         _apiKey = apiKey;
