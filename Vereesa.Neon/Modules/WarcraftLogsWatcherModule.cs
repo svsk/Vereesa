@@ -111,7 +111,7 @@ public class WarcraftLogsWatcherModule : IBotModule
         }
 
         // Reports that were started 15 minutes before, or after the event started are considered relevant.
-        var reports = await GetRelevantReports(DateTimeOffset.Now.AddMinutes(-15));
+        var reports = await GetRelevantReports(ongoingEvent.StartTime.AddMinutes(-15));
 
         var reportsWeDidNotKnowAbout = reports.Where(report => !IsKnownReport(report)).ToList();
 
